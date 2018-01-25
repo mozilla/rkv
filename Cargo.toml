@@ -1,0 +1,11 @@
+[package]
+name = "kista"
+version = "0.1.0"
+authors = ["Richard Newman <rnewman@twinql.com>"]
+
+[dependencies]
+arrayref = "0.3"
+bincode = "0.9"
+failure = "0.1"
+lmdb = "0.7"
+uuid = "0.5"
