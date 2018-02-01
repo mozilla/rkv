@@ -18,6 +18,11 @@ extern crate bincode;
 extern crate lmdb;
 extern crate uuid;
 
+use std::path::{
+    Path,
+    PathBuf,
+};
+
 use bincode::{
     Infinite,
     deserialize,
@@ -28,11 +33,13 @@ use failure::Error;
 
 use lmdb::{
     Database,
+    DatabaseFlags,
     Cursor,
     RoCursor,
     RwCursor,
     Environment,
     EnvironmentBuilder,
+    EnvironmentFlags,
     Transaction,
     RoTransaction,
     RwTransaction,
@@ -217,10 +224,90 @@ impl<'a> AsValue for &'a [u8] {
     }
 }
 
+#[derive(Debug, Eq, Fail, PartialEq)]
+enum StoreError {
+    #[fail(display = "directory does not exist: {:?}", _0)]
+    DirectoryDoesNotExistError(PathBuf),
+
+    #[fail(display = "lmdb error: {}", _0)]
+    LmdbError(lmdb::Error),
+}
+
+/// Wrapper around an `lmdb::Environment`.
+pub struct Kista {
+    path: PathBuf,
+    env: Environment,
+}
+
+impl Kista {
+    fn new(path: &Path) -> Result<Kista, StoreError> {
+        let mut builder = Environment::new();
+        builder.set_max_dbs(10);
+
+        // Future: set flags, maximum size, etc. here if necessary.
+        let environment =
+            builder.open(path)
+                   .map_err(|e|
+                       match e {
+                           lmdb::Error::Other(2) => StoreError::DirectoryDoesNotExistError(path.into()),
+                           e => StoreError::LmdbError(e),
+                       })?;
+        Ok(Kista {
+            path: path.into(),
+            env: environment,
+        })
+    }
+
+    fn create_or_open_default(&self) -> Result<Store, StoreError> {
+        self.create_or_open(None)
+    }
+
+    fn create_or_open<'s, T>(&self, name: T) -> Result<Store, StoreError>
+    where T: Into<Option<&'s str>> {
+        let flags = DatabaseFlags::empty();
+        let db = self.env.create_db(name.into(), flags).map_err(StoreError::LmdbError)?;
+        Ok(Store {
+            db: db,
+        })
+    }
+}
+
+/// Wrapper around an `lmdb::Database`.
+pub struct Store {
+    db: Database,
+}
+
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_load() {
+    extern crate tempdir;
 
+    use self::tempdir::TempDir;
+    use std::fs;
+
+    use super::*;
+
+    /// We can't open a directory that doesn't exist.
+    #[test]
+    fn test_open_fails() {
+        let root = TempDir::new("test_open_fails").expect("tempdir");
+        assert!(root.path().exists());
+
+        let nope = root.path().join("nope/");
+        assert!(!nope.exists());
+
+        assert_eq!(Some(StoreError::DirectoryDoesNotExistError(nope.to_path_buf())),
+                   Kista::new(nope.as_path()).err());
+    }
+
+    #[test]
+    fn test_open() {
+        let root = TempDir::new("test_open").expect("tempdir");
+        println!("Root path: {:?}", root.path());
+        fs::create_dir_all(root.path()).expect("dir created");
+        assert!(root.path().is_dir());
+
+        let k = Kista::new(root.path()).expect("new succeeded");
+        assert!(k.create_or_open_default().is_ok());
+        assert!(k.create_or_open("yyy").is_ok());
     }
 }

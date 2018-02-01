@@ -9,3 +9,6 @@ bincode = "0.9"
 failure = "0.1"
 lmdb = "0.7"
 uuid = "0.5"
+
+[dev-dependencies]
+tempdir = "0.3"
