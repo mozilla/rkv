@@ -16,7 +16,12 @@
 
 extern crate bincode;
 extern crate lmdb;
+extern crate ordered_float;
 extern crate uuid;
+
+use std::os::raw::{
+    c_uint,
+};
 
 use std::path::{
     Path,
@@ -33,21 +38,28 @@ use failure::Error;
 
 use lmdb::{
     Database,
-    DatabaseFlags,
     Cursor,
     RoCursor,
     RwCursor,
     Environment,
-    EnvironmentBuilder,
-    EnvironmentFlags,
     Transaction,
     RoTransaction,
     RwTransaction,
 };
 
+use ordered_float::{
+    OrderedFloat,
+};
+
 use uuid::{
     Uuid,
     UuidBytes,
+};
+
+pub use lmdb::{
+    DatabaseFlags,
+    EnvironmentBuilder,
+    EnvironmentFlags,
 };
 
 /// We define a set of types, associated with simple integers, to annotate values
@@ -56,7 +68,7 @@ use uuid::{
 /// crate.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq)]
-enum Type {
+pub enum Type {
     Bool    = 1,
     U64     = 2,
     I64     = 3,
@@ -106,11 +118,12 @@ impl std::fmt::Display for Type {
     }
 }
 
-enum Value<'s> {
+#[derive(Debug, Eq, PartialEq)]
+pub enum Value<'s> {
     Bool(bool),
     U64(u64),
     I64(i64),
-    F64(f64),
+    F64(OrderedFloat<f64>),
     Instant(i64),    // Millisecond-precision timestamp.
     Uuid(&'s UuidBytes),
     Str(&'s str),
@@ -131,7 +144,7 @@ enum OwnedValue {
 }
 
 #[derive(Debug, Fail)]
-enum DataError {
+pub enum DataError {
     #[fail(display = "unknown type tag: {}", _0)]
     UnknownType(u8),
 
@@ -195,7 +208,7 @@ impl<'s> Value<'s> {
                 deserialize(data).map(Value::I64)
             },
             Type::F64 => {
-                deserialize(data).map(Value::F64)
+                deserialize(data).map(OrderedFloat).map(Value::F64)
             },
             Type::Instant => {
                 deserialize(data).map(Value::Instant)
@@ -224,58 +237,129 @@ impl<'a> AsValue for &'a [u8] {
     }
 }
 
-#[derive(Debug, Eq, Fail, PartialEq)]
-enum StoreError {
+#[derive(Debug, Fail)]
+pub enum StoreError {
     #[fail(display = "directory does not exist: {:?}", _0)]
     DirectoryDoesNotExistError(PathBuf),
+
+    #[fail(display = "data error: {:?}", _0)]
+    DataError(DataError),
 
     #[fail(display = "lmdb error: {}", _0)]
     LmdbError(lmdb::Error),
 }
 
+// TODO: integer key support.
+pub struct U32Key(u32);
+pub struct I32Key(i32);
+pub struct U64Key(u64);
+pub struct I64Key(i64);
+
 /// Wrapper around an `lmdb::Environment`.
+#[derive(Debug)]
 pub struct Kista {
     path: PathBuf,
     env: Environment,
 }
 
-impl Kista {
-    fn new(path: &Path) -> Result<Kista, StoreError> {
-        let mut builder = Environment::new();
-        builder.set_max_dbs(10);
+static DEFAULT_MAX_DBS: c_uint = 5;
 
-        // Future: set flags, maximum size, etc. here if necessary.
-        let environment =
-            builder.open(path)
-                   .map_err(|e|
-                       match e {
-                           lmdb::Error::Other(2) => StoreError::DirectoryDoesNotExistError(path.into()),
-                           e => StoreError::LmdbError(e),
-                       })?;
+impl Kista {
+    pub fn environment_builder() -> EnvironmentBuilder {
+        Environment::new()
+    }
+
+    pub fn from_env(env: EnvironmentBuilder, path: &Path) -> Result<Kista, StoreError> {
         Ok(Kista {
             path: path.into(),
-            env: environment,
+            env: env.open(path)
+                    .map_err(|e|
+                        match e {
+                            lmdb::Error::Other(2) => StoreError::DirectoryDoesNotExistError(path.into()),
+                            e => StoreError::LmdbError(e),
+                        })?,
         })
     }
 
-    fn create_or_open_default(&self) -> Result<Store, StoreError> {
+    /// Return a new Kista environment that supports up to `DEFAULT_MAX_DBS` open databases.
+    pub fn new(path: &Path) -> Result<Kista, StoreError> {
+        let mut builder = Environment::new();
+        builder.set_max_dbs(DEFAULT_MAX_DBS);
+
+        // Future: set flags, maximum size, etc. here if necessary.
+        Kista::from_env(builder, path)
+    }
+
+    pub fn create_or_open_default(&self) -> Result<Store<&str>, StoreError> {
         self.create_or_open(None)
     }
 
-    fn create_or_open<'s, T>(&self, name: T) -> Result<Store, StoreError>
-    where T: Into<Option<&'s str>> {
+    pub fn create_or_open<'s, T, K>(&self, name: T) -> Result<Store<K>, StoreError>
+    where T: Into<Option<&'s str>>,
+          K: AsRef<[u8]> {
         let flags = DatabaseFlags::empty();
+        self.create_or_open_with_flags(name, flags)
+    }
+
+    pub fn create_or_open_with_flags<'s, T, K>(&self, name: T, flags: DatabaseFlags) -> Result<Store<K>, StoreError>
+    where T: Into<Option<&'s str>>,
+          K: AsRef<[u8]> {
         let db = self.env.create_db(name.into(), flags).map_err(StoreError::LmdbError)?;
         Ok(Store {
             db: db,
+            phantom: ::std::marker::PhantomData,
         })
+    }
+
+    pub fn read(&self) -> Result<RoTransaction, lmdb::Error> {
+        self.env.begin_ro_txn()
+    }
+}
+
+fn read_transform<'x>(val: Result<&'x [u8], lmdb::Error>) -> Result<Option<Value<'x>>, StoreError> {
+    match val {
+        Ok(bytes) => Value::from_tagged_slice(bytes).map(Some)
+                                                    .map_err(StoreError::DataError),
+        Err(lmdb::Error::NotFound) => Ok(None),
+        Err(e) => Err(StoreError::LmdbError(e)),
+    }
+}
+
+pub struct Reader<'env, K> where K: AsRef<[u8]> {
+    tx: RoTransaction<'env>,
+    db: Database,
+    phantom: ::std::marker::PhantomData<K>,
+}
+
+impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
+    fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        let bytes = self.tx.get(self.db, &k.as_ref());
+        read_transform(bytes)
     }
 }
 
 /// Wrapper around an `lmdb::Database`.
-pub struct Store {
+pub struct Store<K> where K: AsRef<[u8]> {
     db: Database,
+    phantom: ::std::marker::PhantomData<K>,
 }
+
+impl<K> Store<K> where K: AsRef<[u8]> {
+    fn read<'env>(&self, env: &'env Kista) -> Result<Reader<'env, K>, lmdb::Error> {
+        let tx = env.read()?;
+        Ok(Reader {
+            tx: tx,
+            db: self.db,
+            phantom: ::std::marker::PhantomData,
+        })
+    }
+
+    fn get<'env, 'tx>(&self, tx: &'tx RoTransaction<'env>, k: K) -> Result<Option<Value<'tx>>, StoreError> {
+        let bytes = tx.get(self.db, &k.as_ref());
+        read_transform(bytes)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -295,8 +379,13 @@ mod tests {
         let nope = root.path().join("nope/");
         assert!(!nope.exists());
 
-        assert_eq!(Some(StoreError::DirectoryDoesNotExistError(nope.to_path_buf())),
-                   Kista::new(nope.as_path()).err());
+        let pb = nope.to_path_buf();
+        match Kista::new(nope.as_path()).err() {
+            Some(StoreError::DirectoryDoesNotExistError(p)) => {
+                assert_eq!(pb, p);
+            },
+            _ => panic!("expected error"),
+        };
     }
 
     #[test]
@@ -307,7 +396,16 @@ mod tests {
         assert!(root.path().is_dir());
 
         let k = Kista::new(root.path()).expect("new succeeded");
-        assert!(k.create_or_open_default().is_ok());
-        assert!(k.create_or_open("yyy").is_ok());
+        let _ = k.create_or_open_default().expect("created default");
+
+        let yyy: Store<&str> = k.create_or_open("yyy").expect("opened");
+        let reader = yyy.read(&k).expect("reader");
+
+        let result = reader.get("foo");
+        assert_eq!(None, result.expect("success but no value"));
+    }
+
+    #[test]
+    fn test_round_trip() {
     }
 }
