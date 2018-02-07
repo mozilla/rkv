@@ -1,4 +1,4 @@
-// Copyright 2016 Mozilla
+// Copyright 2018 Mozilla
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 // this file except in compliance with the License. You may obtain a copy of the
@@ -9,7 +9,6 @@
 // specific language governing permissions and limitations under the License.
 
 #![allow(dead_code)]
-#![allow(unused_imports)]
 
 #[macro_use] extern crate arrayref;
 #[macro_use] extern crate failure;
@@ -28,32 +27,12 @@ use std::path::{
     PathBuf,
 };
 
-use bincode::{
-    Infinite,
-    deserialize,
-    serialize,
-};
-
-use failure::Error;
-
 use lmdb::{
     Database,
-    Cursor,
-    RoCursor,
-    RwCursor,
     Environment,
     Transaction,
     RoTransaction,
     RwTransaction,
-};
-
-use ordered_float::{
-    OrderedFloat,
-};
-
-use uuid::{
-    Uuid,
-    UuidBytes,
 };
 
 pub use lmdb::{
@@ -63,232 +42,18 @@ pub use lmdb::{
     WriteFlags,
 };
 
-/// We define a set of types, associated with simple integers, to annotate values
-/// stored in LMDB. This is to avoid an accidental 'cast' from a value of one type
-/// to another. For this reason we don't simply use `deserialize` from the `bincode`
-/// crate.
-#[repr(u8)]
-#[derive(Debug, PartialEq, Eq)]
-pub enum Type {
-    Bool    = 1,
-    U64     = 2,
-    I64     = 3,
-    F64     = 4,
-    Instant = 5,    // Millisecond-precision timestamp.
-    Uuid    = 6,
-    Str     = 7,
-    Json    = 8,
-}
+pub mod value;
+pub mod error;
 
-/// We use manual tagging, because <https://github.com/serde-rs/serde/issues/610>.
-impl Type {
-    fn from_tag(tag: u8) -> Result<Type, DataError> {
-        Type::from_primitive(tag).ok_or(DataError::UnknownType(tag))
-    }
+use error::{
+    StoreError,
+};
 
-    fn to_tag(self) -> u8 {
-        self as u8
-    }
+use value::{
+    Value,
+};
 
-    fn from_primitive(p: u8) -> Option<Type> {
-        match p {
-            1 => Some(Type::Bool),
-            2 => Some(Type::U64),
-            3 => Some(Type::I64),
-            4 => Some(Type::F64),
-            5 => Some(Type::Instant),
-            6 => Some(Type::Uuid),
-            7 => Some(Type::Str),
-            8 => Some(Type::Json),
-            _ => None,
-        }
-    }
-}
-
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        f.write_str(match *self {
-            Type::Bool    => "bool",
-            Type::U64     => "u64",
-            Type::I64     => "i64",
-            Type::F64     => "f64",
-            Type::Instant => "instant",
-            Type::Uuid    => "uuid",
-            Type::Str     => "str",
-            Type::Json    => "json",
-        })
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum Value<'s> {
-    Bool(bool),
-    U64(u64),
-    I64(i64),
-    F64(OrderedFloat<f64>),
-    Instant(i64),    // Millisecond-precision timestamp.
-    Uuid(&'s UuidBytes),
-    Str(&'s str),
-    Json(&'s str),
-}
-
-// TODO: implement conversion between the two types of `Value` wrapper.
-// This might be unnecessary: we'll probably jump straight to primitives.
-enum OwnedValue {
-    Bool(bool),
-    U64(u64),
-    I64(i64),
-    F64(f64),
-    Instant(i64),    // Millisecond-precision timestamp.
-    Uuid(Uuid),
-    Str(String),
-    Json(String),    // TODO
-}
-
-#[derive(Debug, Fail)]
-pub enum DataError {
-    #[fail(display = "unknown type tag: {}", _0)]
-    UnknownType(u8),
-
-    #[fail(display = "unexpected type tag: expected {}, got {}", expected, actual)]
-    UnexpectedType {
-        expected: Type,
-        actual: Type,
-    },
-
-    #[fail(display = "empty data; expected tag")]
-    Empty,
-
-    #[fail(display = "invalid value for type {}: {}", value_type, err)]
-    DecodingError {
-        value_type: Type,
-        err: Box<bincode::ErrorKind>,
-    },
-
-    #[fail(display = "couldn't encode value: {}", _0)]
-    EncodingError(Box<bincode::ErrorKind>),
-
-    #[fail(display = "invalid uuid bytes")]
-    InvalidUuid,
-}
-
-fn uuid<'s>(bytes: &'s [u8]) -> Result<Value<'s>, DataError> {
-    if bytes.len() == 16 {
-        Ok(Value::Uuid(array_ref![bytes, 0, 16]))
-    } else {
-        Err(DataError::InvalidUuid)
-    }
-}
-
-impl<'s> Value<'s> {
-    fn expected_from_tagged_slice(expected: Type, slice: &'s [u8]) -> Result<Value<'s>, DataError> {
-        let (tag, data) = slice.split_first().ok_or(DataError::Empty)?;
-        let t = Type::from_tag(*tag)?;
-        if t == expected {
-            return Err(DataError::UnexpectedType { expected: expected, actual: t });
-        }
-        Value::from_type_and_data(t, data)
-    }
-
-    fn from_tagged_slice(slice: &'s [u8]) -> Result<Value<'s>, DataError> {
-        let (tag, data) = slice.split_first().ok_or(DataError::Empty)?;
-        let t = Type::from_tag(*tag)?;
-        Value::from_type_and_data(t, data)
-    }
-
-    fn from_type_and_data(t: Type, data: &'s [u8]) -> Result<Value<'s>, DataError> {
-        if t == Type::Uuid {
-            return deserialize(data).map_err(|e| DataError::DecodingError { value_type: t, err: e })
-                                    .map(uuid)?;
-        }
-
-        match t {
-            Type::Bool => {
-                deserialize(data).map(Value::Bool)
-            },
-            Type::U64 => {
-                deserialize(data).map(Value::U64)
-            },
-            Type::I64 => {
-                deserialize(data).map(Value::I64)
-            },
-            Type::F64 => {
-                deserialize(data).map(OrderedFloat).map(Value::F64)
-            },
-            Type::Instant => {
-                deserialize(data).map(Value::Instant)
-            },
-            Type::Str => {
-                deserialize(data).map(Value::Str)
-            },
-            Type::Json => {
-                deserialize(data).map(Value::Json)
-            },
-            Type::Uuid => {
-                // Processed above to avoid verbose duplication of error transforms.
-                unreachable!()
-            },
-        }.map_err(|e| DataError::DecodingError { value_type: t, err: e })
-    }
-
-    fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
-        match self {
-            &Value::Bool(ref v) => {
-                serialize(&(Type::Bool.to_tag(), *v), Infinite)
-            },
-            &Value::U64(ref v) => {
-                serialize(&(Type::U64.to_tag(), *v), Infinite)
-            },
-            &Value::I64(ref v) => {
-                serialize(&(Type::I64.to_tag(), *v), Infinite)
-            },
-            &Value::F64(ref v) => {
-                serialize(&(Type::F64.to_tag(), v.0), Infinite)
-            },
-            &Value::Instant(ref v) => {
-                serialize(&(Type::Instant.to_tag(), *v), Infinite)
-            },
-            &Value::Str(ref v) => {
-                serialize(&(Type::Str.to_tag(), v), Infinite)
-            },
-            &Value::Json(ref v) => {
-                serialize(&(Type::Json.to_tag(), v), Infinite)
-            },
-            &Value::Uuid(ref v) => {
-                // Processed above to avoid verbose duplication of error transforms.
-                serialize(&(Type::Uuid.to_tag(), v), Infinite)
-            },
-        }.map_err(DataError::EncodingError)
-    }
-}
-
-trait AsValue {
-    fn as_value(&self) -> Result<Value, DataError>;
-}
-
-impl<'a> AsValue for &'a [u8] {
-    fn as_value(&self) -> Result<Value, DataError> {
-        Value::from_tagged_slice(self)
-    }
-}
-
-#[derive(Debug, Fail)]
-pub enum StoreError {
-    #[fail(display = "directory does not exist: {:?}", _0)]
-    DirectoryDoesNotExistError(PathBuf),
-
-    #[fail(display = "data error: {:?}", _0)]
-    DataError(DataError),
-
-    #[fail(display = "lmdb error: {}", _0)]
-    LmdbError(lmdb::Error),
-}
-
-impl From<DataError> for StoreError {
-    fn from(e: DataError) -> StoreError {
-        StoreError::DataError(e)
-    }
-}
+static DEFAULT_MAX_DBS: c_uint = 5;
 
 // TODO: integer key support.
 pub struct U32Key(u32);
@@ -302,8 +67,6 @@ pub struct Kista {
     path: PathBuf,
     env: Environment,
 }
-
-static DEFAULT_MAX_DBS: c_uint = 5;
 
 impl Kista {
     pub fn environment_builder() -> EnvironmentBuilder {
@@ -407,6 +170,10 @@ impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
         let bytes = self.tx.get(self.db, &k.as_ref());
         read_transform(bytes)
     }
+
+    fn abort(self) {
+        self.tx.abort();
+    }
 }
 
 /// Wrapper around an `lmdb::Database`.
@@ -416,7 +183,7 @@ pub struct Store<K> where K: AsRef<[u8]> {
 }
 
 impl<K> Store<K> where K: AsRef<[u8]> {
-    fn read<'env>(&self, env: &'env Kista) -> Result<Reader<'env, K>, lmdb::Error> {
+    fn read<'env>(&self, env: &'env Kista) -> Result<Reader<'env, K>, StoreError> {
         let tx = env.read()?;
         Ok(Reader {
             tx: tx,
@@ -486,8 +253,8 @@ mod tests {
     }
 
     #[test]
-    fn test_round_trip() {
-        let root = TempDir::new("test_open").expect("tempdir");
+    fn test_round_trip_and_transactions() {
+        let root = TempDir::new("test_round_trip_and_transactions").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Kista::new(root.path()).expect("new succeeded");
 
@@ -539,5 +306,72 @@ mod tests {
             assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
             assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
         }
+    }
+
+    #[test]
+    fn test_concurrent_read_transactions_prohibited() {
+        let root = TempDir::new("test_concurrent_reads_prohibited").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Kista::new(root.path()).expect("new succeeded");
+        let s: Store<&str> = k.create_or_open("s").expect("opened");
+
+        let _first = s.read(&k).expect("reader");
+        let second = s.read(&k);
+
+        match second {
+            Err(StoreError::ReadTransactionAlreadyExists(t)) => {
+                println!("Thread was {:?}", t);
+            },
+            _ => {
+                panic!("Expected error.");
+            },
+        }
+    }
+
+    #[test]
+    fn test_isolation() {
+        let root = TempDir::new("test_isolation").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Kista::new(root.path()).expect("new succeeded");
+        let mut s: Store<&str> = k.create_or_open("s").expect("opened");
+
+        // Add one field.
+        {
+            let mut writer = s.write(&k).expect("writer");
+            writer.put("foo", &Value::I64(1234)).expect("wrote");
+            writer.commit().expect("committed");
+        }
+
+        // Both ways of reading see the value.
+        {
+            let reader = &k.read().unwrap();
+            assert_eq!(s.get(reader, "foo").expect("read"), Some(Value::I64(1234)));
+        }
+        {
+            let reader = s.read(&k).unwrap();
+            assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(1234)));
+        }
+
+        // Establish a long-lived reader that outlasts a writer.
+        let reader = s.read(&k).expect("reader");
+        assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(1234)));
+
+        // Start a write transaction.
+        let mut writer = s.write(&k).expect("writer");
+        writer.put("foo", &Value::I64(999)).expect("wrote");
+
+        // The reader and writer are isolated.
+        assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(1234)));
+        assert_eq!(writer.get("foo").expect("read"), Some(Value::I64(999)));
+
+        // If we commit the writer, we still have isolation.
+        writer.commit().expect("committed");
+        assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(1234)));
+
+        // A new reader sees the committed value. Note that LMDB doesn't allow two
+        // read transactions to exist in the same thread, so we abort the previous one.
+        reader.abort();
+        let reader = s.read(&k).expect("reader");
+        assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(999)));
     }
 }
