@@ -60,6 +60,7 @@ pub use lmdb::{
     DatabaseFlags,
     EnvironmentBuilder,
     EnvironmentFlags,
+    WriteFlags,
 };
 
 /// We define a set of types, associated with simple integers, to annotate values
@@ -79,6 +80,7 @@ pub enum Type {
     Json    = 8,
 }
 
+/// We use manual tagging, because <https://github.com/serde-rs/serde/issues/610>.
 impl Type {
     fn from_tag(tag: u8) -> Result<Type, DataError> {
         Type::from_primitive(tag).ok_or(DataError::UnknownType(tag))
@@ -158,10 +160,13 @@ pub enum DataError {
     Empty,
 
     #[fail(display = "invalid value for type {}: {}", value_type, err)]
-    EncodingError {
+    DecodingError {
         value_type: Type,
         err: Box<bincode::ErrorKind>,
     },
+
+    #[fail(display = "couldn't encode value: {}", _0)]
+    EncodingError(Box<bincode::ErrorKind>),
 
     #[fail(display = "invalid uuid bytes")]
     InvalidUuid,
@@ -193,7 +198,7 @@ impl<'s> Value<'s> {
 
     fn from_type_and_data(t: Type, data: &'s [u8]) -> Result<Value<'s>, DataError> {
         if t == Type::Uuid {
-            return deserialize(data).map_err(|e| DataError::EncodingError { value_type: t, err: e })
+            return deserialize(data).map_err(|e| DataError::DecodingError { value_type: t, err: e })
                                     .map(uuid)?;
         }
 
@@ -223,7 +228,37 @@ impl<'s> Value<'s> {
                 // Processed above to avoid verbose duplication of error transforms.
                 unreachable!()
             },
-        }.map_err(|e| DataError::EncodingError { value_type: t, err: e })
+        }.map_err(|e| DataError::DecodingError { value_type: t, err: e })
+    }
+
+    fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
+        match self {
+            &Value::Bool(ref v) => {
+                serialize(&(Type::Bool.to_tag(), *v), Infinite)
+            },
+            &Value::U64(ref v) => {
+                serialize(&(Type::U64.to_tag(), *v), Infinite)
+            },
+            &Value::I64(ref v) => {
+                serialize(&(Type::I64.to_tag(), *v), Infinite)
+            },
+            &Value::F64(ref v) => {
+                serialize(&(Type::F64.to_tag(), v.0), Infinite)
+            },
+            &Value::Instant(ref v) => {
+                serialize(&(Type::Instant.to_tag(), *v), Infinite)
+            },
+            &Value::Str(ref v) => {
+                serialize(&(Type::Str.to_tag(), v), Infinite)
+            },
+            &Value::Json(ref v) => {
+                serialize(&(Type::Json.to_tag(), v), Infinite)
+            },
+            &Value::Uuid(ref v) => {
+                // Processed above to avoid verbose duplication of error transforms.
+                serialize(&(Type::Uuid.to_tag(), v), Infinite)
+            },
+        }.map_err(DataError::EncodingError)
     }
 }
 
@@ -247,6 +282,12 @@ pub enum StoreError {
 
     #[fail(display = "lmdb error: {}", _0)]
     LmdbError(lmdb::Error),
+}
+
+impl From<DataError> for StoreError {
+    fn from(e: DataError) -> StoreError {
+        StoreError::DataError(e)
+    }
 }
 
 // TODO: integer key support.
@@ -314,6 +355,10 @@ impl Kista {
     pub fn read(&self) -> Result<RoTransaction, lmdb::Error> {
         self.env.begin_ro_txn()
     }
+
+    pub fn write(&self) -> Result<RwTransaction, lmdb::Error> {
+        self.env.begin_rw_txn()
+    }
 }
 
 fn read_transform<'x>(val: Result<&'x [u8], lmdb::Error>) -> Result<Option<Value<'x>>, StoreError> {
@@ -325,10 +370,36 @@ fn read_transform<'x>(val: Result<&'x [u8], lmdb::Error>) -> Result<Option<Value
     }
 }
 
+pub struct Writer<'env, K> where K: AsRef<[u8]> {
+    tx: RwTransaction<'env>,
+    db: Database,
+    phantom: ::std::marker::PhantomData<K>,
+}
+
 pub struct Reader<'env, K> where K: AsRef<[u8]> {
     tx: RoTransaction<'env>,
     db: Database,
     phantom: ::std::marker::PhantomData<K>,
+}
+
+impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
+    fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        let bytes = self.tx.get(self.db, &k.as_ref());
+        read_transform(bytes)
+    }
+
+    // TODO: flags
+    fn put<'s>(&'s mut self, k: K, v: &Value) -> Result<(), StoreError> {
+        // TODO: don't allocate twice.
+        let bytes = v.to_bytes()?;
+        self.tx
+            .put(self.db, &k.as_ref(), &bytes, WriteFlags::empty())
+            .map_err(StoreError::LmdbError)
+    }
+
+    fn commit(self) -> Result<(), StoreError> {
+        self.tx.commit().map_err(StoreError::LmdbError)
+    }
 }
 
 impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
@@ -348,6 +419,15 @@ impl<K> Store<K> where K: AsRef<[u8]> {
     fn read<'env>(&self, env: &'env Kista) -> Result<Reader<'env, K>, lmdb::Error> {
         let tx = env.read()?;
         Ok(Reader {
+            tx: tx,
+            db: self.db,
+            phantom: ::std::marker::PhantomData,
+        })
+    }
+
+    fn write<'env>(&mut self, env: &'env Kista) -> Result<Writer<'env, K>, lmdb::Error> {
+        let tx = env.write()?;
+        Ok(Writer {
             tx: tx,
             db: self.db,
             phantom: ::std::marker::PhantomData,
@@ -407,5 +487,57 @@ mod tests {
 
     #[test]
     fn test_round_trip() {
+        let root = TempDir::new("test_open").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Kista::new(root.path()).expect("new succeeded");
+
+        let mut sk: Store<&str> = k.create_or_open("sk").expect("opened");
+
+        {
+            let mut writer = sk.write(&k).expect("writer");
+            writer.put("foo", &Value::I64(1234)).expect("wrote");
+            writer.put("noo", &Value::F64(1234.0.into())).expect("wrote");
+            writer.put("bar", &Value::Bool(true)).expect("wrote");
+            writer.put("baz", &Value::Str("héllo, yöu")).expect("wrote");
+            assert_eq!(writer.get("foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(writer.get("noo").expect("read"), Some(Value::F64(1234.0.into())));
+            assert_eq!(writer.get("bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(writer.get("baz").expect("read"), Some(Value::Str("héllo, yöu")));
+
+            // Isolation. Reads won't return values.
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), None);
+            assert_eq!(sk.get(r, "bar").expect("read"), None);
+            assert_eq!(sk.get(r, "baz").expect("read"), None);
+        }
+
+        // Dropped: tx rollback. Reads will still return nothing.
+
+        {
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), None);
+            assert_eq!(sk.get(r, "bar").expect("read"), None);
+            assert_eq!(sk.get(r, "baz").expect("read"), None);
+        }
+
+        {
+            let mut writer = sk.write(&k).expect("writer");
+            writer.put("foo", &Value::I64(1234)).expect("wrote");
+            writer.put("bar", &Value::Bool(true)).expect("wrote");
+            writer.put("baz", &Value::Str("héllo, yöu")).expect("wrote");
+            assert_eq!(writer.get("foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(writer.get("bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(writer.get("baz").expect("read"), Some(Value::Str("héllo, yöu")));
+
+            writer.commit().expect("committed");
+        }
+
+        // Committed. Reads will succeed.
+        {
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
     }
 }
