@@ -11,5 +11,7 @@ lmdb = "0.7"
 ordered-float = "0.5"
 uuid = "0.5"
 
+serde = "1.0"
+
 [dev-dependencies]
 tempdir = "0.3"

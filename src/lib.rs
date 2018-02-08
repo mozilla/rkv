@@ -16,6 +16,7 @@
 extern crate bincode;
 extern crate lmdb;
 extern crate ordered_float;
+extern crate serde;               // So we can specify trait bounds. Everything else is bincode.
 extern crate uuid;
 
 use std::os::raw::{
@@ -43,10 +44,16 @@ pub use lmdb::{
 pub mod value;
 pub mod error;
 mod readwrite;
+mod integer;
 
 pub use error::{
     DataError,
     StoreError,
+};
+
+pub use integer::{
+    IntegerStore,
+    PrimitiveInt,
 };
 
 pub use value::{
@@ -109,6 +116,15 @@ impl Kista {
           K: AsRef<[u8]> {
         let flags = DatabaseFlags::empty();
         self.create_or_open_with_flags(name, flags)
+    }
+
+    pub fn create_or_open_integer<'s, T, K>(&self, name: T) -> Result<IntegerStore<K>, StoreError>
+    where T: Into<Option<&'s str>>,
+          K: PrimitiveInt {
+        let mut flags = DatabaseFlags::empty();
+        flags.toggle(lmdb::INTEGER_KEY);
+        let db = self.env.create_db(name.into(), flags).map_err(StoreError::LmdbError)?;
+        Ok(IntegerStore::new(db))
     }
 
     pub fn create_or_open_with_flags<'s, T, K>(&self, name: T, flags: DatabaseFlags) -> Result<Store<K>, StoreError>
