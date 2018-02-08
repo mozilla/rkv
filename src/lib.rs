@@ -28,9 +28,7 @@ use std::path::{
 };
 
 use lmdb::{
-    Database,
     Environment,
-    Transaction,
     RoTransaction,
     RwTransaction,
 };
@@ -44,13 +42,21 @@ pub use lmdb::{
 
 pub mod value;
 pub mod error;
+mod readwrite;
 
-use error::{
+pub use error::{
+    DataError,
     StoreError,
 };
 
-use value::{
+pub use value::{
     Value,
+};
+
+pub use readwrite::{
+    Reader,
+    Writer,
+    Store,
 };
 
 static DEFAULT_MAX_DBS: c_uint = 5;
@@ -109,10 +115,7 @@ impl Kista {
     where T: Into<Option<&'s str>>,
           K: AsRef<[u8]> {
         let db = self.env.create_db(name.into(), flags).map_err(StoreError::LmdbError)?;
-        Ok(Store {
-            db: db,
-            phantom: ::std::marker::PhantomData,
-        })
+        Ok(Store::new(db))
     }
 
     pub fn read(&self) -> Result<RoTransaction, lmdb::Error> {
@@ -123,90 +126,6 @@ impl Kista {
         self.env.begin_rw_txn()
     }
 }
-
-fn read_transform<'x>(val: Result<&'x [u8], lmdb::Error>) -> Result<Option<Value<'x>>, StoreError> {
-    match val {
-        Ok(bytes) => Value::from_tagged_slice(bytes).map(Some)
-                                                    .map_err(StoreError::DataError),
-        Err(lmdb::Error::NotFound) => Ok(None),
-        Err(e) => Err(StoreError::LmdbError(e)),
-    }
-}
-
-pub struct Writer<'env, K> where K: AsRef<[u8]> {
-    tx: RwTransaction<'env>,
-    db: Database,
-    phantom: ::std::marker::PhantomData<K>,
-}
-
-pub struct Reader<'env, K> where K: AsRef<[u8]> {
-    tx: RoTransaction<'env>,
-    db: Database,
-    phantom: ::std::marker::PhantomData<K>,
-}
-
-impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
-    fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        let bytes = self.tx.get(self.db, &k.as_ref());
-        read_transform(bytes)
-    }
-
-    // TODO: flags
-    fn put<'s>(&'s mut self, k: K, v: &Value) -> Result<(), StoreError> {
-        // TODO: don't allocate twice.
-        let bytes = v.to_bytes()?;
-        self.tx
-            .put(self.db, &k.as_ref(), &bytes, WriteFlags::empty())
-            .map_err(StoreError::LmdbError)
-    }
-
-    fn commit(self) -> Result<(), StoreError> {
-        self.tx.commit().map_err(StoreError::LmdbError)
-    }
-}
-
-impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
-    fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        let bytes = self.tx.get(self.db, &k.as_ref());
-        read_transform(bytes)
-    }
-
-    fn abort(self) {
-        self.tx.abort();
-    }
-}
-
-/// Wrapper around an `lmdb::Database`.
-pub struct Store<K> where K: AsRef<[u8]> {
-    db: Database,
-    phantom: ::std::marker::PhantomData<K>,
-}
-
-impl<K> Store<K> where K: AsRef<[u8]> {
-    fn read<'env>(&self, env: &'env Kista) -> Result<Reader<'env, K>, StoreError> {
-        let tx = env.read()?;
-        Ok(Reader {
-            tx: tx,
-            db: self.db,
-            phantom: ::std::marker::PhantomData,
-        })
-    }
-
-    fn write<'env>(&mut self, env: &'env Kista) -> Result<Writer<'env, K>, lmdb::Error> {
-        let tx = env.write()?;
-        Ok(Writer {
-            tx: tx,
-            db: self.db,
-            phantom: ::std::marker::PhantomData,
-        })
-    }
-
-    fn get<'env, 'tx>(&self, tx: &'tx RoTransaction<'env>, k: K) -> Result<Option<Value<'tx>>, StoreError> {
-        let bytes = tx.get(self.db, &k.as_ref());
-        read_transform(bytes)
-    }
-}
-
 
 #[cfg(test)]
 mod tests {

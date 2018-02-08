@@ -46,6 +46,12 @@ pub enum DataError {
     InvalidUuid,
 }
 
+impl From<Box<bincode::ErrorKind>> for DataError {
+    fn from(e: Box<bincode::ErrorKind>) -> DataError {
+        DataError::EncodingError(e)
+    }
+}
+
 #[derive(Debug, Fail)]
 pub enum StoreError {
     #[fail(display = "directory does not exist: {:?}", _0)]
