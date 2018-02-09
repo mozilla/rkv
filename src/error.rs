@@ -54,7 +54,7 @@ impl From<Box<bincode::ErrorKind>> for DataError {
 
 #[derive(Debug, Fail)]
 pub enum StoreError {
-    #[fail(display = "directory does not exist: {:?}", _0)]
+    #[fail(display = "directory does not exist or not a directory: {:?}", _0)]
     DirectoryDoesNotExistError(PathBuf),
 
     #[fail(display = "data error: {:?}", _0)]
