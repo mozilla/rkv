@@ -109,14 +109,22 @@ impl Kista {
           K: PrimitiveInt {
         let mut flags = DatabaseFlags::empty();
         flags.toggle(lmdb::INTEGER_KEY);
-        let db = self.env.create_db(name.into(), flags).map_err(StoreError::LmdbError)?;
+        let db = self.env.create_db(name.into(), flags)
+                         .map_err(|e| match e {
+                             lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+                             _ => e.into(),
+                         })?;
         Ok(IntegerStore::new(db))
     }
 
     pub fn create_or_open_with_flags<'s, T, K>(&self, name: T, flags: DatabaseFlags) -> Result<Store<K>, StoreError>
     where T: Into<Option<&'s str>>,
           K: AsRef<[u8]> {
-        let db = self.env.create_db(name.into(), flags).map_err(StoreError::LmdbError)?;
+        let db = self.env.create_db(name.into(), flags)
+                         .map_err(|e| match e {
+                             lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+                             _ => e.into(),
+                         })?;
         Ok(Store::new(db))
     }
 }

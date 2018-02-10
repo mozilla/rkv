@@ -65,6 +65,15 @@ pub enum StoreError {
 
     #[fail(display = "read transaction already exists in thread {:?}", _0)]
     ReadTransactionAlreadyExists(::std::thread::ThreadId),
+
+    #[fail(display = "attempted to open DB during transaction in thread {:?}", _0)]
+    OpenAttemptedDuringTransaction(::std::thread::ThreadId),
+}
+
+impl StoreError {
+    pub fn open_during_transaction() -> StoreError {
+        StoreError::OpenAttemptedDuringTransaction(::std::thread::current().id())
+    }
 }
 
 impl From<lmdb::Error> for StoreError {
