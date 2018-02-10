@@ -31,6 +31,7 @@ pub mod error;
 mod env;
 mod readwrite;
 mod integer;
+mod manager;
 
 pub use env::{
     Kista,
@@ -46,12 +47,16 @@ pub use integer::{
     PrimitiveInt,
 };
 
-pub use value::{
-    Value,
+pub use manager::{
+    Manager,
 };
 
 pub use readwrite::{
     Reader,
     Writer,
     Store,
+};
+
+pub use value::{
+    Value,
 };

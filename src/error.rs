@@ -54,6 +54,9 @@ impl From<Box<bincode::ErrorKind>> for DataError {
 
 #[derive(Debug, Fail)]
 pub enum StoreError {
+    #[fail(display = "I/O error: {:?}", _0)]
+    IoError(::std::io::Error),
+
     #[fail(display = "directory does not exist or not a directory: {:?}", _0)]
     DirectoryDoesNotExistError(PathBuf),
 
@@ -88,5 +91,11 @@ impl From<lmdb::Error> for StoreError {
 impl From<DataError> for StoreError {
     fn from(e: DataError) -> StoreError {
         StoreError::DataError(e)
+    }
+}
+
+impl From<::std::io::Error> for StoreError {
+    fn from(e: ::std::io::Error) -> StoreError {
+        StoreError::IoError(e)
     }
 }

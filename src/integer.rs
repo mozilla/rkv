@@ -141,7 +141,7 @@ impl<K> IntegerStore<K> where K: PrimitiveInt {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     extern crate tempdir;
 
     use self::tempdir::TempDir;
