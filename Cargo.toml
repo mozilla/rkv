@@ -1,5 +1,5 @@
 [package]
-name = "kista"
+name = "rkv"
 version = "0.1.0"
 authors = ["Richard Newman <rnewman@twinql.com>"]
 

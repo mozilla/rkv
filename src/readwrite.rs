@@ -33,7 +33,7 @@ use value::{
     Value,
 };
 
-use ::Kista;
+use ::Rkv;
 
 fn read_transform<'x>(val: Result<&'x [u8], lmdb::Error>) -> Result<Option<Value<'x>>, StoreError> {
     match val {
@@ -105,7 +105,7 @@ impl<K> Store<K> where K: AsRef<[u8]> {
         }
     }
 
-    pub fn read<'env>(&self, env: &'env Kista) -> Result<Reader<'env, K>, StoreError> {
+    pub fn read<'env>(&self, env: &'env Rkv) -> Result<Reader<'env, K>, StoreError> {
         let tx = env.read()?;
         Ok(Reader {
             tx: tx,
@@ -114,7 +114,7 @@ impl<K> Store<K> where K: AsRef<[u8]> {
         })
     }
 
-    pub fn write<'env>(&mut self, env: &'env Kista) -> Result<Writer<'env, K>, lmdb::Error> {
+    pub fn write<'env>(&mut self, env: &'env Rkv) -> Result<Writer<'env, K>, lmdb::Error> {
         let tx = env.write()?;
         Ok(Writer {
             tx: tx,

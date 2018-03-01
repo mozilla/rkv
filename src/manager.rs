@@ -31,12 +31,12 @@ use error::{
     StoreError,
 };
 
-use ::Kista;
+use ::Rkv;
 
 /// A process is only permitted to have one open handle to each database. This manager
 /// exists to enforce that constraint: don't open databases directly.
 pub struct Manager {
-    stores: Mutex<BTreeMap<PathBuf, Arc<RwLock<Kista>>>>,
+    stores: Mutex<BTreeMap<PathBuf, Arc<RwLock<Rkv>>>>,
 }
 
 impl Manager {
@@ -47,15 +47,15 @@ impl Manager {
     }
 
     /// Return the open store at `path`, returning `None` if it has not already been opened.
-    pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<RwLock<Kista>>>, ::std::io::Error>
+    pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<RwLock<Rkv>>>, ::std::io::Error>
     where P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
         Ok(self.stores.lock().unwrap().get(&canonical).cloned())
     }
 
     /// Return the open store at `path`, or create it by calling `f`.
-    pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<Arc<RwLock<Kista>>, StoreError>
-    where F: FnOnce(&Path) -> Result<Kista, StoreError>,
+    pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
+    where F: FnOnce(&Path) -> Result<Rkv, StoreError>,
           P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
         let mut map = self.stores.lock().unwrap();
@@ -78,7 +78,7 @@ mod tests {
 
     use super::*;
 
-    /// Test that the manager will return the same Kista instance each time for each path.
+    /// Test that the manager will return the same Rkv instance each time for each path.
     #[test]
     fn test_same() {
         let root = TempDir::new("test_same").expect("tempdir");
@@ -89,7 +89,7 @@ mod tests {
         let p = root.path();
         assert!(manager.get(p).expect("success").is_none());
 
-        let created_arc = manager.get_or_create(p, Kista::new).expect("created");
+        let created_arc = manager.get_or_create(p, Rkv::new).expect("created");
         let fetched_arc = manager.get(p).expect("success").expect("existed");
         assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
     }

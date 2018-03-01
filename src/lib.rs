@@ -34,7 +34,7 @@ mod integer;
 mod manager;
 
 pub use env::{
-    Kista,
+    Rkv,
 };
 
 pub use error::{

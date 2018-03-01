@@ -44,24 +44,24 @@ pub static DEFAULT_MAX_DBS: c_uint = 5;
 
 /// Wrapper around an `lmdb::Environment`.
 #[derive(Debug)]
-pub struct Kista {
+pub struct Rkv {
     path: PathBuf,
     env: Environment,
 }
 
 /// Static methods.
-impl Kista {
+impl Rkv {
     pub fn environment_builder() -> EnvironmentBuilder {
         Environment::new()
     }
 
-    /// Return a new Kista environment from the provided builder.
-    pub fn from_env(env: EnvironmentBuilder, path: &Path) -> Result<Kista, StoreError> {
+    /// Return a new Rkv environment from the provided builder.
+    pub fn from_env(env: EnvironmentBuilder, path: &Path) -> Result<Rkv, StoreError> {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
         }
 
-        Ok(Kista {
+        Ok(Rkv {
             path: path.into(),
             env: env.open(path)
                     .map_err(|e|
@@ -72,13 +72,13 @@ impl Kista {
         })
     }
 
-    /// Return a new Kista environment that supports up to `DEFAULT_MAX_DBS` open databases.
-    pub fn new(path: &Path) -> Result<Kista, StoreError> {
-        Kista::with_capacity(path, DEFAULT_MAX_DBS)
+    /// Return a new Rkv environment that supports up to `DEFAULT_MAX_DBS` open databases.
+    pub fn new(path: &Path) -> Result<Rkv, StoreError> {
+        Rkv::with_capacity(path, DEFAULT_MAX_DBS)
     }
 
-    /// Return a new Kista environment that supports the specified number of open databases.
-    pub fn with_capacity(path: &Path, max_dbs: c_uint) -> Result<Kista, StoreError> {
+    /// Return a new Rkv environment that supports the specified number of open databases.
+    pub fn with_capacity(path: &Path, max_dbs: c_uint) -> Result<Rkv, StoreError> {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
         }
@@ -87,12 +87,12 @@ impl Kista {
         builder.set_max_dbs(max_dbs);
 
         // Future: set flags, maximum size, etc. here if necessary.
-        Kista::from_env(builder, path)
+        Rkv::from_env(builder, path)
     }
 }
 
 /// Store creation methods.
-impl Kista {
+impl Rkv {
     pub fn create_or_open_default(&self) -> Result<Store<&str>, StoreError> {
         self.create_or_open(None)
     }
@@ -130,7 +130,7 @@ impl Kista {
 }
 
 /// Read and write accessors.
-impl Kista {
+impl Rkv {
     pub fn read(&self) -> Result<RoTransaction, lmdb::Error> {
         self.env.begin_ro_txn()
     }
@@ -160,7 +160,7 @@ mod tests {
         assert!(!nope.exists());
 
         let pb = nope.to_path_buf();
-        match Kista::new(nope.as_path()).err() {
+        match Rkv::new(nope.as_path()).err() {
             Some(StoreError::DirectoryDoesNotExistError(p)) => {
                 assert_eq!(pb, p);
             },
@@ -175,7 +175,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
-        let k = Kista::new(root.path()).expect("new succeeded");
+        let k = Rkv::new(root.path()).expect("new succeeded");
         let _ = k.create_or_open_default().expect("created default");
 
         let yyy: Store<&str> = k.create_or_open("yyy").expect("opened");
@@ -189,7 +189,7 @@ mod tests {
     fn test_round_trip_and_transactions() {
         let root = TempDir::new("test_round_trip_and_transactions").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Kista::new(root.path()).expect("new succeeded");
+        let k = Rkv::new(root.path()).expect("new succeeded");
 
         let mut sk: Store<&str> = k.create_or_open("sk").expect("opened");
 
@@ -245,7 +245,7 @@ mod tests {
     fn test_concurrent_read_transactions_prohibited() {
         let root = TempDir::new("test_concurrent_reads_prohibited").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Kista::new(root.path()).expect("new succeeded");
+        let k = Rkv::new(root.path()).expect("new succeeded");
         let s: Store<&str> = k.create_or_open("s").expect("opened");
 
         let _first = s.read(&k).expect("reader");
@@ -265,7 +265,7 @@ mod tests {
     fn test_isolation() {
         let root = TempDir::new("test_isolation").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Kista::new(root.path()).expect("new succeeded");
+        let k = Rkv::new(root.path()).expect("new succeeded");
         let mut s: Store<&str> = k.create_or_open("s").expect("opened");
 
         // Add one field.

@@ -41,7 +41,7 @@ use readwrite::{
     Writer,
 };
 
-use ::Kista;
+use ::Rkv;
 
 
 pub trait EncodableKey {
@@ -122,13 +122,13 @@ impl<K> IntegerStore<K> where K: PrimitiveInt {
         }
     }
 
-    pub fn read<'env>(&self, env: &'env Kista) -> Result<IntegerReader<'env, K>, StoreError> {
+    pub fn read<'env>(&self, env: &'env Rkv) -> Result<IntegerReader<'env, K>, StoreError> {
         Ok(IntegerReader {
             inner: self.inner.read(env)?,
         })
     }
 
-    pub fn write<'env>(&mut self, env: &'env Kista) -> Result<IntegerWriter<'env, K>, StoreError> {
+    pub fn write<'env>(&mut self, env: &'env Rkv) -> Result<IntegerWriter<'env, K>, StoreError> {
         Ok(IntegerWriter {
             inner: self.inner.write(env)?,
         })
@@ -153,7 +153,7 @@ mod tests {
     fn test_integer_keys() {
         let root = TempDir::new("test_integer_keys").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Kista::new(root.path()).expect("new succeeded");
+        let k = Rkv::new(root.path()).expect("new succeeded");
         let mut s: IntegerStore<u32> = k.create_or_open_integer("s").expect("open");
 
         let mut writer = s.write(&k).expect("writer");
