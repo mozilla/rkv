@@ -1,21 +1,31 @@
 [package]
 name = "rkv"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Richard Newman <rnewman@twinql.com>"]
 description = "A humane key-value store built on LMDB."
 license = "Apache-2.0"
 homepage = "https://github.com/mozilla-prototypes/rkv"
 repository = "https://github.com/mozilla-prototypes/rkv"
 
+[features]
+default = []
+backtrace = ["failure/backtrace", "failure/std"]
+
 [dependencies]
 arrayref = "0.3"
 bincode = "0.9"
-failure = "0.1"
 lmdb = "0.7"
 ordered-float = "0.5"
 uuid = "0.5"
 
 serde = "1.0"
+
+# Get rid of failure's dependency on backtrace. Eventually
+# backtrace will move into Rust core, but we don't need it here.
+[dependencies.failure]
+version = "0.1"
+default_features = false
+features = ["derive"]
 
 [dev-dependencies]
 tempdir = "0.3"

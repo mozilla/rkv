@@ -13,3 +13,8 @@ It aims to achieve the following:
 - Correctly restrict to one handle per process via a 'manager'.
 - Use Rust's type system to make single-typed key stores (including LMDB's own integer-keyed stores) safe and ergonomic.
 - Encode and decode values via `bincode`/`serde` and type tags, achieving platform-independent storage and input/output flexibility.
+
+## Feature choices
+
+If you specify the `backtrace` feature, backtraces will be enabled in `failure`
+errors. This feature is disabled by default.
