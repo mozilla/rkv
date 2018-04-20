@@ -191,7 +191,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
-        let mut sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
 
         {
             let mut writer = sk.write(&k).expect("writer");
@@ -266,7 +266,7 @@ mod tests {
         let root = TempDir::new("test_isolation").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut s: Store<&str> = k.create_or_open("s").expect("opened");
+        let s: Store<&str> = k.create_or_open("s").expect("opened");
 
         // Add one field.
         {

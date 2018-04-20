@@ -114,7 +114,7 @@ impl<K> Store<K> where K: AsRef<[u8]> {
         })
     }
 
-    pub fn write<'env>(&mut self, env: &'env Rkv) -> Result<Writer<'env, K>, lmdb::Error> {
+    pub fn write<'env>(&self, env: &'env Rkv) -> Result<Writer<'env, K>, lmdb::Error> {
         let tx = env.write()?;
         Ok(Writer {
             tx: tx,
