@@ -241,6 +241,17 @@ mod tests {
         }
     }
 
+    fn get_existing_foo(writer: &Writer<&str>) -> Option<i64> {
+        match writer.get("foo").expect("read") {
+            Some(Value::I64(num)) => Some(num),
+            _ => None,
+        }
+    }
+
+    fn set_foo(writer: &mut Writer<&str>, val: i64) -> Result<(), StoreError> {
+        writer.put("foo", &Value::I64(val))
+    }
+
     #[test]
     fn test_read_before_write() {
         let root = TempDir::new("test_read_before_write").expect("tempdir");
@@ -249,10 +260,12 @@ mod tests {
         let sk: Store<&str> = k.create_or_open("sk").expect("opened");
 
         let mut writer = sk.write(&k).expect("writer");
-        let _existing_value = writer.get("foo").expect("read");
-        // insert business logic here
-        writer.put("foo", &Value::I64(1234)).expect("wrote");
-        writer.commit().expect("committed");
+        let mut existing = get_existing_foo(&writer).unwrap_or(99);
+        existing += 1;
+        set_foo(&mut writer, existing).expect("success");
+        let updated = get_existing_foo(&writer).unwrap_or(99);
+        assert_eq!(updated, 100);
+        writer.commit().expect("commit");
     }
 
     #[test]
