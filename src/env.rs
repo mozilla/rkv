@@ -269,6 +269,23 @@ mod tests {
     }
 
     #[test]
+    fn test_read_before_write_str() {
+        let root = TempDir::new("test_read_before_write_str").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+
+        let mut writer = sk.write(&k).expect("writer");
+        let mut existing = match writer.get("foo").expect("read") {
+            Some(Value::Str(val)) => val,
+            _ => "",
+        }.to_string();
+        existing.push('…');
+        writer.put("foo", &Value::Str(&existing)).expect("write");
+        writer.commit().expect("commit");
+    }
+
+    #[test]
     fn test_concurrent_read_transactions_prohibited() {
         let root = TempDir::new("test_concurrent_reads_prohibited").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
