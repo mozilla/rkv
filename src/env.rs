@@ -239,6 +239,51 @@ mod tests {
             assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
             assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
         }
+
+        {
+            let mut writer = sk.write(&k).expect("writer");
+            writer.delete("foo").expect("deleted");
+            writer.delete("bar").expect("deleted");
+            writer.delete("baz").expect("deleted");
+            assert_eq!(writer.get("foo").expect("read"), None);
+            assert_eq!(writer.get("bar").expect("read"), None);
+            assert_eq!(writer.get("baz").expect("read"), None);
+
+            // Isolation. Reads still return values.
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+
+        // Dropped: tx rollback. Reads will still return values.
+
+        {
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+
+        {
+            let mut writer = sk.write(&k).expect("writer");
+            writer.delete("foo").expect("deleted");
+            writer.delete("bar").expect("deleted");
+            writer.delete("baz").expect("deleted");
+            assert_eq!(writer.get("foo").expect("read"), None);
+            assert_eq!(writer.get("bar").expect("read"), None);
+            assert_eq!(writer.get("baz").expect("read"), None);
+
+            writer.commit().expect("committed");
+        }
+
+        // Committed. Reads will succeed.
+        {
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), None);
+            assert_eq!(sk.get(r, "bar").expect("read"), None);
+            assert_eq!(sk.get(r, "baz").expect("read"), None);
+        }
     }
 
     #[test]

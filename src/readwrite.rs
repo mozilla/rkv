@@ -71,6 +71,13 @@ impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
             .map_err(StoreError::LmdbError)
     }
 
+    // TODO: duplicate data
+    pub fn delete<'s>(&'s mut self, k: K) -> Result<(), StoreError> {
+        self.tx
+            .del(self.db, &k.as_ref(), None)
+            .map_err(StoreError::LmdbError)
+    }
+
     pub fn commit(self) -> Result<(), StoreError> {
         self.tx.commit().map_err(StoreError::LmdbError)
     }
