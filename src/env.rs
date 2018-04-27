@@ -352,4 +352,18 @@ mod tests {
         let reader = s.read(&k).expect("reader");
         assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(999)));
     }
+
+    #[test]
+    #[should_panic(expected = "not yet implemented")]
+    fn test_delete_value() {
+        let root = TempDir::new("test_delete_value").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open_with_flags("sk", lmdb::DUP_SORT).expect("opened");
+
+        let mut writer = sk.write(&k).expect("writer");
+        writer.put("foo", &Value::I64(1234)).expect("wrote");
+        writer.put("foo", &Value::I64(1235)).expect("wrote");
+        writer.delete_value("foo", &Value::I64(1234)).expect("deleted");
+    }
 }
