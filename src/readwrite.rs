@@ -71,6 +71,21 @@ impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
             .map_err(StoreError::LmdbError)
     }
 
+    pub fn delete<'s>(&'s mut self, k: K) -> Result<(), StoreError> {
+        self.tx
+            .del(self.db, &k.as_ref(), None)
+            .map_err(StoreError::LmdbError)
+    }
+
+    pub fn delete_value<'s>(&'s mut self, _k: K, _v: &Value) -> Result<(), StoreError> {
+        // Even better would be to make this a method only on a dupsort store —
+        // it would need a little bit of reorganizing of types and traits,
+        // but when I see "If the database does not support sorted duplicate
+        // data items (MDB_DUPSORT) the data parameter is ignored" in the docs,
+        // I see a footgun that we can avoid by using the type system.
+        unimplemented!();
+    }
+
     pub fn commit(self) -> Result<(), StoreError> {
         self.tx.commit().map_err(StoreError::LmdbError)
     }

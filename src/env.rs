@@ -239,6 +239,51 @@ mod tests {
             assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
             assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
         }
+
+        {
+            let mut writer = sk.write(&k).expect("writer");
+            writer.delete("foo").expect("deleted");
+            writer.delete("bar").expect("deleted");
+            writer.delete("baz").expect("deleted");
+            assert_eq!(writer.get("foo").expect("read"), None);
+            assert_eq!(writer.get("bar").expect("read"), None);
+            assert_eq!(writer.get("baz").expect("read"), None);
+
+            // Isolation. Reads still return values.
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+
+        // Dropped: tx rollback. Reads will still return values.
+
+        {
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(r, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(r, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+
+        {
+            let mut writer = sk.write(&k).expect("writer");
+            writer.delete("foo").expect("deleted");
+            writer.delete("bar").expect("deleted");
+            writer.delete("baz").expect("deleted");
+            assert_eq!(writer.get("foo").expect("read"), None);
+            assert_eq!(writer.get("bar").expect("read"), None);
+            assert_eq!(writer.get("baz").expect("read"), None);
+
+            writer.commit().expect("committed");
+        }
+
+        // Committed. Reads will succeed but return None to indicate a missing value.
+        {
+            let r = &k.read().unwrap();
+            assert_eq!(sk.get(r, "foo").expect("read"), None);
+            assert_eq!(sk.get(r, "bar").expect("read"), None);
+            assert_eq!(sk.get(r, "baz").expect("read"), None);
+        }
     }
 
     #[test]
@@ -306,5 +351,19 @@ mod tests {
         reader.abort();
         let reader = s.read(&k).expect("reader");
         assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(999)));
+    }
+
+    #[test]
+    #[should_panic(expected = "not yet implemented")]
+    fn test_delete_value() {
+        let root = TempDir::new("test_delete_value").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open_with_flags("sk", lmdb::DUP_SORT).expect("opened");
+
+        let mut writer = sk.write(&k).expect("writer");
+        writer.put("foo", &Value::I64(1234)).expect("wrote");
+        writer.put("foo", &Value::I64(1235)).expect("wrote");
+        writer.delete_value("foo", &Value::I64(1234)).expect("deleted");
     }
 }
