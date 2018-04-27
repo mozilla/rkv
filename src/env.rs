@@ -277,7 +277,7 @@ mod tests {
             writer.commit().expect("committed");
         }
 
-        // Committed. Reads will succeed.
+        // Committed. Reads will succeed but return None to indicate a missing value.
         {
             let r = &k.read().unwrap();
             assert_eq!(sk.get(r, "foo").expect("read"), None);
