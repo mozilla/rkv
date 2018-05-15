@@ -40,7 +40,7 @@ pub struct Manager {
 }
 
 impl Manager {
-    fn new() -> Manager {
+    pub fn new() -> Manager {
         Manager {
             stores: Mutex::new(Default::default()),
         }
