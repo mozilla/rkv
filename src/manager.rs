@@ -16,6 +16,10 @@ use std::collections::btree_map::{
     Entry,
 };
 
+use std::os::raw::{
+    c_uint,
+};
+
 use std::path::{
     Path,
     PathBuf,
@@ -71,6 +75,22 @@ impl Manager {
             }
         })
     }
+
+    /// Return the open store at `path` with capacity `capacity`,
+    /// or create it by calling `f`.
+    pub fn get_or_create_with_capacity<'p, F, P>(&mut self, path: P, capacity: c_uint, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
+    where F: FnOnce(&Path, c_uint) -> Result<Rkv, StoreError>,
+          P: Into<&'p Path> {
+        let canonical = path.into().canonicalize()?;
+        let mut map = self.stores.lock().unwrap();
+        Ok(match map.entry(canonical) {
+            Entry::Occupied(e) => e.get().clone(),
+            Entry::Vacant(e) => {
+                let k = Arc::new(RwLock::new(f(e.key().as_path(), capacity)?));
+                e.insert(k).clone()
+            }
+        })
+    }
 }
 
 #[cfg(test)]
@@ -94,6 +114,22 @@ mod tests {
         assert!(manager.get(p).expect("success").is_none());
 
         let created_arc = manager.get_or_create(p, Rkv::new).expect("created");
+        let fetched_arc = manager.get(p).expect("success").expect("existed");
+        assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
+    }
+
+    /// Test that the manager will return the same Rkv instance each time for each path.
+    #[test]
+    fn test_same_with_capacity() {
+        let root = TempDir::new("test_same").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let mut manager = Manager::new();
+
+        let p = root.path();
+        assert!(manager.get(p).expect("success").is_none());
+
+        let created_arc = manager.get_or_create_with_capacity(p, 10, Rkv::with_capacity).expect("created");
         let fetched_arc = manager.get(p).expect("success").expect("existed");
         assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
     }
