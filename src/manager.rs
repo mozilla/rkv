@@ -82,8 +82,7 @@ impl Manager {
     where F: FnOnce(&Path, c_uint) -> Result<Rkv, StoreError>,
           P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
-        let mut map = self.stores.lock().unwrap();
-        Ok(match map.entry(canonical) {
+        Ok(match self.stores.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
                 let k = Arc::new(RwLock::new(f(e.key().as_path(), capacity)?));
