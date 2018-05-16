@@ -23,7 +23,6 @@ use std::path::{
 
 use std::sync::{
     Arc,
-    Mutex,
     RwLock,
 };
 
@@ -35,14 +34,20 @@ use ::Rkv;
 
 /// A process is only permitted to have one open handle to each database. This manager
 /// exists to enforce that constraint: don't open databases directly.
+lazy_static! {
+    pub static ref MANAGER: RwLock<Manager> = {
+        RwLock::new(Manager::new())
+    };
+}
+
 pub struct Manager {
-    stores: Mutex<BTreeMap<PathBuf, Arc<RwLock<Rkv>>>>,
+    stores: BTreeMap<PathBuf, Arc<RwLock<Rkv>>>,
 }
 
 impl Manager {
-    pub fn new() -> Manager {
+    fn new() -> Manager {
         Manager {
-            stores: Mutex::new(Default::default()),
+            stores: Default::default(),
         }
     }
 
@@ -50,7 +55,7 @@ impl Manager {
     pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<RwLock<Rkv>>>, ::std::io::Error>
     where P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
-        Ok(self.stores.lock().unwrap().get(&canonical).cloned())
+        Ok(self.stores.get(&canonical).cloned())
     }
 
     /// Return the open store at `path`, or create it by calling `f`.
@@ -58,8 +63,7 @@ impl Manager {
     where F: FnOnce(&Path) -> Result<Rkv, StoreError>,
           P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
-        let mut map = self.stores.lock().unwrap();
-        Ok(match map.entry(canonical) {
+        Ok(match self.stores.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
                 let k = Arc::new(RwLock::new(f(e.key().as_path())?));

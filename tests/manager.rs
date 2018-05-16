@@ -2,7 +2,7 @@ extern crate rkv;
 extern crate tempdir;
 
 use rkv::{
-	Manager,
+	MANAGER,
 	Rkv,
 };
 
@@ -16,17 +16,15 @@ use std::sync::{
 
 #[test]
 // Identical to the same-named unit test, but this one confirms that it works
-// via public Manager APIs.
+// via the public MANAGER singleton.
 fn test_same() {
-    let root = TempDir::new("test_same").expect("tempdir");
+    let root = TempDir::new("test_same_singleton").expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let mut manager = Manager::new();
-
     let p = root.path();
-    assert!(manager.get(p).expect("success").is_none());
+    assert!(MANAGER.read().unwrap().get(p).expect("success").is_none());
 
-    let created_arc = manager.get_or_create(p, Rkv::new).expect("created");
-    let fetched_arc = manager.get(p).expect("success").expect("existed");
+    let created_arc = MANAGER.write().unwrap().get_or_create(p, Rkv::new).expect("created");
+    let fetched_arc = MANAGER.read().unwrap().get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }
