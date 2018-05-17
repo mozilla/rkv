@@ -287,6 +287,57 @@ mod tests {
     }
 
     #[test]
+    fn test_read_before_write_num() {
+        let root = TempDir::new("test_read_before_write_num").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+
+        // Test reading a number, modifying it, and then writing it back.
+        // We have to be done with the Value::I64 before calling Writer::put,
+        // as the Value::I64 borrows an immutable reference to the Writer.
+        // So we extract and copy its primitive value.
+
+        fn get_existing_foo(writer: &Writer<&str>) -> Option<i64> {
+            match writer.get("foo").expect("read") {
+                Some(Value::I64(val)) => Some(val),
+                _ => None,
+            }
+        }
+
+        let mut writer = sk.write(&k).expect("writer");
+        let mut existing = get_existing_foo(&writer).unwrap_or(99);
+        existing += 1;
+        writer.put("foo", &Value::I64(existing)).expect("success");
+
+        let updated = get_existing_foo(&writer).unwrap_or(99);
+        assert_eq!(updated, 100);
+        writer.commit().expect("commit");
+    }
+
+    #[test]
+    fn test_read_before_write_str() {
+        let root = TempDir::new("test_read_before_write_str").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+
+        // Test reading a string, modifying it, and then writing it back.
+        // We have to be done with the Value::Str before calling Writer::put,
+        // as the Value::Str (and its underlying &str) borrows an immutable
+        // reference to the Writer.  So we copy it to a String.
+
+        let mut writer = sk.write(&k).expect("writer");
+        let mut existing = match writer.get("foo").expect("read") {
+            Some(Value::Str(val)) => val,
+            _ => "",
+        }.to_string();
+        existing.push('…');
+        writer.put("foo", &Value::Str(&existing)).expect("write");
+        writer.commit().expect("commit");
+    }
+
+    #[test]
     fn test_concurrent_read_transactions_prohibited() {
         let root = TempDir::new("test_concurrent_reads_prohibited").expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
