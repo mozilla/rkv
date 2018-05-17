@@ -12,6 +12,7 @@
 
 #[macro_use] extern crate arrayref;
 #[macro_use] extern crate failure;
+#[macro_use] extern crate lazy_static;
 
 extern crate bincode;
 extern crate lmdb;
@@ -48,7 +49,7 @@ pub use integer::{
 };
 
 pub use manager::{
-    Manager,
+    Manager
 };
 
 pub use readwrite::{
