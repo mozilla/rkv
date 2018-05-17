@@ -12,7 +12,7 @@ extern crate rkv;
 extern crate tempdir;
 
 use rkv::{
-	MANAGER,
+	Manager,
 	Rkv,
 };
 
@@ -32,9 +32,9 @@ fn test_same() {
     fs::create_dir_all(root.path()).expect("dir created");
 
     let p = root.path();
-    assert!(MANAGER.read().unwrap().get(p).expect("success").is_none());
+    assert!(Manager::singleton().read().unwrap().get(p).expect("success").is_none());
 
-    let created_arc = MANAGER.write().unwrap().get_or_create(p, Rkv::new).expect("created");
-    let fetched_arc = MANAGER.read().unwrap().get(p).expect("success").expect("existed");
+    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).expect("created");
+    let fetched_arc = Manager::singleton().read().unwrap().get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }

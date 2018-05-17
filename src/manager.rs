@@ -39,7 +39,7 @@ use ::Rkv;
 /// A process is only permitted to have one open handle to each database. This manager
 /// exists to enforce that constraint: don't open databases directly.
 lazy_static! {
-    pub static ref MANAGER: RwLock<Manager> = {
+    static ref MANAGER: RwLock<Manager> = {
         RwLock::new(Manager::new())
     };
 }
@@ -53,6 +53,10 @@ impl Manager {
         Manager {
             stores: Default::default(),
         }
+    }
+
+    pub fn singleton() -> &'static RwLock<Manager> {
+        &*MANAGER
     }
 
     /// Return the open store at `path`, returning `None` if it has not already been opened.

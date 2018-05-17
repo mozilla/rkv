@@ -49,7 +49,7 @@ pub use integer::{
 };
 
 pub use manager::{
-    MANAGER,
+    Manager
 };
 
 pub use readwrite::{
