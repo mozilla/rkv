@@ -38,6 +38,7 @@ pub enum Type {
     Uuid    = 6,
     Str     = 7,
     Json    = 8,
+    Blob    = 9,
 }
 
 /// We use manual tagging, because <https://github.com/serde-rs/serde/issues/610>.
@@ -60,6 +61,7 @@ impl Type {
             6 => Some(Type::Uuid),
             7 => Some(Type::Str),
             8 => Some(Type::Json),
+            9 => Some(Type::Blob),
             _ => None,
         }
     }
@@ -76,6 +78,7 @@ impl ::std::fmt::Display for Type {
             Type::Uuid    => "uuid",
             Type::Str     => "str",
             Type::Json    => "json",
+            Type::Blob    => "blob",
         })
     }
 }
@@ -90,6 +93,7 @@ pub enum Value<'s> {
     Uuid(&'s UuidBytes),
     Str(&'s str),
     Json(&'s str),
+    Blob(&'s [u8]),
 }
 
 // TODO: implement conversion between the two types of `Value` wrapper.
@@ -103,6 +107,7 @@ enum OwnedValue {
     Uuid(Uuid),
     Str(String),
     Json(String),    // TODO
+    Blob(Vec<u8>),
 }
 
 fn uuid<'s>(bytes: &'s [u8]) -> Result<Value<'s>, DataError> {
@@ -157,6 +162,9 @@ impl<'s> Value<'s> {
             Type::Json => {
                 deserialize(data).map(Value::Json)
             },
+            Type::Blob => {
+                deserialize(data).map(Value::Blob)
+            },
             Type::Uuid => {
                 // Processed above to avoid verbose duplication of error transforms.
                 unreachable!()
@@ -186,6 +194,9 @@ impl<'s> Value<'s> {
             },
             &Value::Json(ref v) => {
                 serialize(&(Type::Json.to_tag(), v), Infinite)
+            },
+            &Value::Blob(ref v) => {
+                serialize(&(Type::Blob.to_tag(), v), Infinite)
             },
             &Value::Uuid(ref v) => {
                 // Processed above to avoid verbose duplication of error transforms.

@@ -143,7 +143,9 @@ impl Rkv {
 #[cfg(test)]
 mod tests {
     extern crate tempdir;
+    extern crate byteorder;
 
+    use self::byteorder::{ByteOrder, LittleEndian};
     use self::tempdir::TempDir;
     use std::fs;
 
@@ -402,6 +404,43 @@ mod tests {
         reader.abort();
         let reader = s.read(&k).expect("reader");
         assert_eq!(reader.get("foo").expect("read"), Some(Value::I64(999)));
+    }
+
+    #[test]
+    fn test_blob() {
+        let root = TempDir::new("test_round_trip_blob").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let mut writer = sk.write(&k).expect("writer");
+
+        assert_eq!(writer.get("foo").expect("read"), None);
+        writer.put("foo", &Value::Blob(&[1, 2, 3, 4])).expect("wrote");
+        assert_eq!(writer.get("foo").expect("read"), Some(Value::Blob(&[1, 2, 3, 4])));
+
+        fn u16_to_u8(src: &[u16]) -> Vec<u8> {
+            let mut dst = vec![0; 2 * src.len()];
+            LittleEndian::write_u16_into(src, &mut dst);
+            dst
+        }
+
+        fn u8_to_u16(src: &[u8]) -> Vec<u16> {
+            let mut dst = vec![0; src.len() / 2];
+            LittleEndian::read_u16_into(src, &mut dst);
+            dst
+        }
+
+        // When storing UTF-16 strings as blobs, we'll need to convert
+        // their [u16] backing storage to [u8].  Test that converting, writing,
+        // reading, and converting back works as expected.
+        let u16_array = [1000, 10000, 54321, 65535];
+        assert_eq!(writer.get("bar").expect("read"), None);
+        writer.put("bar", &Value::Blob(&u16_to_u8(&u16_array))).expect("wrote");
+        let u8_array = match writer.get("bar").expect("read") {
+            Some(Value::Blob(val)) => val,
+            _ => &[],
+        };
+        assert_eq!(u8_to_u16(u8_array), u16_array);
     }
 
     #[test]
