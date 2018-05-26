@@ -15,10 +15,13 @@ use std::marker::{
 };
 
 use lmdb::{
+    Cursor,
     Database,
-    Transaction,
+    Iter as LmdbIter,
+    RoCursor,
     RoTransaction,
     RwTransaction,
+    Transaction,
 };
 
 use lmdb::{
@@ -54,6 +57,11 @@ pub struct Reader<'env, K> where K: AsRef<[u8]> {
     tx: RoTransaction<'env>,
     db: Database,
     phantom: PhantomData<K>,
+}
+
+pub struct Iter<'env> {
+    iter: LmdbIter<'env>,
+    cursor: RoCursor<'env>,
 }
 
 impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
@@ -103,6 +111,35 @@ impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
 
     pub fn abort(self) {
         self.tx.abort();
+    }
+
+    pub fn iter<'s>(&'s self) -> Result<Iter<'s>, StoreError> {
+        let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+        let iter = cursor.iter();
+        Ok(Iter {
+            iter: iter,
+            cursor: cursor,
+        })
+    }
+
+    pub fn iter_from<'s>(&'s self, k: K) -> Result<Iter<'s>, StoreError> {
+        let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+        let iter = cursor.iter_from(k);
+        Ok(Iter {
+            iter: iter,
+            cursor: cursor,
+        })
+    }
+}
+
+impl<'env> Iterator for Iter<'env> {
+    type Item = (&'env [u8], Result<Option<Value<'env>>, StoreError>);
+
+    fn next(&mut self) -> Option<(&'env [u8], Result<Option<Value<'env>>, StoreError>)> {
+        match self.iter.next() {
+            None => None,
+            Some((key, bytes)) => Some((key, read_transform(Ok(bytes)))),
+        }
     }
 }
 

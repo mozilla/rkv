@@ -147,7 +147,7 @@ mod tests {
 
     use self::byteorder::{ByteOrder, LittleEndian};
     use self::tempdir::TempDir;
-    use std::fs;
+    use std::{fs, str};
 
     use super::*;
     use ::*;
@@ -455,5 +455,85 @@ mod tests {
         writer.put("foo", &Value::I64(1234)).expect("wrote");
         writer.put("foo", &Value::I64(1235)).expect("wrote");
         writer.delete_value("foo", &Value::I64(1234)).expect("deleted");
+    }
+
+    #[test]
+    fn test_iter() {
+        let root = TempDir::new("test_iter").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+
+        // An iterator over an empty store returns no values.
+        {
+            let reader = sk.read(&k).unwrap();
+            let mut iter = reader.iter().unwrap();
+            assert!(iter.next().is_none());
+        }
+
+        let mut writer = sk.write(&k).expect("writer");
+        writer.put("foo", &Value::I64(1234)).expect("wrote");
+        writer.put("noo", &Value::F64(1234.0.into())).expect("wrote");
+        writer.put("bar", &Value::Bool(true)).expect("wrote");
+        writer.put("baz", &Value::Str("héllo, yöu")).expect("wrote");
+        writer.commit().expect("committed");
+
+        let reader = sk.read(&k).unwrap();
+
+        // Reader.iter() returns (key, value) tuples ordered by key.
+        let mut iter = reader.iter().unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "bar");
+        assert_eq!(val.expect("value"), Some(Value::Bool(true)));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "baz");
+        assert_eq!(val.expect("value"), Some(Value::Str("héllo, yöu")));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "foo");
+        assert_eq!(val.expect("value"), Some(Value::I64(1234)));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        assert!(iter.next().is_none());
+
+        // Iterators don't loop.  Once one returns None, additional calls
+        // to its next() method will always return None.
+        assert!(iter.next().is_none());
+
+        // Reader.iter_from() begins iteration at the first key equal to
+        // or greater than the given key.  In this case, the first (and only)
+        // key greater than "moo" is "noo", so that's the only result.
+        let mut iter = reader.iter_from("moo").unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: NotFound")]
+    fn test_iter_from_key_greater_than_existing() {
+        let root = TempDir::new("test_iter_from_key_greater_than_existing").expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+
+        let mut writer = sk.write(&k).expect("writer");
+        writer.put("foo", &Value::I64(1234)).expect("wrote");
+        writer.put("noo", &Value::F64(1234.0.into())).expect("wrote");
+        writer.put("bar", &Value::Bool(true)).expect("wrote");
+        writer.put("baz", &Value::Str("héllo, yöu")).expect("wrote");
+        writer.commit().expect("committed");
+
+        let reader = sk.read(&k).unwrap();
+
+        // There is no key greater than "nuu", so the underlying LMDB API panics
+        // when calling iter_from.  This is unfortunate, and I've requested
+        // https://github.com/danburkert/lmdb-rs/pull/29 to make the underlying
+        // API return a Result instead.
+        //
+        // Also see alternative https://github.com/danburkert/lmdb-rs/pull/30.
+        //
+        reader.iter_from("nuu").unwrap();
     }
 }
