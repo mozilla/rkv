@@ -518,6 +518,17 @@ mod tests {
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
         assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
+
+        // Reader.iter_from() works as expected when the given key is a prefix
+        // of a key in the store.
+        let mut iter = reader.iter_from("no").unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert!(iter.next().is_none());
     }
 
     #[test]
