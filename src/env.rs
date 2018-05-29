@@ -467,7 +467,7 @@ mod tests {
         // An iterator over an empty store returns no values.
         {
             let reader = sk.read(&k).unwrap();
-            let mut iter = reader.iter().unwrap();
+            let mut iter = reader.iter_start().unwrap();
             assert!(iter.next().is_none());
         }
 
@@ -483,7 +483,7 @@ mod tests {
         let reader = sk.read(&k).unwrap();
 
         // Reader.iter() returns (key, value) tuples ordered by key.
-        let mut iter = reader.iter().unwrap();
+        let mut iter = reader.iter_start().unwrap();
         let (key, val) = iter.next().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "bar");
         assert_eq!(val.expect("value"), Some(Value::Bool(true)));

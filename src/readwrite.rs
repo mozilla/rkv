@@ -113,7 +113,7 @@ impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
         self.tx.abort();
     }
 
-    pub fn iter<'s>(&'s self) -> Result<Iter<'s>, StoreError> {
+    pub fn iter_start<'s>(&'s self) -> Result<Iter<'s>, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter();
         Ok(Iter {
