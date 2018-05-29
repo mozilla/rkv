@@ -145,9 +145,19 @@ mod tests {
     extern crate tempdir;
     extern crate byteorder;
 
-    use self::byteorder::{ByteOrder, LittleEndian};
-    use self::tempdir::TempDir;
-    use std::{fs, str};
+    use self::byteorder::{
+        ByteOrder,
+        LittleEndian,
+    };
+
+    use self::tempdir::{
+        TempDir,
+    };
+
+    use std::{
+        fs,
+        str,
+    };
 
     use super::*;
     use ::*;
