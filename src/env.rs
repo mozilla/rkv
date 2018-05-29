@@ -476,6 +476,8 @@ mod tests {
         writer.put("noo", &Value::F64(1234.0.into())).expect("wrote");
         writer.put("bar", &Value::Bool(true)).expect("wrote");
         writer.put("baz", &Value::Str("héllo, yöu")).expect("wrote");
+        writer.put("héllò, töűrîst", &Value::Str("Emil.RuleZ!")).expect("wrote");
+        writer.put("你好，遊客", &Value::Str("米克規則")).expect("wrote");
         writer.commit().expect("committed");
 
         let reader = sk.read(&k).unwrap();
@@ -492,8 +494,14 @@ mod tests {
         assert_eq!(str::from_utf8(key).expect("key"), "foo");
         assert_eq!(val.expect("value"), Some(Value::I64(1234)));
         let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "héllò, töűrîst");
+        assert_eq!(val.expect("value"), Some(Value::Str("Emil.RuleZ!")));
+        let (key, val) = iter.next().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
         assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Iterators don't loop.  Once one returns None, additional calls
@@ -501,12 +509,14 @@ mod tests {
         assert!(iter.next().is_none());
 
         // Reader.iter_from() begins iteration at the first key equal to
-        // or greater than the given key.  In this case, the first (and only)
-        // key greater than "moo" is "noo", so that's the only result.
+        // or greater than the given key.
         let mut iter = reader.iter_from("moo").unwrap();
         let (key, val) = iter.next().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
         assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
     }
 
