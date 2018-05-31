@@ -115,7 +115,17 @@ impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
 
     pub fn iter_start<'s>(&'s self) -> Result<Iter<'s>, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+
+        // We call Cursor.iter() instead of Cursor.iter_start() because
+        // the latter panics at "called `Result::unwrap()` on an `Err` value:
+        // NotFound" when there are no items in the store, whereas the former
+        // returns an iterator that yields no items.
+        //
+        // And since we create the Cursor and don't change its position, we can
+        // be sure that a call to Cursor.iter() will start at the beginning.
+        //
         let iter = cursor.iter();
+
         Ok(Iter {
             iter: iter,
             cursor: cursor,
