@@ -36,8 +36,8 @@ use error::{
 
 use ::Rkv;
 
-/// A process is only permitted to have one open handle to each database. This manager
-/// exists to enforce that constraint: don't open databases directly.
+/// A process is only permitted to have one open handle to each Rkv environment.
+/// This manager exists to enforce that constraint: don't open environments directly.
 lazy_static! {
     static ref MANAGER: RwLock<Manager> = {
         RwLock::new(Manager::new())
@@ -45,13 +45,13 @@ lazy_static! {
 }
 
 pub struct Manager {
-    stores: BTreeMap<PathBuf, Arc<RwLock<Rkv>>>,
+    environments: BTreeMap<PathBuf, Arc<RwLock<Rkv>>>,
 }
 
 impl Manager {
     fn new() -> Manager {
         Manager {
-            stores: Default::default(),
+            environments: Default::default(),
         }
     }
 
@@ -59,19 +59,19 @@ impl Manager {
         &*MANAGER
     }
 
-    /// Return the open store at `path`, returning `None` if it has not already been opened.
+    /// Return the open env at `path`, returning `None` if it has not already been opened.
     pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<RwLock<Rkv>>>, ::std::io::Error>
     where P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
-        Ok(self.stores.get(&canonical).cloned())
+        Ok(self.environments.get(&canonical).cloned())
     }
 
-    /// Return the open store at `path`, or create it by calling `f`.
+    /// Return the open env at `path`, or create it by calling `f`.
     pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
     where F: FnOnce(&Path) -> Result<Rkv, StoreError>,
           P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
-        Ok(match self.stores.entry(canonical) {
+        Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
                 let k = Arc::new(RwLock::new(f(e.key().as_path())?));
@@ -80,13 +80,13 @@ impl Manager {
         })
     }
 
-    /// Return the open store at `path` with capacity `capacity`,
+    /// Return the open env at `path` with capacity `capacity`,
     /// or create it by calling `f`.
     pub fn get_or_create_with_capacity<'p, F, P>(&mut self, path: P, capacity: c_uint, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
     where F: FnOnce(&Path, c_uint) -> Result<Rkv, StoreError>,
           P: Into<&'p Path> {
         let canonical = path.into().canonicalize()?;
-        Ok(match self.stores.entry(canonical) {
+        Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
                 let k = Arc::new(RwLock::new(f(e.key().as_path(), capacity)?));
