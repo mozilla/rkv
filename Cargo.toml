@@ -30,4 +30,4 @@ features = ["derive"]
 
 [dev-dependencies]
 byteorder = "1"
-tempdir = "0.3"
+tempfile = "3"

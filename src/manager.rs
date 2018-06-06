@@ -98,9 +98,11 @@ impl Manager {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
+    extern crate tempfile;
 
-    use self::tempdir::TempDir;
+    use self::tempfile::{
+        Builder,
+    };
     use std::fs;
 
     use super::*;
@@ -108,7 +110,7 @@ mod tests {
     /// Test that the manager will return the same Rkv instance each time for each path.
     #[test]
     fn test_same() {
-        let root = TempDir::new("test_same").expect("tempdir");
+        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
         let mut manager = Manager::new();
@@ -124,7 +126,7 @@ mod tests {
     /// Test that the manager will return the same Rkv instance each time for each path.
     #[test]
     fn test_same_with_capacity() {
-        let root = TempDir::new("test_same").expect("tempdir");
+        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
         let mut manager = Manager::new();
