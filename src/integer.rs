@@ -142,16 +142,18 @@ impl<K> IntegerStore<K> where K: PrimitiveInt {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
+    extern crate tempfile;
 
-    use self::tempdir::TempDir;
+    use self::tempfile::{
+        Builder,
+    };
     use std::fs;
 
     use super::*;
 
     #[test]
     fn test_integer_keys() {
-        let root = TempDir::new("test_integer_keys").expect("tempdir");
+        let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let mut s: IntegerStore<u32> = k.create_or_open_integer("s").expect("open");

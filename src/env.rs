@@ -142,7 +142,7 @@ impl Rkv {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
+    extern crate tempfile;
     extern crate byteorder;
 
     use self::byteorder::{
@@ -150,8 +150,8 @@ mod tests {
         LittleEndian,
     };
 
-    use self::tempdir::{
-        TempDir,
+    use self::tempfile::{
+        Builder,
     };
 
     use std::{
@@ -165,7 +165,7 @@ mod tests {
     /// We can't open a directory that doesn't exist.
     #[test]
     fn test_open_fails() {
-        let root = TempDir::new("test_open_fails").expect("tempdir");
+        let root = Builder::new().prefix("test_open_fails").tempdir().expect("tempdir");
         assert!(root.path().exists());
 
         let nope = root.path().join("nope/");
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_open() {
-        let root = TempDir::new("test_open").expect("tempdir");
+        let root = Builder::new().prefix("test_open").tempdir().expect("tempdir");
         println!("Root path: {:?}", root.path());
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_round_trip_and_transactions() {
-        let root = TempDir::new("test_round_trip_and_transactions").expect("tempdir");
+        let root = Builder::new().prefix("test_round_trip_and_transactions").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
@@ -300,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_read_before_write_num() {
-        let root = TempDir::new("test_read_before_write_num").expect("tempdir");
+        let root = Builder::new().prefix("test_read_before_write_num").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store<&str> = k.create_or_open("sk").expect("opened");
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn test_read_before_write_str() {
-        let root = TempDir::new("test_read_before_write_str").expect("tempdir");
+        let root = Builder::new().prefix("test_read_before_write_str").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store<&str> = k.create_or_open("sk").expect("opened");
@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_read_transactions_prohibited() {
-        let root = TempDir::new("test_concurrent_reads_prohibited").expect("tempdir");
+        let root = Builder::new().prefix("test_concurrent_reads_prohibited").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let s: Store<&str> = k.create_or_open("s").expect("opened");
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_isolation() {
-        let root = TempDir::new("test_isolation").expect("tempdir");
+        let root = Builder::new().prefix("test_isolation").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let s: Store<&str> = k.create_or_open("s").expect("opened");
@@ -418,7 +418,7 @@ mod tests {
 
     #[test]
     fn test_blob() {
-        let root = TempDir::new("test_round_trip_blob").expect("tempdir");
+        let root = Builder::new().prefix("test_round_trip_blob").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store<&str> = k.create_or_open("sk").expect("opened");
@@ -456,7 +456,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "not yet implemented")]
     fn test_delete_value() {
-        let root = TempDir::new("test_delete_value").expect("tempdir");
+        let root = Builder::new().prefix("test_delete_value").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store<&str> = k.create_or_open_with_flags("sk", lmdb::DUP_SORT).expect("opened");
@@ -469,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        let root = TempDir::new("test_iter").expect("tempdir");
+        let root = Builder::new().prefix("test_iter").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store<&str> = k.create_or_open("sk").expect("opened");
@@ -544,7 +544,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: NotFound")]
     fn test_iter_from_key_greater_than_existing() {
-        let root = TempDir::new("test_iter_from_key_greater_than_existing").expect("tempdir");
+        let root = Builder::new().prefix("test_iter_from_key_greater_than_existing").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store<&str> = k.create_or_open("sk").expect("opened");
