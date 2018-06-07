@@ -8,17 +8,11 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::collections::{
-    BTreeMap,
-};
+use std::collections::BTreeMap;
 
-use std::collections::btree_map::{
-    Entry,
-};
+use std::collections::btree_map::Entry;
 
-use std::os::raw::{
-    c_uint,
-};
+use std::os::raw::c_uint;
 
 use std::path::{
     Path,
@@ -30,18 +24,14 @@ use std::sync::{
     RwLock,
 };
 
-use error::{
-    StoreError,
-};
+use error::StoreError;
 
-use ::Rkv;
+use Rkv;
 
 /// A process is only permitted to have one open handle to each Rkv environment.
 /// This manager exists to enforce that constraint: don't open environments directly.
 lazy_static! {
-    static ref MANAGER: RwLock<Manager> = {
-        RwLock::new(Manager::new())
-    };
+    static ref MANAGER: RwLock<Manager> = { RwLock::new(Manager::new()) };
 }
 
 pub struct Manager {
@@ -61,15 +51,19 @@ impl Manager {
 
     /// Return the open env at `path`, returning `None` if it has not already been opened.
     pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<RwLock<Rkv>>>, ::std::io::Error>
-    where P: Into<&'p Path> {
+    where
+        P: Into<&'p Path>,
+    {
         let canonical = path.into().canonicalize()?;
         Ok(self.environments.get(&canonical).cloned())
     }
 
     /// Return the open env at `path`, or create it by calling `f`.
     pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
-    where F: FnOnce(&Path) -> Result<Rkv, StoreError>,
-          P: Into<&'p Path> {
+    where
+        F: FnOnce(&Path) -> Result<Rkv, StoreError>,
+        P: Into<&'p Path>,
+    {
         let canonical = path.into().canonicalize()?;
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
@@ -82,9 +76,16 @@ impl Manager {
 
     /// Return the open env at `path` with capacity `capacity`,
     /// or create it by calling `f`.
-    pub fn get_or_create_with_capacity<'p, F, P>(&mut self, path: P, capacity: c_uint, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
-    where F: FnOnce(&Path, c_uint) -> Result<Rkv, StoreError>,
-          P: Into<&'p Path> {
+    pub fn get_or_create_with_capacity<'p, F, P>(
+        &mut self,
+        path: P,
+        capacity: c_uint,
+        f: F,
+    ) -> Result<Arc<RwLock<Rkv>>, StoreError>
+    where
+        F: FnOnce(&Path, c_uint) -> Result<Rkv, StoreError>,
+        P: Into<&'p Path>,
+    {
         let canonical = path.into().canonicalize()?;
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
@@ -100,9 +101,7 @@ impl Manager {
 mod tests {
     extern crate tempfile;
 
-    use self::tempfile::{
-        Builder,
-    };
+    use self::tempfile::Builder;
     use std::fs;
 
     use super::*;
@@ -110,7 +109,10 @@ mod tests {
     /// Test that the manager will return the same Rkv instance each time for each path.
     #[test]
     fn test_same() {
-        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_same")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
         let mut manager = Manager::new();
@@ -126,7 +128,10 @@ mod tests {
     /// Test that the manager will return the same Rkv instance each time for each path.
     #[test]
     fn test_same_with_capacity() {
-        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_same")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
         let mut manager = Manager::new();
@@ -134,7 +139,9 @@ mod tests {
         let p = root.path();
         assert!(manager.get(p).expect("success").is_none());
 
-        let created_arc = manager.get_or_create_with_capacity(p, 10, Rkv::with_capacity).expect("created");
+        let created_arc = manager
+            .get_or_create_with_capacity(p, 10, Rkv::with_capacity)
+            .expect("created");
         let fetched_arc = manager.get(p).expect("success").expect("existed");
         assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
     }
