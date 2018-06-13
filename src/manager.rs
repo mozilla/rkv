@@ -12,6 +12,12 @@ use std::collections::{
     BTreeMap,
 };
 
+use std::io::{
+    self,
+    Error,
+    ErrorKind,
+};
+
 use std::collections::btree_map::{
     Entry,
 };
@@ -30,6 +36,8 @@ use std::sync::{
     RwLock,
 };
 
+use url::Url;
+
 use error::{
     StoreError,
 };
@@ -42,6 +50,20 @@ lazy_static! {
     static ref MANAGER: RwLock<Manager> = {
         RwLock::new(Manager::new())
     };
+}
+
+// Workaround the UNC path on Windows, see https://github.com/rust-lang/rust/issues/42869.
+// Otherwise, `Env::from_env()` will panic with error_no(123).
+fn canonicalize_path<'p, P>(path: P) -> io::Result<PathBuf>
+where P: Into<&'p Path> {
+    let canonical = path.into().canonicalize()?;
+    if cfg!(target_os = "windows") {
+        let url = Url::from_file_path(&canonical)
+            .map_err(|_e| Error::new(ErrorKind::Other, "URL passing error"))?;
+        return url.to_file_path()
+            .map_err(|_e| Error::new(ErrorKind::Other, "path canonicalization error"));
+    }
+    Ok(canonical)
 }
 
 pub struct Manager {
@@ -62,7 +84,7 @@ impl Manager {
     /// Return the open env at `path`, returning `None` if it has not already been opened.
     pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<RwLock<Rkv>>>, ::std::io::Error>
     where P: Into<&'p Path> {
-        let canonical = path.into().canonicalize()?;
+        let canonical = canonicalize_path(path)?;
         Ok(self.environments.get(&canonical).cloned())
     }
 
@@ -70,7 +92,7 @@ impl Manager {
     pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
     where F: FnOnce(&Path) -> Result<Rkv, StoreError>,
           P: Into<&'p Path> {
-        let canonical = path.into().canonicalize()?;
+        let canonical = canonicalize_path(path)?;
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
@@ -85,7 +107,7 @@ impl Manager {
     pub fn get_or_create_with_capacity<'p, F, P>(&mut self, path: P, capacity: c_uint, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
     where F: FnOnce(&Path, c_uint) -> Result<Rkv, StoreError>,
           P: Into<&'p Path> {
-        let canonical = path.into().canonicalize()?;
+        let canonical = canonicalize_path(path)?;
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {

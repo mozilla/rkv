@@ -18,8 +18,8 @@ lazy_static = "1.0"
 lmdb = "0.7"
 ordered-float = "0.5"
 uuid = "0.5"
-
 serde = "1.0"
+url = "1.7.0"
 
 # Get rid of failure's dependency on backtrace. Eventually
 # backtrace will move into Rust core, but we don't need it here.
