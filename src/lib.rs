@@ -19,6 +19,7 @@ extern crate lmdb;
 extern crate ordered_float;
 extern crate serde;               // So we can specify trait bounds. Everything else is bincode.
 extern crate uuid;
+extern crate url;
 
 pub use lmdb::{
     DatabaseFlags,
