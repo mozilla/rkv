@@ -8,16 +8,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::path::{
-    PathBuf,
-};
+use std::path::PathBuf;
 
 use bincode;
 use lmdb;
 
-use value::{
-    Type,
-};
+use value::Type;
 
 #[derive(Debug, Fail)]
 pub enum DataError {
@@ -25,10 +21,7 @@ pub enum DataError {
     UnknownType(u8),
 
     #[fail(display = "unexpected type tag: expected {}, got {}", expected, actual)]
-    UnexpectedType {
-        expected: Type,
-        actual: Type,
-    },
+    UnexpectedType { expected: Type, actual: Type },
 
     #[fail(display = "empty data; expected tag")]
     Empty,
@@ -82,7 +75,9 @@ impl StoreError {
 impl From<lmdb::Error> for StoreError {
     fn from(e: lmdb::Error) -> StoreError {
         match e {
-            lmdb::Error::BadRslot => StoreError::ReadTransactionAlreadyExists(::std::thread::current().id()),
+            lmdb::Error::BadRslot => {
+                StoreError::ReadTransactionAlreadyExists(::std::thread::current().id())
+            }
             e @ _ => StoreError::LmdbError(e),
         }
     }

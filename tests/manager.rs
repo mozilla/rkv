@@ -12,31 +12,46 @@ extern crate rkv;
 extern crate tempfile;
 
 use rkv::{
-	Manager,
-	Rkv,
+    Manager,
+    Rkv,
 };
 
-use self::tempfile::{
-    Builder,
-};
+use self::tempfile::Builder;
 
 use std::fs;
 
-use std::sync::{
-    Arc,
-};
+use std::sync::Arc;
 
 #[test]
 // Identical to the same-named unit test, but this one confirms that it works
 // via the public MANAGER singleton.
 fn test_same() {
-    let root = Builder::new().prefix("test_same_singleton").tempdir().expect("tempdir");
+    let root = Builder::new()
+        .prefix("test_same_singleton")
+        .tempdir()
+        .expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
     let p = root.path();
-    assert!(Manager::singleton().read().unwrap().get(p).expect("success").is_none());
+    assert!(
+        Manager::singleton()
+            .read()
+            .unwrap()
+            .get(p)
+            .expect("success")
+            .is_none()
+    );
 
-    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).expect("created");
-    let fetched_arc = Manager::singleton().read().unwrap().get(p).expect("success").expect("existed");
+    let created_arc = Manager::singleton()
+        .write()
+        .unwrap()
+        .get_or_create(p, Rkv::new)
+        .expect("created");
+    let fetched_arc = Manager::singleton()
+        .read()
+        .unwrap()
+        .get(p)
+        .expect("success")
+        .expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }
