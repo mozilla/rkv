@@ -57,12 +57,12 @@ lazy_static! {
 fn canonicalize_path<'p, P>(path: P) -> io::Result<PathBuf>
 where P: Into<&'p Path> {
     let canonical = path.into().canonicalize()?;
-    if cfg!(target_os = "windows") {
-        let url = Url::from_file_path(&canonical)
-            .map_err(|_e| Error::new(ErrorKind::Other, "URL passing error"))?;
-        return url.to_file_path()
-            .map_err(|_e| Error::new(ErrorKind::Other, "path canonicalization error"));
-    }
+    // if cfg!(target_os = "windows") {
+    //     let url = Url::from_file_path(&canonical)
+    //         .map_err(|_e| Error::new(ErrorKind::Other, "URL passing error"))?;
+    //     return url.to_file_path()
+    //         .map_err(|_e| Error::new(ErrorKind::Other, "path canonicalization error"));
+    // }
     Ok(canonical)
 }
 
