@@ -8,16 +8,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::path::{
-    PathBuf,
-};
+use std::path::PathBuf;
 
 use bincode;
 use lmdb;
 
-use value::{
-    Type,
-};
+use value::Type;
 
 #[derive(Debug, Fail)]
 pub enum DataError {

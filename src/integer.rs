@@ -8,13 +8,11 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::marker::{
-    PhantomData,
-};
+use std::marker::PhantomData;
 
 use bincode::{
-    Infinite,
     serialize,
+    Infinite,
 };
 
 use lmdb::{
@@ -22,18 +20,14 @@ use lmdb::{
     RoTransaction,
 };
 
-use serde::{
-    Serialize,
-};
+use serde::Serialize;
 
 use error::{
     DataError,
     StoreError,
 };
 
-use value::{
-    Value,
-};
+use value::Value;
 
 use readwrite::{
     Reader,
@@ -41,8 +35,7 @@ use readwrite::{
     Writer,
 };
 
-use ::Rkv;
-
+use Rkv;
 
 pub trait EncodableKey {
     fn to_bytes(&self) -> Result<Vec<u8>, DataError>;
@@ -52,7 +45,10 @@ pub trait PrimitiveInt: EncodableKey {}
 
 impl PrimitiveInt for u32 {}
 
-impl<T> EncodableKey for T where T: Serialize {
+impl<T> EncodableKey for T
+where
+    T: Serialize,
+{
     fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
         serialize(self, Infinite)         // TODO: limited key length.
         .map_err(|e| e.into())
@@ -64,13 +60,19 @@ struct Key<K> {
     phantom: PhantomData<K>,
 }
 
-impl<K> AsRef<[u8]> for Key<K> where K: EncodableKey {
+impl<K> AsRef<[u8]> for Key<K>
+where
+    K: EncodableKey,
+{
     fn as_ref(&self) -> &[u8] {
         self.bytes.as_ref()
     }
 }
 
-impl<K> Key<K> where K: EncodableKey {
+impl<K> Key<K>
+where
+    K: EncodableKey,
+{
     fn new(k: K) -> Result<Key<K>, DataError> {
         Ok(Key {
             bytes: k.to_bytes()?,
@@ -79,15 +81,24 @@ impl<K> Key<K> where K: EncodableKey {
     }
 }
 
-pub struct IntegerStore<K> where K: PrimitiveInt {
+pub struct IntegerStore<K>
+where
+    K: PrimitiveInt,
+{
     inner: Store<Key<K>>,
 }
 
-pub struct IntegerReader<'env, K> where K: PrimitiveInt {
+pub struct IntegerReader<'env, K>
+where
+    K: PrimitiveInt,
+{
     inner: Reader<'env, Key<K>>,
 }
 
-impl<'env, K> IntegerReader<'env, K> where K: PrimitiveInt {
+impl<'env, K> IntegerReader<'env, K>
+where
+    K: PrimitiveInt,
+{
     pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
         self.inner.get(Key::new(k)?)
     }
@@ -97,11 +108,17 @@ impl<'env, K> IntegerReader<'env, K> where K: PrimitiveInt {
     }
 }
 
-pub struct IntegerWriter<'env, K> where K: PrimitiveInt {
+pub struct IntegerWriter<'env, K>
+where
+    K: PrimitiveInt,
+{
     inner: Writer<'env, Key<K>>,
 }
 
-impl<'env, K> IntegerWriter<'env, K> where K: PrimitiveInt {
+impl<'env, K> IntegerWriter<'env, K>
+where
+    K: PrimitiveInt,
+{
     pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
         self.inner.get(Key::new(k)?)
     }
@@ -115,7 +132,10 @@ impl<'env, K> IntegerWriter<'env, K> where K: PrimitiveInt {
     }
 }
 
-impl<K> IntegerStore<K> where K: PrimitiveInt {
+impl<K> IntegerStore<K>
+where
+    K: PrimitiveInt,
+{
     pub fn new(db: Database) -> IntegerStore<K> {
         IntegerStore {
             inner: Store::new(db),
@@ -144,9 +164,7 @@ impl<K> IntegerStore<K> where K: PrimitiveInt {
 mod tests {
     extern crate tempfile;
 
-    use self::tempfile::{
-        Builder,
-    };
+    use self::tempfile::Builder;
     use std::fs;
 
     use super::*;

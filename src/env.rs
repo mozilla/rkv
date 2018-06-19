@@ -8,9 +8,7 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::os::raw::{
-    c_uint,
-};
+use std::os::raw::c_uint;
 
 use std::path::{
     Path,
@@ -27,18 +25,14 @@ use lmdb::{
     RwTransaction,
 };
 
-use error::{
-    StoreError,
-};
+use error::StoreError;
 
 use integer::{
     IntegerStore,
     PrimitiveInt,
 };
 
-use readwrite::{
-    Store,
-};
+use readwrite::Store;
 
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
@@ -63,12 +57,10 @@ impl Rkv {
 
         Ok(Rkv {
             path: path.into(),
-            env: env.open(path)
-                    .map_err(|e|
-                        match e {
-                            lmdb::Error::Other(2) => StoreError::DirectoryDoesNotExistError(path.into()),
-                            e => StoreError::LmdbError(e),
-                        })?,
+            env: env.open(path).map_err(|e| match e {
+                lmdb::Error::Other(2) => StoreError::DirectoryDoesNotExistError(path.into()),
+                e => StoreError::LmdbError(e),
+            })?,
         })
     }
 
@@ -98,33 +90,37 @@ impl Rkv {
     }
 
     pub fn create_or_open<'s, T, K>(&self, name: T) -> Result<Store<K>, StoreError>
-    where T: Into<Option<&'s str>>,
-          K: AsRef<[u8]> {
+    where
+        T: Into<Option<&'s str>>,
+        K: AsRef<[u8]>,
+    {
         let flags = DatabaseFlags::empty();
         self.create_or_open_with_flags(name, flags)
     }
 
     pub fn create_or_open_integer<'s, T, K>(&self, name: T) -> Result<IntegerStore<K>, StoreError>
-    where T: Into<Option<&'s str>>,
-          K: PrimitiveInt {
+    where
+        T: Into<Option<&'s str>>,
+        K: PrimitiveInt,
+    {
         let mut flags = DatabaseFlags::empty();
         flags.toggle(lmdb::INTEGER_KEY);
-        let db = self.env.create_db(name.into(), flags)
-                         .map_err(|e| match e {
-                             lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-                             _ => e.into(),
-                         })?;
+        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
+            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+            _ => e.into(),
+        })?;
         Ok(IntegerStore::new(db))
     }
 
     pub fn create_or_open_with_flags<'s, T, K>(&self, name: T, flags: DatabaseFlags) -> Result<Store<K>, StoreError>
-    where T: Into<Option<&'s str>>,
-          K: AsRef<[u8]> {
-        let db = self.env.create_db(name.into(), flags)
-                         .map_err(|e| match e {
-                             lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-                             _ => e.into(),
-                         })?;
+    where
+        T: Into<Option<&'s str>>,
+        K: AsRef<[u8]>,
+    {
+        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
+            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+            _ => e.into(),
+        })?;
         Ok(Store::new(db))
     }
 }
@@ -142,17 +138,15 @@ impl Rkv {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempfile;
     extern crate byteorder;
+    extern crate tempfile;
 
     use self::byteorder::{
         ByteOrder,
         LittleEndian,
     };
 
-    use self::tempfile::{
-        Builder,
-    };
+    use self::tempfile::Builder;
 
     use std::{
         fs,
@@ -160,7 +154,7 @@ mod tests {
     };
 
     use super::*;
-    use ::*;
+    use *;
 
     /// We can't open a directory that doesn't exist.
     #[test]
