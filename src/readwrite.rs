@@ -10,9 +10,7 @@
 
 use lmdb;
 
-use std::marker::{
-    PhantomData,
-};
+use std::marker::PhantomData;
 
 use lmdb::{
     Cursor,
@@ -24,36 +22,35 @@ use lmdb::{
     Transaction,
 };
 
-use lmdb::{
-    WriteFlags,
-};
+use lmdb::WriteFlags;
 
-use error::{
-    StoreError,
-};
+use error::StoreError;
 
-use value::{
-    Value,
-};
+use value::Value;
 
-use ::Rkv;
+use Rkv;
 
 fn read_transform<'x>(val: Result<&'x [u8], lmdb::Error>) -> Result<Option<Value<'x>>, StoreError> {
     match val {
-        Ok(bytes) => Value::from_tagged_slice(bytes).map(Some)
-                                                    .map_err(StoreError::DataError),
+        Ok(bytes) => Value::from_tagged_slice(bytes).map(Some).map_err(StoreError::DataError),
         Err(lmdb::Error::NotFound) => Ok(None),
         Err(e) => Err(StoreError::LmdbError(e)),
     }
 }
 
-pub struct Writer<'env, K> where K: AsRef<[u8]> {
+pub struct Writer<'env, K>
+where
+    K: AsRef<[u8]>,
+{
     tx: RwTransaction<'env>,
     db: Database,
     phantom: PhantomData<K>,
 }
 
-pub struct Reader<'env, K> where K: AsRef<[u8]> {
+pub struct Reader<'env, K>
+where
+    K: AsRef<[u8]>,
+{
     tx: RoTransaction<'env>,
     db: Database,
     phantom: PhantomData<K>,
@@ -64,7 +61,10 @@ pub struct Iter<'env> {
     cursor: RoCursor<'env>,
 }
 
-impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
+impl<'env, K> Writer<'env, K>
+where
+    K: AsRef<[u8]>,
+{
     pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
         let bytes = self.tx.get(self.db, &k.as_ref());
         read_transform(bytes)
@@ -74,15 +74,11 @@ impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
     pub fn put<'s>(&'s mut self, k: K, v: &Value) -> Result<(), StoreError> {
         // TODO: don't allocate twice.
         let bytes = v.to_bytes()?;
-        self.tx
-            .put(self.db, &k.as_ref(), &bytes, WriteFlags::empty())
-            .map_err(StoreError::LmdbError)
+        self.tx.put(self.db, &k.as_ref(), &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
     pub fn delete<'s>(&'s mut self, k: K) -> Result<(), StoreError> {
-        self.tx
-            .del(self.db, &k.as_ref(), None)
-            .map_err(StoreError::LmdbError)
+        self.tx.del(self.db, &k.as_ref(), None).map_err(StoreError::LmdbError)
     }
 
     pub fn delete_value<'s>(&'s mut self, _k: K, _v: &Value) -> Result<(), StoreError> {
@@ -103,7 +99,10 @@ impl<'env, K> Writer<'env, K> where K: AsRef<[u8]> {
     }
 }
 
-impl<'env, K> Reader<'env, K> where K: AsRef<[u8]> {
+impl<'env, K> Reader<'env, K>
+where
+    K: AsRef<[u8]>,
+{
     pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
         let bytes = self.tx.get(self.db, &k.as_ref());
         read_transform(bytes)
@@ -154,12 +153,18 @@ impl<'env> Iterator for Iter<'env> {
 }
 
 /// Wrapper around an `lmdb::Database`.
-pub struct Store<K> where K: AsRef<[u8]> {
+pub struct Store<K>
+where
+    K: AsRef<[u8]>,
+{
     db: Database,
     phantom: PhantomData<K>,
 }
 
-impl<K> Store<K> where K: AsRef<[u8]> {
+impl<K> Store<K>
+where
+    K: AsRef<[u8]>,
+{
     pub fn new(db: Database) -> Store<K> {
         Store {
             db: db,

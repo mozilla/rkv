@@ -18,3 +18,7 @@ It aims to achieve the following:
 
 If you specify the `backtrace` feature, backtraces will be enabled in `failure`
 errors. This feature is disabled by default.
+
+## Contributing
+
+rkv relies on the latest [rustfmt](https://github.com/rust-lang-nursery/rustfmt) for code formatting, please make sure your pull request passes the rustfmt before submitting it for review. See rustfmt's [quick start](https://github.com/rust-lang-nursery/rustfmt#quick-start) for installation details.

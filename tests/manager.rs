@@ -12,19 +12,15 @@ extern crate rkv;
 extern crate tempfile;
 
 use rkv::{
-	Manager,
-	Rkv,
+    Manager,
+    Rkv,
 };
 
-use self::tempfile::{
-    Builder,
-};
+use self::tempfile::Builder;
 
 use std::fs;
 
-use std::sync::{
-    Arc,
-};
+use std::sync::Arc;
 
 #[test]
 // Identical to the same-named unit test, but this one confirms that it works

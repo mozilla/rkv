@@ -10,7 +10,12 @@
 extern crate rkv;
 extern crate tempfile;
 
-use rkv::{Manager, Rkv, Store, Value};
+use rkv::{
+    Manager,
+    Rkv,
+    Store,
+    Value,
+};
 use tempfile::Builder;
 
 use std::fs;
@@ -21,11 +26,7 @@ fn main() {
     let p = root.path();
 
     // The manager enforces that each process opens the same lmdb environment at most once
-    let created_arc = Manager::singleton()
-        .write()
-        .unwrap()
-        .get_or_create(p, Rkv::new)
-        .unwrap();
+    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).unwrap();
     let k = created_arc.read().unwrap();
 
     // Creates a store called "store"
@@ -38,14 +39,10 @@ fn main() {
         writer.put("int", &Value::I64(1234)).unwrap();
         writer.put("uint", &Value::U64(1234_u64)).unwrap();
         writer.put("float", &Value::F64(1234.0.into())).unwrap();
-        writer
-            .put("instant", &Value::Instant(1528318073700))
-            .unwrap();
+        writer.put("instant", &Value::Instant(1528318073700)).unwrap();
         writer.put("boolean", &Value::Bool(true)).unwrap();
         writer.put("string", &Value::Str("héllo, yöu")).unwrap();
-        writer
-            .put("json", &Value::Json(r#"{"foo":"bar", "number": 1}"#))
-            .unwrap();
+        writer.put("json", &Value::Json(r#"{"foo":"bar", "number": 1}"#)).unwrap();
         writer.put("blob", &Value::Blob(b"blob")).unwrap();
         writer.commit().unwrap();
     }

@@ -27,11 +27,7 @@ fn main() {
     fs::create_dir_all(root.path()).unwrap();
     let p = root.path();
 
-    let created_arc = Manager::singleton()
-        .write()
-        .unwrap()
-        .get_or_create(p, Rkv::new)
-        .unwrap();
+    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).unwrap();
     let k = created_arc.read().unwrap();
     let store: Store<&str> = k.create_or_open("store").unwrap();
 
