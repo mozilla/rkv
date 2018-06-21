@@ -34,6 +34,8 @@
 //! - strings (`Value::Str`)
 //! - blobs (`Value::Blob`)
 //!
+//! See [Value](value/enum.Value.html) for the complete list of supported types.
+//!
 //! ## Basic Usage
 //! ```
 //! extern crate rkv;
