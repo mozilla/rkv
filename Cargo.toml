@@ -2,10 +2,13 @@
 name = "rkv"
 version = "0.3.1"
 authors = ["Richard Newman <rnewman@twinql.com>"]
-description = "A humane key-value store built on LMDB."
+description = "a simple, humane, typed Rust interface to LMDB"
 license = "Apache-2.0"
-homepage = "https://github.com/mozilla-prototypes/rkv"
-repository = "https://github.com/mozilla-prototypes/rkv"
+homepage = "https://github.com/mozilla/rkv"
+repository = "https://github.com/mozilla/rkv"
+readme = "README.md"
+keywords = ["lmdb", "database", "storage"]
+categories = ["database"]
 
 [features]
 default = []

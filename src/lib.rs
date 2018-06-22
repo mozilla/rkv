@@ -13,10 +13,10 @@
 //! It aims to achieve the following:
 //!
 //! - Avoid LMDB's sharp edges (e.g., obscure error codes for common situations).
-//! - Report errors via [failure](../failure/index.html).
+//! - Report errors via [failure](https://docs.rs/failure/).
 //! - Correctly restrict access to one handle per process via a [Manager](struct.Manager.html).
 //! - Use Rust's type system to make single-typed key stores (including LMDB's own integer-keyed stores) safe and ergonomic.
-//! - Encode and decode values via [bincode](../bincode/index.html)/[serde](../serde/index.html)
+//! - Encode and decode values via [bincode](https://docs.rs/bincode/)/[serde](https://docs.rs/serde/)
 //!   and type tags, achieving platform-independent storage and input/output flexibility.
 //!
 //! It exposes these primary abstractions:
