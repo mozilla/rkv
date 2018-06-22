@@ -13,7 +13,7 @@ before_script:
   - rustup component add rustfmt-preview --toolchain nightly-2018-06-18
   - command -v rustfmt || cargo install --force rustfmt-nightly
 script:
-  - cargo +nightly fmt --all -- --check
+  - cargo +nightly-2018-06-18 fmt --all -- --check
   - cargo build --verbose
   - cargo test --verbose
   - ./run-all-examples.sh
