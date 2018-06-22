@@ -1,6 +1,6 @@
 [package]
 name = "rkv"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Richard Newman <rnewman@twinql.com>"]
 description = "A humane key-value store built on LMDB."
 license = "Apache-2.0"
