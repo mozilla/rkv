@@ -59,6 +59,22 @@ fn main() {
         println!("Get string {:?}", store.get(r, "string").unwrap());
         println!("Get json {:?}", store.get(r, "json").unwrap());
         println!("Get blob {:?}", store.get(r, "blob").unwrap());
+        println!("Get non-existent {:?}", store.get(r, "non-existent").unwrap());
+    }
+
+    println!("Looking up keys via Reader.get()...");
+    {
+        // An alternate way to query the store.
+        let r = store.read(&k).expect("reader");
+        println!("Get int {:?}", r.get("int").unwrap());
+        println!("Get uint {:?}", r.get("uint").unwrap());
+        println!("Get float {:?}", r.get("float").unwrap());
+        println!("Get instant {:?}", r.get("instant").unwrap());
+        println!("Get boolean {:?}", r.get("boolean").unwrap());
+        println!("Get string {:?}", r.get("string").unwrap());
+        println!("Get json {:?}", r.get("json").unwrap());
+        println!("Get blob {:?}", r.get("blob").unwrap());
+        println!("Get non-existent {:?}", r.get("non-existent").unwrap());
     }
 
     println!("Aborting transaction...");
@@ -84,5 +100,10 @@ fn main() {
         // Write transaction also supports read
         println!("It should be None! ({:?})", writer.get("foo").unwrap());
         writer.commit().unwrap();
+
+        // Committing a transaction consumes the writer, preventing you
+        // from reusing it by failing and reporting a compile-time error.
+        // This line would report error[E0382]: use of moved value: `writer`.
+        // writer.put("baz", &Value::Str("buz")).unwrap();
     }
 }
