@@ -16,3 +16,4 @@ script:
   - cargo +nightly fmt --all -- --check
   - cargo build --verbose
   - cargo test --verbose
+  - ./run-all-examples.sh
