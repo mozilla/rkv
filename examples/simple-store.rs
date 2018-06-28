@@ -77,6 +77,20 @@ fn main() {
         println!("Get non-existent {:?}", r.get("non-existent").unwrap());
     }
 
+    println!("Looking up keys via Writer.get()...");
+    {
+        let mut writer = store.write(&k).unwrap();
+        writer.put("foo", &Value::Str("bar")).unwrap();
+        writer.put("bar", &Value::Str("baz")).unwrap();
+        writer.delete("foo").unwrap();
+        println!("It should be None! ({:?})", writer.get("foo").unwrap());
+        println!("Get bar ({:?})", writer.get("bar").unwrap());
+        writer.commit().unwrap();
+        let reader = store.read(&k).expect("reader");
+        println!("It should be None! ({:?})", reader.get("foo").unwrap());
+        println!("Get bar {:?}", reader.get("bar").unwrap());
+    }
+
     println!("Aborting transaction...");
     {
         // Aborting a write transaction rollbacks the change(s)

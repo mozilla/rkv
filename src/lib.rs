@@ -146,13 +146,13 @@
 //!     writer.put("bar", &Value::Str("baz")).unwrap();
 //!     writer.delete("foo").unwrap();
 //!
-//!     // A write transaction also supports reading, but the version
-//!     // of the store that it reads doesn't include changes it has made.
+//!     // A write transaction also supports reading, the version of the
+//!     // store that it reads includes changes it has made regardless of
+//!     // the commit state of that transaction.
 //!     // In the code above, "foo" and "bar" were put into the store,
-//!     // then "foo" was deleted; but neither key is visible to readers,
-//!     // not even to the writer itself, until the transaction is committed.
+//!     // then "foo" was deleted so only "bar" will return a result.
 //!     println!("It should be None! ({:?})", writer.get("foo").unwrap());
-//!     println!("It should be None! ({:?})", writer.get("bar").unwrap());
+//!     println!("Get bar ({:?})", writer.get("bar").unwrap());
 //!     writer.commit().unwrap();
 //!     let reader = store.read(&env).expect("reader");
 //!     println!("It should be None! ({:?})", reader.get("foo").unwrap());
