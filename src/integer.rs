@@ -174,7 +174,7 @@ mod tests {
         let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut s: IntegerStore<u32> = k.create_or_open_integer("s").expect("open");
+        let mut s: IntegerStore<u32> = k.open_or_create_integer("s").expect("open");
 
         let mut writer = s.write(&k).expect("writer");
 

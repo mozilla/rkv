@@ -30,7 +30,7 @@ fn main() {
     let k = created_arc.read().unwrap();
 
     // Creates a store called "store"
-    let store: Store<&str> = k.create_or_open("store").unwrap();
+    let store: Store<&str> = k.open_or_create("store").unwrap();
 
     println!("Inserting data...");
     {
