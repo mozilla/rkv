@@ -10,9 +10,7 @@
 
 use std::marker::PhantomData;
 
-use bincode::{
-    serialize,
-};
+use bincode::serialize;
 
 use lmdb::{
     Database,
