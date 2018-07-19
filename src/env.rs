@@ -104,7 +104,7 @@ impl Rkv {
         K: PrimitiveInt,
     {
         let mut flags = DatabaseFlags::empty();
-        flags.toggle(lmdb::INTEGER_KEY);
+        flags.toggle(DatabaseFlags::INTEGER_KEY);
         let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
             lmdb::Error::BadRslot => StoreError::open_during_transaction(),
             _ => e.into(),
@@ -453,7 +453,7 @@ mod tests {
         let root = Builder::new().prefix("test_delete_value").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store<&str> = k.create_or_open_with_flags("sk", lmdb::DUP_SORT).expect("opened");
+        let sk: Store<&str> = k.create_or_open_with_flags("sk", DatabaseFlags::DUP_SORT).expect("opened");
 
         let mut writer = sk.write(&k).expect("writer");
         writer.put("foo", &Value::I64(1234)).expect("wrote");
