@@ -29,7 +29,7 @@ fn main() {
 
     let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).unwrap();
     let k = created_arc.read().unwrap();
-    let store: Store<&str> = k.create_or_open("store").unwrap();
+    let store: Store<&str> = k.open_or_create("store").unwrap();
 
     populate_store(&k, &store).unwrap();
 

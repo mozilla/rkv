@@ -65,9 +65,9 @@
 //! let created_arc = Manager::singleton().write().unwrap().get_or_create(path, Rkv::new).unwrap();
 //! let env = created_arc.read().unwrap();
 //!
-//! // Call `Rkv.create_or_open_default()` to get a handle to the default
+//! // Call `Rkv.open_or_create_default()` to get a handle to the default
 //! // (unnamed) store for the environment.
-//! let store: Store<&str> = env.create_or_open_default().unwrap();
+//! let store: Store<&str> = env.open_or_create_default().unwrap();
 //!
 //! {
 //!     // Use a write transaction to mutate the store by calling

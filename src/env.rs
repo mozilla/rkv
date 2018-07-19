@@ -85,20 +85,20 @@ impl Rkv {
 
 /// Store creation methods.
 impl Rkv {
-    pub fn create_or_open_default(&self) -> Result<Store<&str>, StoreError> {
-        self.create_or_open(None)
+    pub fn open_or_create_default(&self) -> Result<Store<&str>, StoreError> {
+        self.open_or_create(None)
     }
 
-    pub fn create_or_open<'s, T, K>(&self, name: T) -> Result<Store<K>, StoreError>
+    pub fn open_or_create<'s, T, K>(&self, name: T) -> Result<Store<K>, StoreError>
     where
         T: Into<Option<&'s str>>,
         K: AsRef<[u8]>,
     {
         let flags = DatabaseFlags::empty();
-        self.create_or_open_with_flags(name, flags)
+        self.open_or_create_with_flags(name, flags)
     }
 
-    pub fn create_or_open_integer<'s, T, K>(&self, name: T) -> Result<IntegerStore<K>, StoreError>
+    pub fn open_or_create_integer<'s, T, K>(&self, name: T) -> Result<IntegerStore<K>, StoreError>
     where
         T: Into<Option<&'s str>>,
         K: PrimitiveInt,
@@ -112,7 +112,7 @@ impl Rkv {
         Ok(IntegerStore::new(db))
     }
 
-    pub fn create_or_open_with_flags<'s, T, K>(&self, name: T, flags: DatabaseFlags) -> Result<Store<K>, StoreError>
+    pub fn open_or_create_with_flags<'s, T, K>(&self, name: T, flags: DatabaseFlags) -> Result<Store<K>, StoreError>
     where
         T: Into<Option<&'s str>>,
         K: AsRef<[u8]>,
@@ -182,9 +182,9 @@ mod tests {
         assert!(root.path().is_dir());
 
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let _ = k.create_or_open_default().expect("created default");
+        let _ = k.open_or_create_default().expect("created default");
 
-        let yyy: Store<&str> = k.create_or_open("yyy").expect("opened");
+        let yyy: Store<&str> = k.open_or_create("yyy").expect("opened");
         let reader = yyy.read(&k).expect("reader");
 
         let result = reader.get("foo");
@@ -197,7 +197,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
-        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
 
         {
             let mut writer = sk.write(&k).expect("writer");
@@ -297,7 +297,7 @@ mod tests {
         let root = Builder::new().prefix("test_read_before_write_num").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
 
         // Test reading a number, modifying it, and then writing it back.
         // We have to be done with the Value::I64 before calling Writer::put,
@@ -326,7 +326,7 @@ mod tests {
         let root = Builder::new().prefix("test_read_before_write_str").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
 
         // Test reading a string, modifying it, and then writing it back.
         // We have to be done with the Value::Str before calling Writer::put,
@@ -348,7 +348,7 @@ mod tests {
         let root = Builder::new().prefix("test_concurrent_reads_prohibited").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let s: Store<&str> = k.create_or_open("s").expect("opened");
+        let s: Store<&str> = k.open_or_create("s").expect("opened");
 
         let _first = s.read(&k).expect("reader");
         let second = s.read(&k);
@@ -368,7 +368,7 @@ mod tests {
         let root = Builder::new().prefix("test_isolation").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let s: Store<&str> = k.create_or_open("s").expect("opened");
+        let s: Store<&str> = k.open_or_create("s").expect("opened");
 
         // Add one field.
         {
@@ -415,7 +415,7 @@ mod tests {
         let root = Builder::new().prefix("test_round_trip_blob").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
         let mut writer = sk.write(&k).expect("writer");
 
         assert_eq!(writer.get("foo").expect("read"), None);
@@ -453,7 +453,7 @@ mod tests {
         let root = Builder::new().prefix("test_delete_value").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store<&str> = k.create_or_open_with_flags("sk", DatabaseFlags::DUP_SORT).expect("opened");
+        let sk: Store<&str> = k.open_or_create_with_flags("sk", DatabaseFlags::DUP_SORT).expect("opened");
 
         let mut writer = sk.write(&k).expect("writer");
         writer.put("foo", &Value::I64(1234)).expect("wrote");
@@ -466,7 +466,7 @@ mod tests {
         let root = Builder::new().prefix("test_iter").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
 
         // An iterator over an empty store returns no values.
         {
@@ -541,7 +541,7 @@ mod tests {
         let root = Builder::new().prefix("test_iter_from_key_greater_than_existing").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store<&str> = k.create_or_open("sk").expect("opened");
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
 
         let mut writer = sk.write(&k).expect("writer");
         writer.put("foo", &Value::I64(1234)).expect("wrote");
