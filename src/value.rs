@@ -13,7 +13,6 @@ use ordered_float::OrderedFloat;
 use bincode::{
     deserialize,
     serialize,
-    Infinite,
 };
 
 use uuid::{
@@ -168,17 +167,17 @@ impl<'s> Value<'s> {
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
         match self {
-            &Value::Bool(ref v) => serialize(&(Type::Bool.to_tag(), *v), Infinite),
-            &Value::U64(ref v) => serialize(&(Type::U64.to_tag(), *v), Infinite),
-            &Value::I64(ref v) => serialize(&(Type::I64.to_tag(), *v), Infinite),
-            &Value::F64(ref v) => serialize(&(Type::F64.to_tag(), v.0), Infinite),
-            &Value::Instant(ref v) => serialize(&(Type::Instant.to_tag(), *v), Infinite),
-            &Value::Str(ref v) => serialize(&(Type::Str.to_tag(), v), Infinite),
-            &Value::Json(ref v) => serialize(&(Type::Json.to_tag(), v), Infinite),
-            &Value::Blob(ref v) => serialize(&(Type::Blob.to_tag(), v), Infinite),
+            &Value::Bool(ref v) => serialize(&(Type::Bool.to_tag(), *v)),
+            &Value::U64(ref v) => serialize(&(Type::U64.to_tag(), *v)),
+            &Value::I64(ref v) => serialize(&(Type::I64.to_tag(), *v)),
+            &Value::F64(ref v) => serialize(&(Type::F64.to_tag(), v.0)),
+            &Value::Instant(ref v) => serialize(&(Type::Instant.to_tag(), *v)),
+            &Value::Str(ref v) => serialize(&(Type::Str.to_tag(), v)),
+            &Value::Json(ref v) => serialize(&(Type::Json.to_tag(), v)),
+            &Value::Blob(ref v) => serialize(&(Type::Blob.to_tag(), v)),
             &Value::Uuid(ref v) => {
                 // Processed above to avoid verbose duplication of error transforms.
-                serialize(&(Type::Uuid.to_tag(), v), Infinite)
+                serialize(&(Type::Uuid.to_tag(), v))
             },
         }.map_err(DataError::EncodingError)
     }
