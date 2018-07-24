@@ -62,7 +62,7 @@ fn main() {
 
 fn populate_store(k: &Rkv, store: &Store<&str>) -> Result<(), StoreError> {
     let mut writer = store.write(k)?;
-    for (country, city) in &vec![
+    for (country, city) in vec![
         ("Canada", Value::Str("Ottawa")),
         ("United States of America", Value::Str("Washington")),
         ("Germany", Value::Str("Berlin")),
@@ -71,7 +71,7 @@ fn populate_store(k: &Rkv, store: &Store<&str>) -> Result<(), StoreError> {
         ("United Kingdom", Value::Str("London")),
         ("Japan", Value::Str("Tokyo")),
     ] {
-        writer.put(country, city)?;
+        writer.put(country, &city)?;
     }
     writer.commit()
 }
