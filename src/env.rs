@@ -561,4 +561,163 @@ mod tests {
         //
         reader.iter_from("nuu").unwrap();
     }
+
+    #[test]
+    fn test_multiple_store_read_write() {
+        let root = Builder::new().prefix("test_multiple_store_reader_writer").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let main: Store<&str> = k.open_or_create("main").expect("opened");
+        let another: Store<&str> = k.open_or_create("another").expect("opened");
+        let third: Store<&str> = k.open_or_create("third").expect("opened");
+
+        // test put & put_in across multiple stores
+        let mut writer = main.write(&k).expect("writer");
+        writer.put("key", &Value::Str("value 0")).expect("wrote");
+        writer.put_in("key", &Value::Str("value 1"), &another).expect("wrote");
+        writer.put_in("key", &Value::Str("value 2"), &third).expect("wrote");
+
+        // test get & get_in on writer
+        assert_eq!(writer.get("key").expect("value"), Some(Value::Str("value 0")));
+        assert_eq!(writer.get_in("key", &main).expect("value"), Some(Value::Str("value 0")));
+        assert_eq!(writer.get_in("key", &another).expect("value"), Some(Value::Str("value 1")));
+        assert_eq!(writer.get_in("key", &third).expect("value"), Some(Value::Str("value 2")));
+        writer.commit().expect("committed");
+
+        // test get & get_in on reader
+        {
+            let reader = main.read(&k).expect("reader");
+            assert_eq!(reader.get("key").expect("value"), Some(Value::Str("value 0")));
+            assert_eq!(reader.get_in("key", &main).expect("value"), Some(Value::Str("value 0")));
+            assert_eq!(reader.get_in("key", &another).expect("value"), Some(Value::Str("value 1")));
+            assert_eq!(reader.get_in("key", &third).expect("value"), Some(Value::Str("value 2")));
+        }
+
+        // test delete & delete_in across multiple stores
+        let mut writer = main.write(&k).expect("writer");
+        writer.delete("key").expect("wrote");
+        writer.delete_in("key", &another).expect("wrote");
+        writer.delete_in("key", &third).expect("wrote");
+        writer.commit().expect("committed");
+
+        {
+            let reader = main.read(&k).expect("reader");
+            assert_eq!(reader.get("key").expect("value"), None);
+            assert_eq!(reader.get_in("key", &main).expect("value"), None);
+            assert_eq!(reader.get_in("key", &another).expect("value"), None);
+            assert_eq!(reader.get_in("key", &third).expect("value"), None);
+        }
+    }
+
+    #[test]
+    fn test_multiple_store_iterators() {
+        let root = Builder::new().prefix("test_multiple_store_iterators").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let main: Store<&str> = k.open_or_create("main").expect("opened");
+        let another: Store<&str> = k.open_or_create("another").expect("opened");
+
+        let mut writer = main.write(&k).expect("writer");
+        // Write to "main"
+        writer.put("foo", &Value::I64(1234)).expect("wrote");
+        writer.put("noo", &Value::F64(1234.0.into())).expect("wrote");
+        writer.put("bar", &Value::Bool(true)).expect("wrote");
+        writer.put("baz", &Value::Str("héllo, yöu")).expect("wrote");
+        writer.put("héllò, töűrîst", &Value::Str("Emil.RuleZ!")).expect("wrote");
+        writer.put("你好，遊客", &Value::Str("米克規則")).expect("wrote");
+        // Writer to "another"
+        writer.put_in("foo", &Value::I64(1234), &another).expect("wrote");
+        writer.put_in("noo", &Value::F64(1234.0.into()), &another).expect("wrote");
+        writer.put_in("bar", &Value::Bool(true), &another).expect("wrote");
+        writer.put_in("baz", &Value::Str("héllo, yöu"), &another).expect("wrote");
+        writer.put_in("héllò, töűrîst", &Value::Str("Emil.RuleZ!"), &another).expect("wrote");
+        writer.put_in("你好，遊客", &Value::Str("米克規則"), &another).expect("wrote");
+        writer.commit().expect("committed");
+
+        let reader = main.read(&k).unwrap();
+
+        // Iterate through the whole store in "main"
+        let mut iter = reader.iter_start().unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "bar");
+        assert_eq!(val.expect("value"), Some(Value::Bool(true)));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "baz");
+        assert_eq!(val.expect("value"), Some(Value::Str("héllo, yöu")));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "foo");
+        assert_eq!(val.expect("value"), Some(Value::I64(1234)));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "héllò, töűrîst");
+        assert_eq!(val.expect("value"), Some(Value::Str("Emil.RuleZ!")));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert!(iter.next().is_none());
+
+        // Iterate through the whole store in "another"
+        let mut iter = reader.iter_start_in(&another).unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "bar");
+        assert_eq!(val.expect("value"), Some(Value::Bool(true)));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "baz");
+        assert_eq!(val.expect("value"), Some(Value::Str("héllo, yöu")));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "foo");
+        assert_eq!(val.expect("value"), Some(Value::I64(1234)));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "héllò, töűrîst");
+        assert_eq!(val.expect("value"), Some(Value::Str("Emil.RuleZ!")));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert!(iter.next().is_none());
+
+        // Iterate from a given key in "main"
+        let mut iter = reader.iter_from("moo").unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert!(iter.next().is_none());
+
+        // Iterate from a given key in "another"
+        let mut iter = reader.iter_from_in("moo", &another).unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert!(iter.next().is_none());
+
+        // Iterate from a given prefix in "main"
+        let mut iter = reader.iter_from("no").unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert!(iter.next().is_none());
+
+        // Iterate from a given prefix in "another"
+        let mut iter = reader.iter_from_in("no", &another).unwrap();
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "noo");
+        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap();
+        assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
+        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert!(iter.next().is_none());
+    }
 }

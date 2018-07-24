@@ -65,20 +65,57 @@ impl<'env, K> Writer<'env, K>
 where
     K: AsRef<[u8]>,
 {
-    pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        let bytes = self.tx.get(self.db, &k.as_ref());
+    fn inner_get<'s>(&'s self, k: K, store: Option<&'s Store<K>>) -> Result<Option<Value<'s>>, StoreError> {
+        let db = match store {
+            Some(s) => s.db,
+            None => self.db,
+        };
+        let bytes = self.tx.get(db, &k.as_ref());
         read_transform(bytes)
+    }
+
+    pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        self.inner_get(k, None)
+    }
+
+    pub fn get_in<'s>(&'s self, k: K, store: &'s Store<K>) -> Result<Option<Value<'s>>, StoreError> {
+        self.inner_get(k, Some(store))
+    }
+
+    fn inner_put<'s>(&mut self, k: K, v: &Value, store: Option<&'s Store<K>>) -> Result<(), StoreError> {
+        // TODO: don't allocate twice.
+        let bytes = v.to_bytes()?;
+        let db = match store {
+            Some(s) => s.db,
+            None => self.db,
+        };
+        self.tx.put(db, &k.as_ref(), &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
     // TODO: flags
     pub fn put<'s>(&'s mut self, k: K, v: &Value) -> Result<(), StoreError> {
-        // TODO: don't allocate twice.
-        let bytes = v.to_bytes()?;
-        self.tx.put(self.db, &k.as_ref(), &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
+        self.inner_put(k, v, None)
+    }
+
+    // TODO: flags
+    pub fn put_in<'s>(&'s mut self, k: K, v: &Value, store: &'s Store<K>) -> Result<(), StoreError> {
+        self.inner_put(k, v, Some(store))
+    }
+
+    fn inner_delete<'s>(&'s mut self, k: K, store: Option<&'s Store<K>>) -> Result<(), StoreError> {
+        let db = match store {
+            Some(s) => s.db,
+            None => self.db,
+        };
+        self.tx.del(db, &k.as_ref(), None).map_err(StoreError::LmdbError)
     }
 
     pub fn delete<'s>(&'s mut self, k: K) -> Result<(), StoreError> {
-        self.tx.del(self.db, &k.as_ref(), None).map_err(StoreError::LmdbError)
+        self.inner_delete(k, None)
+    }
+
+    pub fn delete_in<'s>(&'s mut self, k: K, store: &'s Store<K>) -> Result<(), StoreError> {
+        self.inner_delete(k, Some(store))
     }
 
     pub fn delete_value<'s>(&'s mut self, _k: K, _v: &Value) -> Result<(), StoreError> {
@@ -103,17 +140,33 @@ impl<'env, K> Reader<'env, K>
 where
     K: AsRef<[u8]>,
 {
-    pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        let bytes = self.tx.get(self.db, &k.as_ref());
+    fn inner_get<'s>(&'s self, k: K, store: Option<&'s Store<K>>) -> Result<Option<Value<'s>>, StoreError> {
+        let db = match store {
+            Some(s) => s.db,
+            None => self.db,
+        };
+        let bytes = self.tx.get(db, &k.as_ref());
         read_transform(bytes)
+    }
+
+    pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        self.inner_get(k, None)
+    }
+
+    pub fn get_in<'s>(&'s self, k: K, store: &'s Store<K>) -> Result<Option<Value<'s>>, StoreError> {
+        self.inner_get(k, Some(store))
     }
 
     pub fn abort(self) {
         self.tx.abort();
     }
 
-    pub fn iter_start<'s>(&'s self) -> Result<Iter<'s>, StoreError> {
-        let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+    fn inner_iter_start<'s>(&'s self, store: Option<&Store<K>>) -> Result<Iter<'s>, StoreError> {
+        let db = match store {
+            Some(s) => s.db,
+            None => self.db,
+        };
+        let mut cursor = self.tx.open_ro_cursor(db).map_err(StoreError::LmdbError)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
         // the latter panics at "called `Result::unwrap()` on an `Err` value:
@@ -131,13 +184,33 @@ where
         })
     }
 
-    pub fn iter_from<'s>(&'s self, k: K) -> Result<Iter<'s>, StoreError> {
-        let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+    pub fn iter_start<'s>(&'s self) -> Result<Iter<'s>, StoreError> {
+        self.inner_iter_start(None)
+    }
+
+    pub fn iter_start_in<'s>(&'s self, store: &Store<K>) -> Result<Iter<'s>, StoreError> {
+        self.inner_iter_start(Some(store))
+    }
+
+    fn inner_iter_from<'s>(&'s self, k: K, store: Option<&Store<K>>) -> Result<Iter<'s>, StoreError> {
+        let db = match store {
+            Some(s) => s.db,
+            None => self.db,
+        };
+        let mut cursor = self.tx.open_ro_cursor(db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {
             iter: iter,
             cursor: cursor,
         })
+    }
+
+    pub fn iter_from<'s>(&'s self, k: K) -> Result<Iter<'s>, StoreError> {
+        self.inner_iter_from(k, None)
+    }
+
+    pub fn iter_from_in<'s>(&'s self, k: K, store: &Store<K>) -> Result<Iter<'s>, StoreError> {
+        self.inner_iter_from(k, Some(store))
     }
 }
 
