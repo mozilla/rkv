@@ -67,25 +67,26 @@
 //!
 //! // Call `Rkv.open_or_create_default()` to get a handle to the default
 //! // (unnamed) store for the environment.
-//! let store: Store<&str> = env.open_or_create_default().unwrap();
+//! let store: Store = env.open_or_create_default().unwrap();
 //!
 //! {
 //!     // Use a write transaction to mutate the store by calling
-//!     // `Store.write()` to create a `Writer`.  There can be only one
+//!     // `Rkv.write()` to create a `Writer`.  There can be only one
 //!     // writer for a given store; opening a second one will block
 //!     // until the first completes.
-//!     let mut writer = store.write(&env).unwrap();
+//!     let mut writer = env.write::<&str>().unwrap();
 //!
+//!     // Writer takes a `Store` reference as the first argument.
 //!     // Keys are `AsRef<[u8]>`, while values are `Value` enum instances.
 //!     // Use the `Blob` variant to store arbitrary collections of bytes.
-//!     writer.put("int", &Value::I64(1234)).unwrap();
-//!     writer.put("uint", &Value::U64(1234_u64)).unwrap();
-//!     writer.put("float", &Value::F64(1234.0.into())).unwrap();
-//!     writer.put("instant", &Value::Instant(1528318073700)).unwrap();
-//!     writer.put("boolean", &Value::Bool(true)).unwrap();
-//!     writer.put("string", &Value::Str("héllo, yöu")).unwrap();
-//!     writer.put("json", &Value::Json(r#"{"foo":"bar", "number": 1}"#)).unwrap();
-//!     writer.put("blob", &Value::Blob(b"blob")).unwrap();
+//!     writer.put(&store, "int", &Value::I64(1234)).unwrap();
+//!     writer.put(&store, "uint", &Value::U64(1234_u64)).unwrap();
+//!     writer.put(&store, "float", &Value::F64(1234.0.into())).unwrap();
+//!     writer.put(&store, "instant", &Value::Instant(1528318073700)).unwrap();
+//!     writer.put(&store, "boolean", &Value::Bool(true)).unwrap();
+//!     writer.put(&store, "string", &Value::Str("héllo, yöu")).unwrap();
+//!     writer.put(&store, "json", &Value::Json(r#"{"foo":"bar", "number": 1}"#)).unwrap();
+//!     writer.put(&store, "blob", &Value::Blob(b"blob")).unwrap();
 //!
 //!     // You must commit a write transaction before the writer goes out
 //!     // of scope, or the transaction will abort and the data won't persist.
@@ -93,24 +94,24 @@
 //! }
 //!
 //! {
-//!     // Use a read transaction to query the store by calling `Store.read()`
+//!     // Use a read transaction to query the store by calling `Rkv.read()`
 //!     // to create a `Reader`.  There can be unlimited concurrent readers
 //!     // for a store, and readers never block on a writer nor other readers.
-//!     let reader = store.read(&env).expect("reader");
+//!     let reader = env.read::<&str>().expect("reader");
 //!
-//!     // To retrieve data, call `Reader.get()`, passing it the key
-//!     // for the value to retrieve.
-//!     println!("Get int {:?}", reader.get("int").unwrap());
-//!     println!("Get uint {:?}", reader.get("uint").unwrap());
-//!     println!("Get float {:?}", reader.get("float").unwrap());
-//!     println!("Get instant {:?}", reader.get("instant").unwrap());
-//!     println!("Get boolean {:?}", reader.get("boolean").unwrap());
-//!     println!("Get string {:?}", reader.get("string").unwrap());
-//!     println!("Get json {:?}", reader.get("json").unwrap());
-//!     println!("Get blob {:?}", reader.get("blob").unwrap());
+//!     // To retrieve data, call `Reader.get()`, passing it the target store
+//!     // and the key for the value to retrieve.
+//!     println!("Get int {:?}", reader.get(&store, "int").unwrap());
+//!     println!("Get uint {:?}", reader.get(&store, "uint").unwrap());
+//!     println!("Get float {:?}", reader.get(&store, "float").unwrap());
+//!     println!("Get instant {:?}", reader.get(&store, "instant").unwrap());
+//!     println!("Get boolean {:?}", reader.get(&store, "boolean").unwrap());
+//!     println!("Get string {:?}", reader.get(&store, "string").unwrap());
+//!     println!("Get json {:?}", reader.get(&store, "json").unwrap());
+//!     println!("Get blob {:?}", reader.get(&store, "blob").unwrap());
 //!
 //!     // Retrieving a non-existent value returns `Ok(None)`.
-//!     println!("Get non-existent value {:?}", reader.get("non-existent"));
+//!     println!("Get non-existent value {:?}", reader.get(&store, "non-existent"));
 //!
 //!     // A read transaction will automatically close once the reader
 //!     // goes out of scope, so isn't necessary to close it explicitly,
@@ -119,12 +120,12 @@
 //!
 //! {
 //!     // Aborting a write transaction rolls back the change(s).
-//!     let mut writer = store.write(&env).unwrap();
-//!     writer.put("foo", &Value::Str("bar")).unwrap();
+//!     let mut writer = env.write::<&str>().unwrap();
+//!     writer.put(&store, "foo", &Value::Str("bar")).unwrap();
 //!     writer.abort();
 //!
-//!     let reader = store.read(&env).expect("reader");
-//!     println!("It should be None! ({:?})", reader.get("foo").unwrap());
+//!     let reader = env.read().expect("reader");
+//!     println!("It should be None! ({:?})", reader.get(&store, "foo").unwrap());
 //! }
 //!
 //! {
@@ -132,36 +133,36 @@
 //!     // abort is desired, since both read and write transactions will
 //!     // implicitly be aborted once they go out of scope.
 //!     {
-//!         let mut writer = store.write(&env).unwrap();
-//!         writer.put("foo", &Value::Str("bar")).unwrap();
+//!         let mut writer = env.write::<&str>().unwrap();
+//!         writer.put(&store, "foo", &Value::Str("bar")).unwrap();
 //!     }
-//!     let reader = store.read(&env).expect("reader");
-//!     println!("It should be None! ({:?})", reader.get("foo").unwrap());
+//!     let reader = env.read::<&str>().expect("reader");
+//!     println!("It should be None! ({:?})", reader.get(&store, "foo").unwrap());
 //! }
 //!
 //! {
 //!     // Deleting a key/value pair also requires a write transaction.
-//!     let mut writer = store.write(&env).unwrap();
-//!     writer.put("foo", &Value::Str("bar")).unwrap();
-//!     writer.put("bar", &Value::Str("baz")).unwrap();
-//!     writer.delete("foo").unwrap();
+//!     let mut writer = env.write::<&str>().unwrap();
+//!     writer.put(&store, "foo", &Value::Str("bar")).unwrap();
+//!     writer.put(&store, "bar", &Value::Str("baz")).unwrap();
+//!     writer.delete(&store, "foo").unwrap();
 //!
 //!     // A write transaction also supports reading, the version of the
 //!     // store that it reads includes changes it has made regardless of
 //!     // the commit state of that transaction.
 //!     // In the code above, "foo" and "bar" were put into the store,
 //!     // then "foo" was deleted so only "bar" will return a result.
-//!     println!("It should be None! ({:?})", writer.get("foo").unwrap());
-//!     println!("Get bar ({:?})", writer.get("bar").unwrap());
+//!     println!("It should be None! ({:?})", writer.get(&store, "foo").unwrap());
+//!     println!("Get bar ({:?})", writer.get(&store, "bar").unwrap());
 //!     writer.commit().unwrap();
-//!     let reader = store.read(&env).expect("reader");
-//!     println!("It should be None! ({:?})", reader.get("foo").unwrap());
-//!     println!("Get bar {:?}", reader.get("bar").unwrap());
+//!     let reader = env.read::<&str>().expect("reader");
+//!     println!("It should be None! ({:?})", reader.get(&store, "foo").unwrap());
+//!     println!("Get bar {:?}", reader.get(&store, "bar").unwrap());
 //!
 //!     // Committing a transaction consumes the writer, preventing you
 //!     // from reusing it by failing at compile time with an error.
 //!     // This line would report error[E0382]: use of moved value: `writer`.
-//!     // writer.put("baz", &Value::Str("buz")).unwrap();
+//!     // writer.put(&store, "baz", &Value::Str("buz")).unwrap();
 //! }
 //! ```
 
@@ -202,10 +203,10 @@ pub use error::{
     StoreError,
 };
 
-pub use integer::{
-    IntegerStore,
-    PrimitiveInt,
-};
+// pub use integer::{
+// IntegerStore,
+// PrimitiveInt,
+// };
 
 pub use manager::Manager;
 
