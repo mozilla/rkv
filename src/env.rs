@@ -123,6 +123,22 @@ impl Rkv {
         })?;
         Ok(Store::new(db))
     }
+
+    /// Open an existing database, unlike other `open_or_create_*` functions, it
+    /// opens the given database by using a read transaction, which means other
+    /// in-flight write transaction will not block this call. This is preferred
+    /// to be used in the read_only scenarios.
+    pub fn open<'s, T, K>(&self, name: T) -> Result<Store<K>, StoreError>
+    where
+        T: Into<Option<&'s str>>,
+        K: AsRef<[u8]>,
+    {
+        let db = self.env.open_db(name.into()).map_err(|e| match e {
+            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+            _ => e.into(),
+        })?;
+        Ok(Store::new(db))
+    }
 }
 
 /// Read and write accessors.
@@ -290,6 +306,34 @@ mod tests {
             assert_eq!(sk.get(r, "bar").expect("read"), None);
             assert_eq!(sk.get(r, "baz").expect("read"), None);
         }
+    }
+
+    #[test]
+    fn test_open_store_for_read() {
+        let root = Builder::new().prefix("test_open_store_for_read").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        // First create the store, and start a write transaction on it.
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
+        let mut writer = sk.write(&k).expect("writer");
+        writer.put("foo", &Value::Str("bar")).expect("write");
+
+        // Open the same store for read, note that the write transaction is still in progress,
+        // it should not block the reader though.
+        let sk_readonly: Store<&str> = k.open("sk").expect("opened");
+        writer.commit().expect("commit");
+        // Now the write transaction is committed, any followed reads should see its change.
+        let reader = sk_readonly.read(&k).expect("reader");
+        assert_eq!(reader.get("foo").expect("read"), Some(Value::Str("bar")));
+    }
+
+    #[test]
+    #[should_panic(expected = "open a missing store")]
+    fn test_open_a_missing_store() {
+        let root = Builder::new().prefix("test_open_a_missing_store").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let _sk: Store<&str> = k.open("sk").expect("open a missing store");
     }
 
     #[test]
