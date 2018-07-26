@@ -25,10 +25,12 @@ use lmdb::{
 
 use error::StoreError;
 
-// use integer::{
-// IntegerStore,
-// PrimitiveInt,
-// };
+use integer::{
+    IntegerReader,
+    IntegerWriter,
+    Key,
+    PrimitiveInt,
+};
 
 use readwrite::{
     Reader,
@@ -99,18 +101,14 @@ impl Rkv {
         self.open_or_create_with_flags(name, flags)
     }
 
-    // pub fn open_or_create_integer<'s, T>(&self, name: T) -> Result<IntegerStore, StoreError>
-    // where
-    // T: Into<Option<&'s str>>,
-    // {
-    // let mut flags = DatabaseFlags::empty();
-    // flags.toggle(DatabaseFlags::INTEGER_KEY);
-    // let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
-    // lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-    // _ => e.into(),
-    // })?;
-    // Ok(IntegerStore::new(db))
-    // }
+    pub fn open_or_create_integer<'s, T>(&self, name: T) -> Result<Store, StoreError>
+    where
+        T: Into<Option<&'s str>>,
+    {
+        let mut flags = DatabaseFlags::empty();
+        flags.toggle(DatabaseFlags::INTEGER_KEY);
+        self.open_or_create_with_flags(name, flags)
+    }
 
     pub fn open_or_create_with_flags<'s, T>(&self, name: T, flags: DatabaseFlags) -> Result<Store, StoreError>
     where
@@ -156,6 +154,22 @@ impl Rkv {
     {
         let txn = self.env.begin_rw_txn()?;
         Ok(Writer::new(txn))
+    }
+
+    pub fn read_int<K>(&self) -> Result<IntegerReader<K>, StoreError>
+    where
+        K: PrimitiveInt,
+    {
+        let reader = self.read::<Key<K>>()?;
+        Ok(IntegerReader::new(reader))
+    }
+
+    pub fn write_int<K>(&self) -> Result<IntegerWriter<K>, StoreError>
+    where
+        K: PrimitiveInt,
+    {
+        let write = self.write::<Key<K>>()?;
+        Ok(IntegerWriter::new(write))
     }
 }
 

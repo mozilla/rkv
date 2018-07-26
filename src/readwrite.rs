@@ -61,7 +61,7 @@ impl<'env, K> Writer<'env, K>
 where
     K: AsRef<[u8]>,
 {
-    pub fn new(txn: RwTransaction) -> Writer<K> {
+    pub(crate) fn new(txn: RwTransaction) -> Writer<K> {
         Writer {
             tx: txn,
             phantom: PhantomData,
@@ -106,7 +106,7 @@ impl<'env, K> Reader<'env, K>
 where
     K: AsRef<[u8]>,
 {
-    pub fn new(txn: RoTransaction) -> Reader<K> {
+    pub(crate) fn new(txn: RoTransaction) -> Reader<K> {
         Reader {
             tx: txn,
             phantom: PhantomData,

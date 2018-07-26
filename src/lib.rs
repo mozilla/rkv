@@ -203,10 +203,11 @@ pub use error::{
     StoreError,
 };
 
-// pub use integer::{
-// IntegerStore,
-// PrimitiveInt,
-// };
+pub use integer::{
+    IntegerReader,
+    IntegerWriter,
+    PrimitiveInt,
+};
 
 pub use manager::Manager;
 
