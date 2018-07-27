@@ -337,6 +337,23 @@ mod tests {
     }
 
     #[test]
+    fn test_open_fail_with_badrslot() {
+        let root = Builder::new().prefix("test_open_fail_with_badrslot").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        // First create the store
+        let sk: Store<&str> = k.open_or_create("sk").expect("opened");
+        // Open a reader on this store
+        let _reader = sk.read(&k).expect("reader");
+        // Open the same store for read while the reader is in progress will panic
+        let store: Result<Store<&str>, StoreError> = k.open("sk");
+        match store {
+            Err(StoreError::OpenAttemptedDuringTransaction(_thread_id)) => assert!(true),
+            _ => panic!("should panic"),
+        }
+    }
+
+    #[test]
     fn test_read_before_write_num() {
         let root = Builder::new().prefix("test_read_before_write_num").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
