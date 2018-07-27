@@ -74,7 +74,7 @@
 //!     // `Rkv.write()` to create a `Writer`.  There can be only one
 //!     // writer for a given store; opening a second one will block
 //!     // until the first completes.
-//!     let mut writer = env.write::<&str>().unwrap();
+//!     let mut writer = env.write().unwrap();
 //!
 //!     // Writer takes a `Store` reference as the first argument.
 //!     // Keys are `AsRef<[u8]>`, while values are `Value` enum instances.
@@ -97,7 +97,7 @@
 //!     // Use a read transaction to query the store by calling `Rkv.read()`
 //!     // to create a `Reader`.  There can be unlimited concurrent readers
 //!     // for a store, and readers never block on a writer nor other readers.
-//!     let reader = env.read::<&str>().expect("reader");
+//!     let reader = env.read().expect("reader");
 //!
 //!     // To retrieve data, call `Reader.get()`, passing it the target store
 //!     // and the key for the value to retrieve.
@@ -120,7 +120,7 @@
 //!
 //! {
 //!     // Aborting a write transaction rolls back the change(s).
-//!     let mut writer = env.write::<&str>().unwrap();
+//!     let mut writer = env.write().unwrap();
 //!     writer.put(&store, "foo", &Value::Str("bar")).unwrap();
 //!     writer.abort();
 //!
@@ -133,16 +133,16 @@
 //!     // abort is desired, since both read and write transactions will
 //!     // implicitly be aborted once they go out of scope.
 //!     {
-//!         let mut writer = env.write::<&str>().unwrap();
+//!         let mut writer = env.write().unwrap();
 //!         writer.put(&store, "foo", &Value::Str("bar")).unwrap();
 //!     }
-//!     let reader = env.read::<&str>().expect("reader");
+//!     let reader = env.read().expect("reader");
 //!     println!("It should be None! ({:?})", reader.get(&store, "foo").unwrap());
 //! }
 //!
 //! {
 //!     // Deleting a key/value pair also requires a write transaction.
-//!     let mut writer = env.write::<&str>().unwrap();
+//!     let mut writer = env.write().unwrap();
 //!     writer.put(&store, "foo", &Value::Str("bar")).unwrap();
 //!     writer.put(&store, "bar", &Value::Str("baz")).unwrap();
 //!     writer.delete(&store, "foo").unwrap();
@@ -155,7 +155,7 @@
 //!     println!("It should be None! ({:?})", writer.get(&store, "foo").unwrap());
 //!     println!("Get bar ({:?})", writer.get(&store, "bar").unwrap());
 //!     writer.commit().unwrap();
-//!     let reader = env.read::<&str>().expect("reader");
+//!     let reader = env.read().expect("reader");
 //!     println!("It should be None! ({:?})", reader.get(&store, "foo").unwrap());
 //!     println!("Get bar {:?}", reader.get(&store, "bar").unwrap());
 //!
@@ -205,6 +205,7 @@ pub use error::{
 
 pub use integer::{
     IntegerReader,
+    IntegerStore,
     IntegerWriter,
     PrimitiveInt,
 };

@@ -33,7 +33,7 @@ fn main() {
 
     populate_store(&k, &store).unwrap();
 
-    let reader = k.read::<&str>().unwrap();
+    let reader = k.read().unwrap();
 
     println!("Iterating from the beginning...");
     // Reader::iter_start() iterates from the first item in the store, and
@@ -61,7 +61,7 @@ fn main() {
 }
 
 fn populate_store(k: &Rkv, store: &Store) -> Result<(), StoreError> {
-    let mut writer = k.write::<&str>()?;
+    let mut writer = k.write()?;
     for (country, city) in vec![
         ("Canada", Value::Str("Ottawa")),
         ("United States of America", Value::Str("Washington")),

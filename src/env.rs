@@ -27,6 +27,7 @@ use error::StoreError;
 
 use integer::{
     IntegerReader,
+    IntegerStore,
     IntegerWriter,
     Key,
     PrimitiveInt,
@@ -101,13 +102,17 @@ impl Rkv {
         self.open_or_create_with_flags(name, flags)
     }
 
-    pub fn open_or_create_integer<'s, T>(&self, name: T) -> Result<Store, StoreError>
+    pub fn open_or_create_integer<'s, T>(&self, name: T) -> Result<IntegerStore, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
         let mut flags = DatabaseFlags::empty();
         flags.toggle(DatabaseFlags::INTEGER_KEY);
-        self.open_or_create_with_flags(name, flags)
+        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
+            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+            _ => e.into(),
+        })?;
+        Ok(IntegerStore::new(db))
     }
 
     pub fn open_or_create_with_flags<'s, T>(&self, name: T, flags: DatabaseFlags) -> Result<Store, StoreError>
@@ -222,7 +227,7 @@ mod tests {
         let _ = k.open_or_create_default().expect("created default");
 
         let yyy = k.open_or_create("yyy").expect("opened");
-        let reader = k.read::<&str>().expect("reader");
+        let reader = k.read().expect("reader");
 
         let result = reader.get(&yyy, "foo");
         assert_eq!(None, result.expect("success but no value"));
@@ -237,7 +242,7 @@ mod tests {
         let sk: Store = k.open_or_create("sk").expect("opened");
 
         {
-            let mut writer = k.write::<&str>().expect("writer");
+            let mut writer = k.write().expect("writer");
             writer.put(&sk, "foo", &Value::I64(1234)).expect("wrote");
             writer.put(&sk, "noo", &Value::F64(1234.0.into())).expect("wrote");
             writer.put(&sk, "bar", &Value::Bool(true)).expect("wrote");
@@ -248,7 +253,7 @@ mod tests {
             assert_eq!(writer.get(&sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
 
             // Isolation. Reads won't return values.
-            let r = &k.read::<&str>().unwrap();
+            let r = &k.read().unwrap();
             assert_eq!(r.get(&sk, "foo").expect("read"), None);
             assert_eq!(r.get(&sk, "bar").expect("read"), None);
             assert_eq!(r.get(&sk, "baz").expect("read"), None);
@@ -257,14 +262,14 @@ mod tests {
         // Dropped: tx rollback. Reads will still return nothing.
 
         {
-            let r = &k.read::<&str>().unwrap();
+            let r = &k.read().unwrap();
             assert_eq!(r.get(&sk, "foo").expect("read"), None);
             assert_eq!(r.get(&sk, "bar").expect("read"), None);
             assert_eq!(r.get(&sk, "baz").expect("read"), None);
         }
 
         {
-            let mut writer = k.write::<&str>().expect("writer");
+            let mut writer = k.write().expect("writer");
             writer.put(&sk, "foo", &Value::I64(1234)).expect("wrote");
             writer.put(&sk, "bar", &Value::Bool(true)).expect("wrote");
             writer.put(&sk, "baz", &Value::Str("héllo, yöu")).expect("wrote");
@@ -277,14 +282,14 @@ mod tests {
 
         // Committed. Reads will succeed.
         {
-            let r = k.read::<&str>().unwrap();
+            let r = k.read().unwrap();
             assert_eq!(r.get(&sk, "foo").expect("read"), Some(Value::I64(1234)));
             assert_eq!(r.get(&sk, "bar").expect("read"), Some(Value::Bool(true)));
             assert_eq!(r.get(&sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
         }
 
         {
-            let mut writer = k.write::<&str>().expect("writer");
+            let mut writer = k.write().expect("writer");
             writer.delete(&sk, "foo").expect("deleted");
             writer.delete(&sk, "bar").expect("deleted");
             writer.delete(&sk, "baz").expect("deleted");
@@ -293,7 +298,7 @@ mod tests {
             assert_eq!(writer.get(&sk, "baz").expect("read"), None);
 
             // Isolation. Reads still return values.
-            let r = k.read::<&str>().unwrap();
+            let r = k.read().unwrap();
             assert_eq!(r.get(&sk, "foo").expect("read"), Some(Value::I64(1234)));
             assert_eq!(r.get(&sk, "bar").expect("read"), Some(Value::Bool(true)));
             assert_eq!(r.get(&sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
@@ -302,14 +307,14 @@ mod tests {
         // Dropped: tx rollback. Reads will still return values.
 
         {
-            let r = k.read::<&str>().unwrap();
+            let r = k.read().unwrap();
             assert_eq!(r.get(&sk, "foo").expect("read"), Some(Value::I64(1234)));
             assert_eq!(r.get(&sk, "bar").expect("read"), Some(Value::Bool(true)));
             assert_eq!(r.get(&sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
         }
 
         {
-            let mut writer = k.write::<&str>().expect("writer");
+            let mut writer = k.write().expect("writer");
             writer.delete(&sk, "foo").expect("deleted");
             writer.delete(&sk, "bar").expect("deleted");
             writer.delete(&sk, "baz").expect("deleted");
@@ -322,7 +327,7 @@ mod tests {
 
         // Committed. Reads will succeed but return None to indicate a missing value.
         {
-            let r = k.read::<&str>().unwrap();
+            let r = k.read().unwrap();
             assert_eq!(r.get(&sk, "foo").expect("read"), None);
             assert_eq!(r.get(&sk, "bar").expect("read"), None);
             assert_eq!(r.get(&sk, "baz").expect("read"), None);
@@ -393,7 +398,7 @@ mod tests {
             }
         }
 
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         let mut existing = get_existing_foo(&writer, &sk).unwrap_or(99);
         existing += 1;
         writer.put(&sk, "foo", &Value::I64(existing)).expect("success");
@@ -415,7 +420,7 @@ mod tests {
         // as the Value::Str (and its underlying &str) borrows an immutable
         // reference to the Writer.  So we copy it to a String.
 
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         let mut existing = match writer.get(&sk, "foo").expect("read") {
             Some(Value::Str(val)) => val,
             _ => "",
@@ -453,22 +458,22 @@ mod tests {
 
         // Add one field.
         {
-            let mut writer = k.write::<&str>().expect("writer");
+            let mut writer = k.write().expect("writer");
             writer.put(&s, "foo", &Value::I64(1234)).expect("wrote");
             writer.commit().expect("committed");
         }
 
         {
-            let reader = k.read::<&str>().unwrap();
+            let reader = k.read().unwrap();
             assert_eq!(reader.get(&s, "foo").expect("read"), Some(Value::I64(1234)));
         }
 
         // Establish a long-lived reader that outlasts a writer.
-        let reader = k.read::<&str>().expect("reader");
+        let reader = k.read().expect("reader");
         assert_eq!(reader.get(&s, "foo").expect("read"), Some(Value::I64(1234)));
 
         // Start a write transaction.
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         writer.put(&s, "foo", &Value::I64(999)).expect("wrote");
 
         // The reader and writer are isolated.
@@ -482,7 +487,7 @@ mod tests {
         // A new reader sees the committed value. Note that LMDB doesn't allow two
         // read transactions to exist in the same thread, so we abort the previous one.
         reader.abort();
-        let reader = k.read::<&str>().expect("reader");
+        let reader = k.read().expect("reader");
         assert_eq!(reader.get(&s, "foo").expect("read"), Some(Value::I64(999)));
     }
 
@@ -492,7 +497,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create("sk").expect("opened");
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
 
         assert_eq!(writer.get(&sk, "foo").expect("read"), None);
         writer.put(&sk, "foo", &Value::Blob(&[1, 2, 3, 4])).expect("wrote");
@@ -531,7 +536,7 @@ mod tests {
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create_with_flags("sk", DatabaseFlags::DUP_SORT).expect("opened");
 
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         writer.put(&sk, "foo", &Value::I64(1234)).expect("wrote");
         writer.put(&sk, "foo", &Value::I64(1235)).expect("wrote");
         writer.delete_value(&sk, "foo", &Value::I64(1234)).expect("deleted");
@@ -551,7 +556,7 @@ mod tests {
             assert!(iter.next().is_none());
         }
 
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         writer.put(&sk, "foo", &Value::I64(1234)).expect("wrote");
         writer.put(&sk, "noo", &Value::F64(1234.0.into())).expect("wrote");
         writer.put(&sk, "bar", &Value::Bool(true)).expect("wrote");
@@ -560,7 +565,7 @@ mod tests {
         writer.put(&sk, "你好，遊客", &Value::Str("米克規則")).expect("wrote");
         writer.commit().expect("committed");
 
-        let reader = k.read::<&str>().unwrap();
+        let reader = k.read().unwrap();
 
         // Reader.iter() returns (key, value) tuples ordered by key.
         let mut iter = reader.iter_start(&sk).unwrap();
@@ -619,14 +624,14 @@ mod tests {
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create("sk").expect("opened");
 
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         writer.put(&sk, "foo", &Value::I64(1234)).expect("wrote");
         writer.put(&sk, "noo", &Value::F64(1234.0.into())).expect("wrote");
         writer.put(&sk, "bar", &Value::Bool(true)).expect("wrote");
         writer.put(&sk, "baz", &Value::Str("héllo, yöu")).expect("wrote");
         writer.commit().expect("committed");
 
-        let reader = k.read::<&str>().unwrap();
+        let reader = k.read().unwrap();
 
         // There is no key greater than "nuu", so the underlying LMDB API panics
         // when calling iter_from.  This is unfortunate, and I've requested
@@ -639,8 +644,8 @@ mod tests {
     }
 
     #[test]
-    fn test_mutilpe_store_read_write() {
-        let root = Builder::new().prefix("test_mutilpe_store_read_write").tempdir().expect("tempdir");
+    fn test_multiple_store_read_write() {
+        let root = Builder::new().prefix("test_multiple_store_read_write").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
@@ -648,7 +653,7 @@ mod tests {
         let s2: Store = k.open_or_create("store_2").expect("opened");
         let s3: Store = k.open_or_create("store_3").expect("opened");
 
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         writer.put(&s1, "foo", &Value::Str("bar")).expect("wrote");
         writer.put(&s2, "foo", &Value::I64(123)).expect("wrote");
         writer.put(&s3, "foo", &Value::Bool(true)).expect("wrote");
@@ -659,20 +664,20 @@ mod tests {
 
         writer.commit().expect("committed");
 
-        let reader = k.read::<&str>().expect("unbound_reader");
+        let reader = k.read().expect("unbound_reader");
         assert_eq!(reader.get(&s1, "foo").expect("read"), Some(Value::Str("bar")));
         assert_eq!(reader.get(&s2, "foo").expect("read"), Some(Value::I64(123)));
         assert_eq!(reader.get(&s3, "foo").expect("read"), Some(Value::Bool(true)));
         reader.abort();
 
         // test delete across multiple stores
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         writer.delete(&s1, "foo").expect("deleted");
         writer.delete(&s2, "foo").expect("deleted");
         writer.delete(&s3, "foo").expect("deleted");
         writer.commit().expect("committed");
 
-        let reader = k.read::<&str>().expect("reader");
+        let reader = k.read().expect("reader");
         assert_eq!(reader.get(&s1, "key").expect("value"), None);
         assert_eq!(reader.get(&s2, "key").expect("value"), None);
         assert_eq!(reader.get(&s3, "key").expect("value"), None);
@@ -686,7 +691,7 @@ mod tests {
         let s1: Store = k.open_or_create("store_1").expect("opened");
         let s2: Store = k.open_or_create("store_2").expect("opened");
 
-        let mut writer = k.write::<&str>().expect("writer");
+        let mut writer = k.write().expect("writer");
         // Write to "s1"
         writer.put(&s1, "foo", &Value::I64(1234)).expect("wrote");
         writer.put(&s1, "noo", &Value::F64(1234.0.into())).expect("wrote");
@@ -703,7 +708,7 @@ mod tests {
         writer.put(&s2, "你好，遊客", &Value::Str("米克規則")).expect("wrote");
         writer.commit().expect("committed");
 
-        let reader = k.read::<&str>().unwrap();
+        let reader = k.read().unwrap();
 
         // Iterate through the whole store in "s1"
         let mut iter = reader.iter_start(&s1).unwrap();

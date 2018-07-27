@@ -14,6 +14,8 @@ use bincode::serialize;
 
 use serde::Serialize;
 
+use lmdb::Database;
+
 use error::{
     DataError,
     StoreError,
@@ -88,8 +90,8 @@ where
         }
     }
 
-    pub fn get<'s>(&'s self, store: &'s Store, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        self.inner.get(store, Key::new(k)?)
+    pub fn get<'s>(&'s self, store: &'s IntegerStore, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        self.inner.get(&store.inner, Key::new(k)?)
     }
 
     pub fn abort(self) {
@@ -114,12 +116,12 @@ where
         }
     }
 
-    pub fn get<'s>(&'s self, store: &'s Store, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        self.inner.get(store, Key::new(k)?)
+    pub fn get<'s>(&'s self, store: &'s IntegerStore, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        self.inner.get(&store.inner, Key::new(k)?)
     }
 
-    pub fn put<'s>(&'s mut self, store: &'s Store, k: K, v: &Value) -> Result<(), StoreError> {
-        self.inner.put(store, Key::new(k)?, v)
+    pub fn put<'s>(&'s mut self, store: &'s IntegerStore, k: K, v: &Value) -> Result<(), StoreError> {
+        self.inner.put(&store.inner, Key::new(k)?, v)
     }
 
     fn abort(self) {
@@ -128,6 +130,18 @@ where
 
     fn commit(self) -> Result<(), StoreError> {
         self.inner.commit()
+    }
+}
+
+pub struct IntegerStore {
+    inner: Store,
+}
+
+impl IntegerStore {
+    pub fn new(db: Database) -> IntegerStore {
+        IntegerStore {
+            inner: Store::new(db),
+        }
     }
 }
 

@@ -34,7 +34,7 @@ fn main() {
     println!("Inserting data...");
     {
         // Use a writer to mutate the store
-        let mut writer = k.write::<&str>().unwrap();
+        let mut writer = k.write().unwrap();
         writer.put(&store, "int", &Value::I64(1234)).unwrap();
         writer.put(&store, "uint", &Value::U64(1234_u64)).unwrap();
         writer.put(&store, "float", &Value::F64(1234.0.into())).unwrap();
@@ -49,7 +49,7 @@ fn main() {
     println!("Looking up keys...");
     {
         // Use a reader to query the store
-        let reader = k.read::<&str>().unwrap();
+        let reader = k.read().unwrap();
         println!("Get int {:?}", reader.get(&store, "int").unwrap());
         println!("Get uint {:?}", reader.get(&store, "uint").unwrap());
         println!("Get float {:?}", reader.get(&store, "float").unwrap());
@@ -63,14 +63,14 @@ fn main() {
 
     println!("Looking up keys via Writer.get()...");
     {
-        let mut writer = k.write::<&str>().unwrap();
+        let mut writer = k.write().unwrap();
         writer.put(&store, "foo", &Value::Str("bar")).unwrap();
         writer.put(&store, "bar", &Value::Str("baz")).unwrap();
         writer.delete(&store, "foo").unwrap();
         println!("It should be None! ({:?})", writer.get(&store, "foo").unwrap());
         println!("Get bar ({:?})", writer.get(&store, "bar").unwrap());
         writer.commit().unwrap();
-        let reader = k.read::<&str>().expect("reader");
+        let reader = k.read().expect("reader");
         println!("It should be None! ({:?})", reader.get(&store, "foo").unwrap());
         println!("Get bar {:?}", reader.get(&store, "bar").unwrap());
     }
@@ -78,11 +78,11 @@ fn main() {
     println!("Aborting transaction...");
     {
         // Aborting a write transaction rollbacks the change(s)
-        let mut writer = k.write::<&str>().unwrap();
+        let mut writer = k.write().unwrap();
         writer.put(&store, "foo", &Value::Str("bar")).unwrap();
         writer.abort();
 
-        let reader = k.read::<&str>().expect("reader");
+        let reader = k.read().expect("reader");
         println!("It should be None! ({:?})", reader.get(&store, "foo").unwrap());
         // Explicitly aborting a transaction is not required unless an early
         // abort is desired, since both read and write transactions will
@@ -92,7 +92,7 @@ fn main() {
     println!("Deleting keys...");
     {
         // Deleting a key/value also requires a write transaction
-        let mut writer = k.write::<&str>().unwrap();
+        let mut writer = k.write().unwrap();
         writer.put(&store, "foo", &Value::Str("bar")).unwrap();
         writer.delete(&store, "foo").unwrap();
         println!("It should be None! ({:?})", writer.get(&store, "foo").unwrap());
@@ -107,12 +107,12 @@ fn main() {
     println!("Write and read on multiple stores...");
     {
         let another_store = k.open_or_create("another_store").unwrap();
-        let mut writer = k.write::<&str>().unwrap();
+        let mut writer = k.write().unwrap();
         writer.put(&store, "foo", &Value::Str("bar")).unwrap();
         writer.put(&another_store, "foo", &Value::Str("baz")).unwrap();
         writer.commit().unwrap();
 
-        let reader = k.read::<&str>().unwrap();
+        let reader = k.read().unwrap();
         println!("Get from store value: {:?}", reader.get(&store, "foo").unwrap());
         println!("Get from another store value: {:?}", reader.get(&another_store, "foo").unwrap());
     }
