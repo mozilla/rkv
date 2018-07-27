@@ -29,16 +29,16 @@ fn main() {
 
     let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).unwrap();
     let k = created_arc.read().unwrap();
-    let store: Store<&str> = k.open_or_create("store").unwrap();
+    let store = k.open_or_create("store").unwrap();
 
     populate_store(&k, &store).unwrap();
 
-    let reader = store.read(&k).unwrap();
+    let reader = k.read().unwrap();
 
     println!("Iterating from the beginning...");
     // Reader::iter_start() iterates from the first item in the store, and
     // returns the (key, value) tuples in order.
-    let mut iter = reader.iter_start().unwrap();
+    let mut iter = reader.iter_start(&store).unwrap();
     while let Some((country, city)) = iter.next() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
@@ -47,21 +47,21 @@ fn main() {
     println!("Iterating from the given key...");
     // Reader::iter_from() iterates from the first key equal to or greater
     // than the given key.
-    let mut iter = reader.iter_from("Japan").unwrap();
+    let mut iter = reader.iter_from(&store, "Japan").unwrap();
     while let Some((country, city)) = iter.next() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
 
     println!("");
     println!("Iterating from the given prefix...");
-    let mut iter = reader.iter_from("Un").unwrap();
+    let mut iter = reader.iter_from(&store, "Un").unwrap();
     while let Some((country, city)) = iter.next() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
 }
 
-fn populate_store(k: &Rkv, store: &Store<&str>) -> Result<(), StoreError> {
-    let mut writer = store.write(k)?;
+fn populate_store(k: &Rkv, store: &Store) -> Result<(), StoreError> {
+    let mut writer = k.write()?;
     for (country, city) in vec![
         ("Canada", Value::Str("Ottawa")),
         ("United States of America", Value::Str("Washington")),
@@ -71,7 +71,7 @@ fn populate_store(k: &Rkv, store: &Store<&str>) -> Result<(), StoreError> {
         ("United Kingdom", Value::Str("London")),
         ("Japan", Value::Str("Tokyo")),
     ] {
-        writer.put(country, &city)?;
+        writer.put(store, country, &city)?;
     }
     writer.commit()
 }

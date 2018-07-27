@@ -28,8 +28,6 @@ use error::StoreError;
 
 use value::Value;
 
-use Rkv;
-
 fn read_transform<'x>(val: Result<&'x [u8], lmdb::Error>) -> Result<Option<Value<'x>>, StoreError> {
     match val {
         Ok(bytes) => Value::from_tagged_slice(bytes).map(Some).map_err(StoreError::DataError),
@@ -43,7 +41,6 @@ where
     K: AsRef<[u8]>,
 {
     tx: RwTransaction<'env>,
-    db: Database,
     phantom: PhantomData<K>,
 }
 
@@ -52,7 +49,6 @@ where
     K: AsRef<[u8]>,
 {
     tx: RoTransaction<'env>,
-    db: Database,
     phantom: PhantomData<K>,
 }
 
@@ -65,23 +61,30 @@ impl<'env, K> Writer<'env, K>
 where
     K: AsRef<[u8]>,
 {
-    pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        let bytes = self.tx.get(self.db, &k.as_ref());
+    pub(crate) fn new(txn: RwTransaction) -> Writer<K> {
+        Writer {
+            tx: txn,
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn get<'s>(&'s self, store: &'s Store, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        let bytes = self.tx.get(store.db, &k.as_ref());
         read_transform(bytes)
     }
 
     // TODO: flags
-    pub fn put<'s>(&'s mut self, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<'s>(&'s mut self, store: &'s Store, k: K, v: &Value) -> Result<(), StoreError> {
         // TODO: don't allocate twice.
         let bytes = v.to_bytes()?;
-        self.tx.put(self.db, &k.as_ref(), &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
+        self.tx.put(store.db, &k.as_ref(), &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete<'s>(&'s mut self, k: K) -> Result<(), StoreError> {
-        self.tx.del(self.db, &k.as_ref(), None).map_err(StoreError::LmdbError)
+    pub fn delete<'s>(&'s mut self, store: &'s Store, k: K) -> Result<(), StoreError> {
+        self.tx.del(store.db, &k.as_ref(), None).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete_value<'s>(&'s mut self, _k: K, _v: &Value) -> Result<(), StoreError> {
+    pub fn delete_value<'s>(&'s mut self, _store: &'s Store, _k: K, _v: &Value) -> Result<(), StoreError> {
         // Even better would be to make this a method only on a dupsort store —
         // it would need a little bit of reorganizing of types and traits,
         // but when I see "If the database does not support sorted duplicate
@@ -103,8 +106,15 @@ impl<'env, K> Reader<'env, K>
 where
     K: AsRef<[u8]>,
 {
-    pub fn get<'s>(&'s self, k: K) -> Result<Option<Value<'s>>, StoreError> {
-        let bytes = self.tx.get(self.db, &k.as_ref());
+    pub(crate) fn new(txn: RoTransaction) -> Reader<K> {
+        Reader {
+            tx: txn,
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn get<'s>(&'s self, store: &'s Store, k: K) -> Result<Option<Value<'s>>, StoreError> {
+        let bytes = self.tx.get(store.db, &k.as_ref());
         read_transform(bytes)
     }
 
@@ -112,8 +122,8 @@ where
         self.tx.abort();
     }
 
-    pub fn iter_start<'s>(&'s self) -> Result<Iter<'s>, StoreError> {
-        let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+    pub fn iter_start<'s>(&'s self, store: &'s Store) -> Result<Iter<'s>, StoreError> {
+        let mut cursor = self.tx.open_ro_cursor(store.db).map_err(StoreError::LmdbError)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
         // the latter panics at "called `Result::unwrap()` on an `Err` value:
@@ -131,8 +141,8 @@ where
         })
     }
 
-    pub fn iter_from<'s>(&'s self, k: K) -> Result<Iter<'s>, StoreError> {
-        let mut cursor = self.tx.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+    pub fn iter_from<'s>(&'s self, store: &'s Store, k: K) -> Result<Iter<'s>, StoreError> {
+        let mut cursor = self.tx.open_ro_cursor(store.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {
             iter: iter,
@@ -153,47 +163,14 @@ impl<'env> Iterator for Iter<'env> {
 }
 
 /// Wrapper around an `lmdb::Database`.
-pub struct Store<K>
-where
-    K: AsRef<[u8]>,
-{
+pub struct Store {
     db: Database,
-    phantom: PhantomData<K>,
 }
 
-impl<K> Store<K>
-where
-    K: AsRef<[u8]>,
-{
-    pub fn new(db: Database) -> Store<K> {
+impl Store {
+    pub fn new(db: Database) -> Store {
         Store {
-            db: db,
-            phantom: PhantomData,
+            db,
         }
-    }
-
-    pub fn read<'env>(&self, env: &'env Rkv) -> Result<Reader<'env, K>, StoreError> {
-        let tx = env.read()?;
-        Ok(Reader {
-            tx: tx,
-            db: self.db,
-            phantom: PhantomData,
-        })
-    }
-
-    /// Note: there may be only one write transaction active at any given time,
-    /// so this will block if any other writers currently exist for this store.
-    pub fn write<'env>(&self, env: &'env Rkv) -> Result<Writer<'env, K>, lmdb::Error> {
-        let tx = env.write()?;
-        Ok(Writer {
-            tx: tx,
-            db: self.db,
-            phantom: PhantomData,
-        })
-    }
-
-    pub fn get<'env, 'tx>(&self, tx: &'tx RoTransaction<'env>, k: K) -> Result<Option<Value<'tx>>, StoreError> {
-        let bytes = tx.get(self.db, &k.as_ref());
-        read_transform(bytes)
     }
 }
