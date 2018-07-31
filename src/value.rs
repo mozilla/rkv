@@ -123,7 +123,7 @@ impl<'s> Value<'s> {
         let t = Type::from_tag(*tag)?;
         if t == expected {
             return Err(DataError::UnexpectedType {
-                expected: expected,
+                expected,
                 actual: t,
             });
         }
@@ -167,15 +167,15 @@ impl<'s> Value<'s> {
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
         match self {
-            &Value::Bool(ref v) => serialize(&(Type::Bool.to_tag(), *v)),
-            &Value::U64(ref v) => serialize(&(Type::U64.to_tag(), *v)),
-            &Value::I64(ref v) => serialize(&(Type::I64.to_tag(), *v)),
-            &Value::F64(ref v) => serialize(&(Type::F64.to_tag(), v.0)),
-            &Value::Instant(ref v) => serialize(&(Type::Instant.to_tag(), *v)),
-            &Value::Str(ref v) => serialize(&(Type::Str.to_tag(), v)),
-            &Value::Json(ref v) => serialize(&(Type::Json.to_tag(), v)),
-            &Value::Blob(ref v) => serialize(&(Type::Blob.to_tag(), v)),
-            &Value::Uuid(ref v) => {
+            Value::Bool(ref v) => serialize(&(Type::Bool.to_tag(), *v)),
+            Value::U64(ref v) => serialize(&(Type::U64.to_tag(), *v)),
+            Value::I64(ref v) => serialize(&(Type::I64.to_tag(), *v)),
+            Value::F64(ref v) => serialize(&(Type::F64.to_tag(), v.0)),
+            Value::Instant(ref v) => serialize(&(Type::Instant.to_tag(), *v)),
+            Value::Str(ref v) => serialize(&(Type::Str.to_tag(), v)),
+            Value::Json(ref v) => serialize(&(Type::Json.to_tag(), v)),
+            Value::Blob(ref v) => serialize(&(Type::Blob.to_tag(), v)),
+            Value::Uuid(ref v) => {
                 // Processed above to avoid verbose duplication of error transforms.
                 serialize(&(Type::Uuid.to_tag(), v))
             },

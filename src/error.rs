@@ -79,7 +79,7 @@ impl From<lmdb::Error> for StoreError {
     fn from(e: lmdb::Error) -> StoreError {
         match e {
             lmdb::Error::BadRslot => StoreError::ReadTransactionAlreadyExists(::std::thread::current().id()),
-            e @ _ => StoreError::LmdbError(e),
+            e => StoreError::LmdbError(e),
         }
     }
 }

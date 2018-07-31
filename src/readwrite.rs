@@ -136,8 +136,8 @@ where
         let iter = cursor.iter();
 
         Ok(Iter {
-            iter: iter,
-            cursor: cursor,
+            iter,
+            cursor,
         })
     }
 
@@ -145,8 +145,8 @@ where
         let mut cursor = self.tx.open_ro_cursor(store.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {
-            iter: iter,
-            cursor: cursor,
+            iter,
+            cursor,
         })
     }
 }
