@@ -54,8 +54,13 @@ impl Rkv {
         Environment::new()
     }
 
+    /// Return a new Rkv environment that supports up to `DEFAULT_MAX_DBS` open databases.
+    pub fn new(path: &Path) -> Result<Rkv, StoreError> {
+        Rkv::with_capacity(path, DEFAULT_MAX_DBS)
+    }
+
     /// Return a new Rkv environment from the provided builder.
-    pub fn from_env(env: EnvironmentBuilder, path: &Path) -> Result<Rkv, StoreError> {
+    pub fn from_env(path: &Path, env: EnvironmentBuilder) -> Result<Rkv, StoreError> {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
         }
@@ -69,22 +74,17 @@ impl Rkv {
         })
     }
 
-    /// Return a new Rkv environment that supports up to `DEFAULT_MAX_DBS` open databases.
-    pub fn new(path: &Path) -> Result<Rkv, StoreError> {
-        Rkv::with_capacity(path, DEFAULT_MAX_DBS)
-    }
-
     /// Return a new Rkv environment that supports the specified number of open databases.
     pub fn with_capacity(path: &Path, max_dbs: c_uint) -> Result<Rkv, StoreError> {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
         }
 
-        let mut builder = Environment::new();
+        let mut builder = Rkv::environment_builder();
         builder.set_max_dbs(max_dbs);
 
         // Future: set flags, maximum size, etc. here if necessary.
-        Rkv::from_env(builder, path)
+        Rkv::from_env(path, builder)
     }
 }
 
@@ -215,6 +215,16 @@ mod tests {
         };
     }
 
+    fn check_rkv(k: &Rkv) {
+        let _ = k.open_or_create_default().expect("created default");
+
+        let yyy = k.open_or_create("yyy").expect("opened");
+        let reader = k.read().expect("reader");
+
+        let result = reader.get(&yyy, "foo");
+        assert_eq!(None, result.expect("success but no value"));
+    }
+
     #[test]
     fn test_open() {
         let root = Builder::new().prefix("test_open").tempdir().expect("tempdir");
@@ -223,13 +233,42 @@ mod tests {
         assert!(root.path().is_dir());
 
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let _ = k.open_or_create_default().expect("created default");
 
-        let yyy = k.open_or_create("yyy").expect("opened");
-        let reader = k.read().expect("reader");
+        check_rkv(&k);
+    }
 
-        let result = reader.get(&yyy, "foo");
-        assert_eq!(None, result.expect("success but no value"));
+    #[test]
+    fn test_open_from_env() {
+        let root = Builder::new().prefix("test_open_from_env").tempdir().expect("tempdir");
+        println!("Root path: {:?}", root.path());
+        fs::create_dir_all(root.path()).expect("dir created");
+        assert!(root.path().is_dir());
+
+        let mut builder = Rkv::environment_builder();
+        builder.set_max_dbs(1);
+        let k = Rkv::from_env(root.path(), builder).expect("rkv");
+
+        check_rkv(&k);
+    }
+
+    #[test]
+    #[should_panic(expected = "opened: LmdbError(DbsFull)")]
+    fn test_open_with_capacity() {
+        let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+        println!("Root path: {:?}", root.path());
+        fs::create_dir_all(root.path()).expect("dir created");
+        assert!(root.path().is_dir());
+
+        let k = Rkv::with_capacity(root.path(), 1).expect("rkv");
+
+        check_rkv(&k);
+
+        // This panics with "opened: LmdbError(DbsFull)" because we specified
+        // a capacity of one (database), and check_rkv already opened one
+        // (plus the default database, which doesn't count against the limit).
+        // This should really return an error rather than panicking, per
+        // <https://github.com/mozilla/lmdb-rs/issues/6>.
+        let _zzz = k.open_or_create("zzz").expect("opened");
     }
 
     #[test]
