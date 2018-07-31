@@ -163,6 +163,7 @@ impl<'env> Iterator for Iter<'env> {
 }
 
 /// Wrapper around an `lmdb::Database`.
+#[derive(Copy, Clone)]
 pub struct Store {
     db: Database,
 }

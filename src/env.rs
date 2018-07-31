@@ -192,6 +192,12 @@ mod tests {
     use std::{
         fs,
         str,
+        thread,
+    };
+
+    use std::sync::{
+        Arc,
+        RwLock,
     };
 
     use super::*;
@@ -792,5 +798,59 @@ mod tests {
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
         assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn test_store_multiple_thread() {
+        let root = Builder::new().prefix("test_multiple_thread").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let rkv_arc = Arc::new(RwLock::new(Rkv::new(root.path()).expect("new succeeded")));
+        let store = rkv_arc.read().unwrap().open_or_create_default().expect("opened");
+
+        let num_threads = 10;
+        let mut write_handles = Vec::with_capacity(num_threads as usize);
+        let mut read_handles = Vec::with_capacity(num_threads as usize);
+
+        // Note that this isn't intended to demonstrate a good use of threads.
+        // For this shape of data, it would be more performant to write/read
+        // all values using one transaction in a single thread. The point here
+        // is just to confirm that a store can be shared by multiple threads.
+
+        // For each KV pair, spawn a thread that writes it to the store.
+        for i in 0..num_threads {
+            let rkv_arc = rkv_arc.clone();
+            write_handles.push(thread::spawn(move || {
+                let rkv = rkv_arc.write().expect("rkv");
+                let mut writer = rkv.write().expect("writer");
+                writer.put(&store, i.to_string(), &Value::U64(i)).expect("written");
+                writer.commit().unwrap();
+            }));
+        }
+        for handle in write_handles {
+            handle.join().expect("joined");
+        }
+
+        // For each KV pair, spawn a thread that reads it from the store
+        // and returns its value.
+        for i in 0..num_threads {
+            let rkv_arc = rkv_arc.clone();
+            read_handles.push(thread::spawn(move || {
+                let rkv = rkv_arc.read().expect("rkv");
+                let reader = rkv.read().expect("reader");
+                let value = match reader.get(&store, i.to_string()) {
+                    Ok(Some(Value::U64(value))) => value,
+                    Ok(Some(_)) => panic!("value type unexpected"),
+                    Ok(None) => panic!("value not found"),
+                    Err(err) => panic!(err),
+                };
+                assert_eq!(value, i);
+                value
+            }));
+        }
+
+        // Sum the values returned from the threads and confirm that they're
+        // equal to the sum of values written to the threads.
+        let thread_sum: u64 = read_handles.into_iter().map(|handle| handle.join().expect("value")).sum();
+        assert_eq!(thread_sum, (0..num_threads).sum());
     }
 }
