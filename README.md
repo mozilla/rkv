@@ -31,10 +31,14 @@ errors. This feature is disabled by default.
 Test this project as you would test other Rust crates:
 
 ```sh
-cargo test --tests
+cargo test
 ```
 
-The project includes unit tests embedded in the `src/` files, integration tests in the `tests/` subdirectory, and usage examples in the `examples/` subdirectory. To ensure your changes don't break examples, specify `--tests` when running tests to run both unit/integration tests and example binaries.
+The project includes unit and doc tests embedded in the `src/` files, integration tests in the `tests/` subdirectory, and usage examples in the `examples/` subdirectory. To ensure your changes don't break examples, also run them via the run-all-examples.sh shell script:
+
+```sh
+./run-all-examples.sh
+```
 
 ## Contribute
 
