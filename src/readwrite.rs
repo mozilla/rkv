@@ -162,7 +162,9 @@ impl<'env> Iterator for Iter<'env> {
     }
 }
 
-/// Wrapper around an `lmdb::Database`.
+/// Wrapper around an `lmdb::Database`.  At this time, the underlying LMDB
+/// handle (within lmdb-rs::Database) is a C integer, so Copy is automatic.
+#[derive(Copy, Clone)]
 pub struct Store {
     db: Database,
 }
