@@ -27,7 +27,7 @@ url = "1.7.0"
 # Get rid of failure's dependency on backtrace. Eventually
 # backtrace will move into Rust core, but we don't need it here.
 [dependencies.failure]
-version = "0.1"
+version = "0.1.2"
 default_features = false
 features = ["derive"]
 
