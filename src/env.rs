@@ -661,7 +661,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: NotFound")]
     fn test_iter_from_key_greater_than_existing() {
         let root = Builder::new().prefix("test_iter_from_key_greater_than_existing").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -676,15 +675,8 @@ mod tests {
         writer.commit().expect("committed");
 
         let reader = k.read().unwrap();
-
-        // There is no key greater than "nuu", so the underlying LMDB API panics
-        // when calling iter_from.  This is unfortunate, and I've requested
-        // https://github.com/danburkert/lmdb-rs/pull/29 to make the underlying
-        // API return a Result instead.
-        //
-        // Also see alternative https://github.com/danburkert/lmdb-rs/pull/30.
-        //
-        reader.iter_from(&sk, "nuu").unwrap();
+        let mut iter = reader.iter_from(&sk, "nuu").unwrap();
+        assert!(iter.next().is_none());
     }
 
     #[test]
