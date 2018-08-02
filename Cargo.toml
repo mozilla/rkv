@@ -18,7 +18,7 @@ backtrace = ["failure/backtrace", "failure/std"]
 arrayref = "0.3"
 bincode = "1.0"
 lazy_static = "1.0"
-lmdb = { git = "https://github.com/mozilla/lmdb-rs", branch = "rkv" }
+lmdb-rkv = "0.8"
 new-ordered-float = "1.0"
 uuid = "0.5"
 serde = "1.0"
