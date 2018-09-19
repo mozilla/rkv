@@ -1,6 +1,6 @@
 [package]
 name = "rkv"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Richard Newman <rnewman@twinql.com>"]
 description = "a simple, humane, typed Rust interface to LMDB"
 license = "Apache-2.0"
