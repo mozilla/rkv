@@ -96,7 +96,7 @@ pub enum Value<'s> {
     Blob(&'s [u8]),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum OwnedValue {
     Bool(bool),
     U64(u64),
