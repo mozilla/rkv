@@ -277,6 +277,60 @@ mod tests {
         let _zzz = k.open_or_create("zzz").expect("opened");
     }
 
+    fn get_larger_than_default_map_size_value() -> usize {
+        // The LMDB C library and lmdb Rust crate docs for setting the map size
+        // <http://www.lmdb.tech/doc/group__mdb.html#gaa2506ec8dab3d969b0e609cd82e619e5>
+        // <https://docs.rs/lmdb/0.8.0/lmdb/struct.EnvironmentBuilder.html#method.set_map_size>
+        // both say that the default map size is 10,485,760 bytes, i.e. 10MiB.
+        //
+        // But the DEFAULT_MAPSIZE define in the LMDB code
+        // https://github.com/LMDB/lmdb/blob/26c7df88e44e31623d0802a564f24781acdefde3/libraries/liblmdb/mdb.c#L729
+        // sets the default map size to 1,048,576 bytes, i.e. 1MiB.
+        //
+        1024 * 1024 + 1 /* 1,048,576 + 1 bytes, i.e. 1MiB + 1 byte */
+    }
+
+    #[test]
+    #[should_panic(expected = "wrote: LmdbError(MapFull)")]
+    fn test_exceed_map_size() {
+        let root = Builder::new().prefix("test_exceed_map_size").tempdir().expect("tempdir");
+        println!("Root path: {:?}", root.path());
+        fs::create_dir_all(root.path()).expect("dir created");
+        assert!(root.path().is_dir());
+
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: Store = k.open_or_create_default().expect("opened");
+
+        // Writing a large enough value should cause LMDB to fail on MapFull.
+        // We write a string that is larger than the default map size.
+        let val = "x".repeat(get_larger_than_default_map_size_value());
+        let mut writer = k.write().expect("writer");
+        writer.put(&sk, "foo", &Value::Str(&val)).expect("wrote");
+    }
+
+    #[test]
+    fn test_increase_map_size() {
+        let root = Builder::new().prefix("test_open_with_map_size").tempdir().expect("tempdir");
+        println!("Root path: {:?}", root.path());
+        fs::create_dir_all(root.path()).expect("dir created");
+        assert!(root.path().is_dir());
+
+        let mut builder = Rkv::environment_builder();
+        // Set the map size to the size of the value we'll store in it + 100KiB,
+        // which ensures that there's enough space for the value and metadata.
+        builder.set_map_size(get_larger_than_default_map_size_value() + 100 * 1024 /* 100KiB */);
+        let k = Rkv::from_env(root.path(), builder).unwrap();
+        let sk: Store = k.open_or_create_default().expect("opened");
+        let val = "x".repeat(get_larger_than_default_map_size_value());
+
+        let mut writer = k.write().expect("writer");
+        writer.put(&sk, "foo", &Value::Str(&val)).expect("wrote");
+        writer.commit().expect("committed");
+
+        let reader = k.read().unwrap();
+        assert_eq!(reader.get(&sk, "foo").expect("read"), Some(Value::Str(&val)));
+    }
+
     #[test]
     fn test_round_trip_and_transactions() {
         let root = Builder::new().prefix("test_round_trip_and_transactions").tempdir().expect("tempdir");
