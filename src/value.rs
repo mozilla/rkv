@@ -16,8 +16,8 @@ use bincode::{
 };
 
 use uuid::{
-    Uuid,
     Bytes,
+    Uuid,
 };
 
 use error::DataError;
