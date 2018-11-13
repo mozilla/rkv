@@ -182,7 +182,13 @@ impl<'s> Value<'s> {
     }
 
     pub fn to_owned(&self) -> OwnedValue {
-        match self {
+        self.into()
+    }
+}
+
+impl<'s> From<&'s Value<'s>> for OwnedValue {
+    fn from(value: &Value) -> OwnedValue {
+        match value {
             Value::Bool(ref v) => OwnedValue::Bool(*v),
             Value::U64(ref v) => OwnedValue::U64(*v),
             Value::I64(ref v) => OwnedValue::I64(*v),
