@@ -20,7 +20,7 @@ bincode = "1.0"
 lazy_static = "1.0"
 lmdb-rkv = "0.8"
 ordered-float = "1.0"
-uuid = "0.6"
+uuid = "0.7"
 serde = "1.0"
 url = "1.7.0"
 

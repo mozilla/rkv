@@ -218,4 +218,7 @@ pub use readwrite::{
     Writer,
 };
 
-pub use value::Value;
+pub use value::{
+    OwnedValue,
+    Value,
+};
