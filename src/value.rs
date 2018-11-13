@@ -180,10 +180,6 @@ impl<'s> Value<'s> {
             },
         }.map_err(DataError::EncodingError)
     }
-
-    pub fn to_owned(&self) -> OwnedValue {
-        self.into()
-    }
 }
 
 impl<'s> From<&'s Value<'s>> for OwnedValue {
