@@ -1,6 +1,6 @@
 [package]
 name = "rkv"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Richard Newman <rnewman@twinql.com>", "Nan Jiang <najiang@mozilla.com>", "Myk Melez <myk@mykzilla.org>"]
 description = "a simple, humane, typed Rust interface to LMDB"
 license = "Apache-2.0"
@@ -18,7 +18,7 @@ backtrace = ["failure/backtrace", "failure/std"]
 arrayref = "0.3"
 bincode = "1.0"
 lazy_static = "1.0"
-lmdb-rkv = "0.8"
+lmdb-rkv = "0.9"
 ordered-float = "1.0"
 uuid = "0.7"
 serde = "1.0"
