@@ -43,7 +43,7 @@ pub enum Type {
 /// We use manual tagging, because <https://github.com/serde-rs/serde/issues/610>.
 impl Type {
     pub fn from_tag(tag: u8) -> Result<Type, DataError> {
-        Type::from_primitive(tag).ok_or(DataError::UnknownType(tag))
+        Type::from_primitive(tag).ok_or_else(|| DataError::UnknownType(tag))
     }
 
     pub fn to_tag(self) -> u8 {
@@ -108,7 +108,7 @@ pub enum OwnedValue {
     Blob(Vec<u8>),
 }
 
-fn uuid<'s>(bytes: &'s [u8]) -> Result<Value<'s>, DataError> {
+fn uuid(bytes: &[u8]) -> Result<Value, DataError> {
     if bytes.len() == 16 {
         Ok(Value::Uuid(array_ref![bytes, 0, 16]))
     } else {
