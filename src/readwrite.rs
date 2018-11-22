@@ -154,7 +154,7 @@ where
 impl<'env> Iterator for Iter<'env> {
     type Item = (&'env [u8], Result<Option<Value<'env>>, StoreError>);
 
-    fn next(&mut self) -> Option<(&'env [u8], Result<Option<Value<'env>>, StoreError>)> {
+    fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             None => None,
             Some((key, bytes)) => Some((key, read_transform(Ok(bytes)))),
