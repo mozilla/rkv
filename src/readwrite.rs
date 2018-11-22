@@ -69,7 +69,7 @@ where
     }
 
     pub fn get(&self, store: Store, k: K) -> Result<Option<Value>, StoreError> {
-        let bytes = self.tx.get(store.0, &k.as_ref());
+        let bytes = self.tx.get(store.0, &k);
         read_transform(bytes)
     }
 
@@ -77,11 +77,11 @@ where
     pub fn put(&mut self, store: Store, k: K, v: &Value) -> Result<(), StoreError> {
         // TODO: don't allocate twice.
         let bytes = v.to_bytes()?;
-        self.tx.put(store.0, &k.as_ref(), &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
+        self.tx.put(store.0, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
     pub fn delete(&mut self, store: Store, k: K) -> Result<(), StoreError> {
-        self.tx.del(store.0, &k.as_ref(), None).map_err(StoreError::LmdbError)
+        self.tx.del(store.0, &k, None).map_err(StoreError::LmdbError)
     }
 
     pub fn delete_value(&mut self, _store: Store, _k: K, _v: &Value) -> Result<(), StoreError> {
@@ -114,7 +114,7 @@ where
     }
 
     pub fn get(&self, store: Store, k: K) -> Result<Option<Value>, StoreError> {
-        let bytes = self.tx.get(store.0, &k.as_ref());
+        let bytes = self.tx.get(store.0, &k);
         read_transform(bytes)
     }
 
