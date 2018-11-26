@@ -120,7 +120,7 @@ where
         self.inner.get(store.0, Key::new(k)?)
     }
 
-    pub fn put<'s>(&'s mut self, store: IntegerStore, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put(&mut self, store: IntegerStore, k: K, v: &Value) -> Result<(), StoreError> {
         self.inner.put(store.0, Key::new(k)?, v)
     }
 
