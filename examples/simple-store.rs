@@ -14,10 +14,23 @@ use rkv::{
     Manager,
     Rkv,
     Value,
+    Writer,
+    Store,
 };
 use tempfile::Builder;
 
 use std::fs;
+
+fn test_getput<K: AsRef<[u8]>>(store: Store, writer: &mut Writer<&str>) {
+    let keys = vec!["str1", "str2", "str3"];
+    for k in keys.iter() {
+        if let Value::Str(s) = writer.get(store, k).unwrap().unwrap() {
+            let r = writer.put(store, s, &Value::Blob(b"weeeeeee")).unwrap();
+        } else {
+            panic!("Failed to get string value");
+        }
+    }
+}
 
 fn main() {
     let root = Builder::new().prefix("simple-db").tempdir().unwrap();
@@ -45,7 +58,16 @@ fn main() {
         writer.put(store, "blob", &Value::Blob(b"blob")).unwrap();
         writer.commit().unwrap();
     }
-
+    
+    println!("Testing getput");
+    {
+        let mut writer = k.write().unwrap();
+        writer.put(store, "str1", &Value::Str("string uno")).unwrap();
+        writer.put(store, "str2", &Value::Str("string dos")).unwrap();
+        writer.put(store, "str3", &Value::Str("string tres")).unwrap();
+        test_getput(store, &mut writer);
+        writer.commit().unwrap();
+    }
     println!("Looking up keys...");
     {
         // Use a reader to query the store
