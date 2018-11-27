@@ -76,7 +76,7 @@
 //!     // until the first completes.
 //!     let mut writer = env.write().unwrap();
 //!
-//!     // Writer takes a `Store` reference as the first argument.
+//!     // Writer takes a `Store` as the first argument.
 //!     // Keys are `AsRef<[u8]>`, while values are `Value` enum instances.
 //!     // Use the `Blob` variant to store arbitrary collections of bytes.
 //!     writer.put(store, "int", &Value::I64(1234)).unwrap();
