@@ -39,6 +39,12 @@ use readwrite::{
     Writer,
 };
 
+use multirw::{
+    MultiReader,
+    MultiWriter,
+    MultiStore,
+};
+
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
 /// Wrapper around an `lmdb::Environment`.
@@ -115,6 +121,35 @@ impl Rkv {
         Ok(IntegerStore::new(db))
     }
 
+    pub fn open_or_create_multi<'s, T>(&self, name: T) -> Result<MultiStore, StoreError>
+    where
+        T: Into<Option<&'s str>>,
+    {
+        let mut flags = DatabaseFlags::empty();
+        flags.toggle(DatabaseFlags::DUP_SORT);
+        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
+            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+            _ => e.into(),
+        })?;
+        Ok(MultiStore::new(db))
+    }
+    
+    pub fn open_or_create_multi_with_flags<'s, T>(
+        &self,
+        name: T,
+        mut flags: DatabaseFlags) -> Result<MultiStore, StoreError>
+    where
+        T: Into<Option<&'s str>>,
+    {
+        flags.set(DatabaseFlags::DUP_SORT, true);
+
+        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
+            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+            _ => e.into(),
+        })?;
+        Ok(MultiStore::new(db))
+    }
+
     pub fn open_or_create_with_flags<'s, T>(&self, name: T, flags: DatabaseFlags) -> Result<Store, StoreError>
     where
         T: Into<Option<&'s str>>,
@@ -158,6 +193,22 @@ impl Rkv {
     {
         let txn = self.env.begin_rw_txn()?;
         Ok(Writer::new(txn))
+    }
+    
+    pub fn read_multi<K>(&self) -> Result<MultiReader<K>, StoreError>
+    where
+        K: AsRef<[u8]>,
+    {
+        let txn = self.env.begin_ro_txn()?;
+        Ok(MultiReader::new(txn))
+    }
+
+    pub fn write_multi<K>(&self) -> Result<MultiWriter<K>, StoreError>
+    where
+        K: AsRef<[u8]>,
+    {
+        let txn = self.env.begin_rw_txn()?;
+        Ok(MultiWriter::new(txn))
     }
 
     pub fn read_int<K>(&self) -> Result<IntegerReader<K>, StoreError>

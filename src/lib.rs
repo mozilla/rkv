@@ -194,6 +194,7 @@ pub mod error;
 mod integer;
 mod manager;
 mod readwrite;
+mod multirw;
 pub mod value;
 
 pub use env::Rkv;
@@ -216,6 +217,13 @@ pub use readwrite::{
     Reader,
     Store,
     Writer,
+};
+
+pub use multirw::{
+    MultiReader,
+    MultiWriter,
+    MultiCursor,
+    MultiStore,
 };
 
 pub use value::{
