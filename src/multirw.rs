@@ -15,7 +15,8 @@ use std::rc::Rc;
 use lmdb::{
     Cursor,
     Database,
-    IterDup as LmdbIter,
+    IterDup as LmdbIterDup,
+    Iter as LmdbIter,
     RoCursor,
     RoTransaction,
     RwTransaction,
@@ -52,6 +53,11 @@ where
     phantom: PhantomData<K>,
 }
 
+pub struct MultiIter<'env> {
+    iter: LmdbIterDup<'env>,
+    cursor: RoCursor<'env>,
+}
+
 pub struct Iter<'env> {
     iter: LmdbIter<'env>,
     cursor: RoCursor<'env>,
@@ -61,7 +67,7 @@ pub struct MultiCursor<'env, K>
 where
     K: AsRef<[u8]>
 {
-    iter: Option<LmdbIter<'env>>,
+    iter: Option<LmdbIterDup<'env>>,
     cursor: Option<RoCursor<'env>>,
     writer: MultiWriter<'env, K>,
 }
@@ -72,7 +78,7 @@ where
 {
 
     pub(crate) fn new(
-        iter: LmdbIter<'env>,
+        iter: LmdbIterDup<'env>,
         cursor: RoCursor<'env>,
         writer: MultiWriter<'env, K>)
     -> MultiCursor<'env, K> {
@@ -87,7 +93,7 @@ where
     /// This cursor will start at the lexographically smallest value that is equal-to or
     /// greater-than the provided key. 
     pub fn get(&mut self, k: K) -> Result<(), StoreError> {
-        self.iter = self.cursor.map(|c| c.iter_dup_from(&k));
+        self.iter = self.cursor.as_mut().map(|c| c.iter_dup_from(&k));
         Ok(())
     }
 
@@ -116,7 +122,7 @@ where
     pub fn get(self, store: MultiStore, k: K) -> Result<MultiCursor<'env, K>, StoreError> {
         let mut mc = MultiCursor { iter: None, cursor: None, writer: self };
         mc.cursor = Some(mc.writer.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?);
-        mc.iter = mc.cursor.map(|c| c.iter_dup_from(&k));
+        mc.iter = mc.cursor.as_mut().map(|c| c.iter_dup_from(&k));
         Ok(mc)
     }
 
@@ -162,10 +168,10 @@ where
 
     /// Provides an iterator starting at the lexographically smallest value that is
     /// equal-to, or greater-than the provided key.
-    pub fn get(&self, store: MultiStore, k: K) -> Result<Iter, StoreError> {
+    pub fn get(&self, store: MultiStore, k: K) -> Result<MultiIter, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_dup_from(&k);
-        Ok(Iter {
+        Ok(MultiIter {
             iter,
             cursor,
         })
@@ -177,7 +183,7 @@ where
     }
 
     /// Provides an iterator starting at the lexographically smallest value in the store
-    pub fn iter_start(&self, store: MultiStore) -> Result<Iter, StoreError> {
+    pub fn iter_start(&self, store: MultiStore) -> Result<MultiIter, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
@@ -190,7 +196,7 @@ where
         //
         let iter = cursor.iter_dup();
 
-        Ok(Iter {
+        Ok(MultiIter {
             iter,
             cursor,
         })
@@ -201,12 +207,24 @@ impl<'env, K> Iterator for MultiCursor<'env, K>
 where
     K: AsRef<[u8]>
 {
-    type Item = Iter<'env>
+    type Item = Iter<'env>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.unwrap().next() {
             None => None,
-            Some((iter) => Some(iter)
+            Some(iter) => Some(Iter{iter, cursor: self.cursor.unwrap()}),
+        }
+    }
+}
+
+impl<'env> Iterator for MultiIter<'env>
+{
+    type Item = Iter<'env>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            None => None,
+            Some(iter) => Some(Iter{iter, cursor: self.cursor}),
         }
     }
 }
