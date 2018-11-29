@@ -15,7 +15,8 @@
 //! - Avoid LMDB's sharp edges (e.g., obscure error codes for common situations).
 //! - Report errors via [failure](https://docs.rs/failure/).
 //! - Correctly restrict access to one handle per process via a [Manager](struct.Manager.html).
-//! - Use Rust's type system to make single-typed key stores (including LMDB's own integer-keyed stores) safe and ergonomic.
+//! - Use Rust's type system to make single-typed key stores (including LMDB's own integer-keyed stores)
+//!   safe and ergonomic.
 //! - Encode and decode values via [bincode](https://docs.rs/bincode/)/[serde](https://docs.rs/serde/)
 //!   and type tags, achieving platform-independent storage and input/output flexibility.
 //!
@@ -25,7 +26,8 @@
 //! - [Rkv](struct.Rkv.html): an LMDB environment, which contains a set of key/value databases
 //! - [Store](struct.Store.html): an LMDB database, which contains a set of key/value pairs
 //!
-//! Keys can be anything that implements `AsRef<[u8]>` or integers (when accessing an [IntegerStore](struct.IntegerStore.html)).
+//! Keys can be anything that implements `AsRef<[u8]>` or integers
+//!  (when accessing an [IntegerStore](struct.IntegerStore.html)).
 //! Values can be any of the types defined by the [Value](value/enum.Value.html) enum, including:
 //!
 //! - booleans (`Value::Bool`)
@@ -182,12 +184,7 @@ extern crate serde; // So we can specify trait bounds. Everything else is bincod
 extern crate url;
 extern crate uuid;
 
-pub use lmdb::{
-    DatabaseFlags,
-    EnvironmentBuilder,
-    EnvironmentFlags,
-    WriteFlags,
-};
+pub use lmdb::{DatabaseFlags, EnvironmentBuilder, EnvironmentFlags, WriteFlags};
 
 mod env;
 pub mod error;
@@ -199,34 +196,14 @@ pub mod value;
 
 pub use env::Rkv;
 
-pub use error::{
-    DataError,
-    StoreError,
-};
+pub use error::{DataError, StoreError};
 
-pub use integer::{
-    IntegerReader,
-    IntegerStore,
-    IntegerWriter,
-    PrimitiveInt,
-};
+pub use integer::{IntegerReader, IntegerStore, IntegerWriter, PrimitiveInt};
 
 pub use manager::Manager;
 
-pub use readwrite::{
-    Reader,
-    Store,
-    Writer,
-};
+pub use readwrite::{Reader, Store, Writer};
 
-pub use multirw::{
-    MultiReader,
-    MultiWriter,
-    MultiCursor,
-    MultiStore,
-};
+pub use multirw::{MultiReader, MultiWriter, MultiCursor, MultiStore};
 
-pub use value::{
-    OwnedValue,
-    Value,
-};
+pub use value::{OwnedValue, Value};

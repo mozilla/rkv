@@ -10,40 +10,19 @@
 
 use std::os::raw::c_uint;
 
-use std::path::{
-    Path,
-    PathBuf,
-};
+use std::path::{Path, PathBuf};
 
 use lmdb;
 
-use lmdb::{
-    DatabaseFlags,
-    Environment,
-    EnvironmentBuilder,
-};
+use lmdb::{DatabaseFlags, Environment, EnvironmentBuilder};
 
 use error::StoreError;
 
-use integer::{
-    IntegerReader,
-    IntegerStore,
-    IntegerWriter,
-    Key,
-    PrimitiveInt,
-};
+use integer::{IntegerReader, IntegerStore, IntegerWriter, Key, PrimitiveInt};
 
-use readwrite::{
-    Reader,
-    Store,
-    Writer,
-};
+use readwrite::{Reader, Store, Writer};
 
-use multirw::{
-    MultiReader,
-    MultiWriter,
-    MultiStore,
-};
+use multirw::{MultiReader, MultiWriter, MultiStore};
 
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
@@ -114,10 +93,12 @@ impl Rkv {
     {
         let mut flags = DatabaseFlags::empty();
         flags.toggle(DatabaseFlags::INTEGER_KEY);
-        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
-            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-            _ => e.into(),
-        })?;
+        let db = self.env.create_db(name.into(), flags).map_err(
+            |e| match e {
+                lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+                _ => e.into(),
+            },
+        )?;
         Ok(IntegerStore::new(db))
     }
 
@@ -127,26 +108,31 @@ impl Rkv {
     {
         let mut flags = DatabaseFlags::empty();
         flags.toggle(DatabaseFlags::DUP_SORT);
-        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
-            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-            _ => e.into(),
-        })?;
+        let db = self.env.create_db(name.into(), flags).map_err(
+            |e| match e {
+                lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+                _ => e.into(),
+            },
+        )?;
         Ok(MultiStore::new(db))
     }
-    
+
     pub fn open_or_create_multi_with_flags<'s, T>(
         &self,
         name: T,
-        mut flags: DatabaseFlags) -> Result<MultiStore, StoreError>
+        mut flags: DatabaseFlags,
+    ) -> Result<MultiStore, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
         flags.set(DatabaseFlags::DUP_SORT, true);
 
-        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
-            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-            _ => e.into(),
-        })?;
+        let db = self.env.create_db(name.into(), flags).map_err(
+            |e| match e {
+                lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+                _ => e.into(),
+            },
+        )?;
         Ok(MultiStore::new(db))
     }
 
@@ -154,10 +140,12 @@ impl Rkv {
     where
         T: Into<Option<&'s str>>,
     {
-        let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
-            lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-            _ => e.into(),
-        })?;
+        let db = self.env.create_db(name.into(), flags).map_err(
+            |e| match e {
+                lmdb::Error::BadRslot => StoreError::open_during_transaction(),
+                _ => e.into(),
+            },
+        )?;
         Ok(Store::new(db))
     }
 
@@ -194,7 +182,7 @@ impl Rkv {
         let txn = self.env.begin_rw_txn()?;
         Ok(Writer::new(txn))
     }
-    
+
     pub fn read_multi<K>(&self) -> Result<MultiReader<K>, StoreError>
     where
         K: AsRef<[u8]>,
@@ -233,31 +221,23 @@ mod tests {
     extern crate byteorder;
     extern crate tempfile;
 
-    use self::byteorder::{
-        ByteOrder,
-        LittleEndian,
-    };
+    use self::byteorder::{ByteOrder, LittleEndian};
 
     use self::tempfile::Builder;
 
-    use std::{
-        fs,
-        str,
-        thread,
-    };
+    use std::{fs, str, thread};
 
-    use std::sync::{
-        Arc,
-        RwLock,
-    };
+    use std::sync::{Arc, RwLock};
 
     use super::*;
-    use *;
+    use ::*;
 
     /// We can't open a directory that doesn't exist.
     #[test]
     fn test_open_fails() {
-        let root = Builder::new().prefix("test_open_fails").tempdir().expect("tempdir");
+        let root = Builder::new().prefix("test_open_fails").tempdir().expect(
+            "tempdir",
+        );
         assert!(root.path().exists());
 
         let nope = root.path().join("nope/");
@@ -284,7 +264,9 @@ mod tests {
 
     #[test]
     fn test_open() {
-        let root = Builder::new().prefix("test_open").tempdir().expect("tempdir");
+        let root = Builder::new().prefix("test_open").tempdir().expect(
+            "tempdir",
+        );
         println!("Root path: {:?}", root.path());
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
@@ -296,7 +278,10 @@ mod tests {
 
     #[test]
     fn test_open_from_env() {
-        let root = Builder::new().prefix("test_open_from_env").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_open_from_env")
+            .tempdir()
+            .expect("tempdir");
         println!("Root path: {:?}", root.path());
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
@@ -311,7 +296,10 @@ mod tests {
     #[test]
     #[should_panic(expected = "opened: LmdbError(DbsFull)")]
     fn test_open_with_capacity() {
-        let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_open_with_capacity")
+            .tempdir()
+            .expect("tempdir");
         println!("Root path: {:?}", root.path());
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
@@ -344,7 +332,10 @@ mod tests {
     #[test]
     #[should_panic(expected = "wrote: LmdbError(MapFull)")]
     fn test_exceed_map_size() {
-        let root = Builder::new().prefix("test_exceed_map_size").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_exceed_map_size")
+            .tempdir()
+            .expect("tempdir");
         println!("Root path: {:?}", root.path());
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
@@ -361,7 +352,10 @@ mod tests {
 
     #[test]
     fn test_increase_map_size() {
-        let root = Builder::new().prefix("test_open_with_map_size").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_open_with_map_size")
+            .tempdir()
+            .expect("tempdir");
         println!("Root path: {:?}", root.path());
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
@@ -369,7 +363,9 @@ mod tests {
         let mut builder = Rkv::environment_builder();
         // Set the map size to the size of the value we'll store in it + 100KiB,
         // which ensures that there's enough space for the value and metadata.
-        builder.set_map_size(get_larger_than_default_map_size_value() + 100 * 1024 /* 100KiB */);
+        builder.set_map_size(
+            get_larger_than_default_map_size_value() + 100 * 1024, /* 100KiB */
+        );
         let k = Rkv::from_env(root.path(), builder).unwrap();
         let sk: Store = k.open_or_create_default().expect("opened");
         let val = "x".repeat(get_larger_than_default_map_size_value());
@@ -384,7 +380,10 @@ mod tests {
 
     #[test]
     fn test_round_trip_and_transactions() {
-        let root = Builder::new().prefix("test_round_trip_and_transactions").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_round_trip_and_transactions")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
@@ -393,13 +392,26 @@ mod tests {
         {
             let mut writer = k.write().expect("writer");
             writer.put(sk, "foo", &Value::I64(1234)).expect("wrote");
-            writer.put(sk, "noo", &Value::F64(1234.0.into())).expect("wrote");
+            writer.put(sk, "noo", &Value::F64(1234.0.into())).expect(
+                "wrote",
+            );
             writer.put(sk, "bar", &Value::Bool(true)).expect("wrote");
-            writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect("wrote");
+            writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect(
+                "wrote",
+            );
             assert_eq!(writer.get(sk, "foo").expect("read"), Some(Value::I64(1234)));
-            assert_eq!(writer.get(sk, "noo").expect("read"), Some(Value::F64(1234.0.into())));
-            assert_eq!(writer.get(sk, "bar").expect("read"), Some(Value::Bool(true)));
-            assert_eq!(writer.get(sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+            assert_eq!(
+                writer.get(sk, "noo").expect("read"),
+                Some(Value::F64(1234.0.into()))
+            );
+            assert_eq!(
+                writer.get(sk, "bar").expect("read"),
+                Some(Value::Bool(true))
+            );
+            assert_eq!(
+                writer.get(sk, "baz").expect("read"),
+                Some(Value::Str("héllo, yöu"))
+            );
 
             // Isolation. Reads won't return values.
             let r = &k.read().unwrap();
@@ -421,10 +433,18 @@ mod tests {
             let mut writer = k.write().expect("writer");
             writer.put(sk, "foo", &Value::I64(1234)).expect("wrote");
             writer.put(sk, "bar", &Value::Bool(true)).expect("wrote");
-            writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect("wrote");
+            writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect(
+                "wrote",
+            );
             assert_eq!(writer.get(sk, "foo").expect("read"), Some(Value::I64(1234)));
-            assert_eq!(writer.get(sk, "bar").expect("read"), Some(Value::Bool(true)));
-            assert_eq!(writer.get(sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+            assert_eq!(
+                writer.get(sk, "bar").expect("read"),
+                Some(Value::Bool(true))
+            );
+            assert_eq!(
+                writer.get(sk, "baz").expect("read"),
+                Some(Value::Str("héllo, yöu"))
+            );
 
             writer.commit().expect("committed");
         }
@@ -434,7 +454,10 @@ mod tests {
             let r = k.read().unwrap();
             assert_eq!(r.get(sk, "foo").expect("read"), Some(Value::I64(1234)));
             assert_eq!(r.get(sk, "bar").expect("read"), Some(Value::Bool(true)));
-            assert_eq!(r.get(sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+            assert_eq!(
+                r.get(sk, "baz").expect("read"),
+                Some(Value::Str("héllo, yöu"))
+            );
         }
 
         {
@@ -450,7 +473,10 @@ mod tests {
             let r = k.read().unwrap();
             assert_eq!(r.get(sk, "foo").expect("read"), Some(Value::I64(1234)));
             assert_eq!(r.get(sk, "bar").expect("read"), Some(Value::Bool(true)));
-            assert_eq!(r.get(sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+            assert_eq!(
+                r.get(sk, "baz").expect("read"),
+                Some(Value::Str("héllo, yöu"))
+            );
         }
 
         // Dropped: tx rollback. Reads will still return values.
@@ -459,7 +485,10 @@ mod tests {
             let r = k.read().unwrap();
             assert_eq!(r.get(sk, "foo").expect("read"), Some(Value::I64(1234)));
             assert_eq!(r.get(sk, "bar").expect("read"), Some(Value::Bool(true)));
-            assert_eq!(r.get(sk, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+            assert_eq!(
+                r.get(sk, "baz").expect("read"),
+                Some(Value::Str("héllo, yöu"))
+            );
         }
 
         {
@@ -485,7 +514,10 @@ mod tests {
 
     #[test]
     fn test_open_store_for_read() {
-        let root = Builder::new().prefix("test_open_store_for_read").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_open_store_for_read")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         // First create the store, and start a write transaction on it.
@@ -499,13 +531,19 @@ mod tests {
         writer.commit().expect("commit");
         // Now the write transaction is committed, any followed reads should see its change.
         let reader = k.read().expect("reader");
-        assert_eq!(reader.get(sk_readonly, "foo").expect("read"), Some(Value::Str("bar")));
+        assert_eq!(
+            reader.get(sk_readonly, "foo").expect("read"),
+            Some(Value::Str("bar"))
+        );
     }
 
     #[test]
     #[should_panic(expected = "open a missing store")]
     fn test_open_a_missing_store() {
-        let root = Builder::new().prefix("test_open_a_missing_store").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_open_a_missing_store")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let _sk = k.open("sk").expect("open a missing store");
@@ -513,7 +551,10 @@ mod tests {
 
     #[test]
     fn test_open_fail_with_badrslot() {
-        let root = Builder::new().prefix("test_open_fail_with_badrslot").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_open_fail_with_badrslot")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         // First create the store
@@ -530,7 +571,10 @@ mod tests {
 
     #[test]
     fn test_read_before_write_num() {
-        let root = Builder::new().prefix("test_read_before_write_num").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_read_before_write_num")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create("sk").expect("opened");
@@ -550,7 +594,9 @@ mod tests {
         let mut writer = k.write().expect("writer");
         let mut existing = get_existing_foo(&writer, sk).unwrap_or(99);
         existing += 1;
-        writer.put(sk, "foo", &Value::I64(existing)).expect("success");
+        writer.put(sk, "foo", &Value::I64(existing)).expect(
+            "success",
+        );
 
         let updated = get_existing_foo(&writer, sk).unwrap_or(99);
         assert_eq!(updated, 100);
@@ -559,7 +605,10 @@ mod tests {
 
     #[test]
     fn test_read_before_write_str() {
-        let root = Builder::new().prefix("test_read_before_write_str").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_read_before_write_str")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create("sk").expect("opened");
@@ -575,13 +624,18 @@ mod tests {
             _ => "",
         }.to_string();
         existing.push('…');
-        writer.put(sk, "foo", &Value::Str(&existing)).expect("write");
+        writer.put(sk, "foo", &Value::Str(&existing)).expect(
+            "write",
+        );
         writer.commit().expect("commit");
     }
 
     #[test]
     fn test_concurrent_read_transactions_prohibited() {
-        let root = Builder::new().prefix("test_concurrent_reads_prohibited").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_concurrent_reads_prohibited")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
@@ -600,7 +654,9 @@ mod tests {
 
     #[test]
     fn test_isolation() {
-        let root = Builder::new().prefix("test_isolation").tempdir().expect("tempdir");
+        let root = Builder::new().prefix("test_isolation").tempdir().expect(
+            "tempdir",
+        );
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let s: Store = k.open_or_create("s").expect("opened");
@@ -642,15 +698,23 @@ mod tests {
 
     #[test]
     fn test_blob() {
-        let root = Builder::new().prefix("test_round_trip_blob").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_round_trip_blob")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create("sk").expect("opened");
         let mut writer = k.write().expect("writer");
 
         assert_eq!(writer.get(sk, "foo").expect("read"), None);
-        writer.put(sk, "foo", &Value::Blob(&[1, 2, 3, 4])).expect("wrote");
-        assert_eq!(writer.get(sk, "foo").expect("read"), Some(Value::Blob(&[1, 2, 3, 4])));
+        writer.put(sk, "foo", &Value::Blob(&[1, 2, 3, 4])).expect(
+            "wrote",
+        );
+        assert_eq!(
+            writer.get(sk, "foo").expect("read"),
+            Some(Value::Blob(&[1, 2, 3, 4]))
+        );
 
         fn u16_to_u8(src: &[u16]) -> Vec<u8> {
             let mut dst = vec![0; 2 * src.len()];
@@ -669,7 +733,9 @@ mod tests {
         // reading, and converting back works as expected.
         let u16_array = [1000, 10000, 54321, 65535];
         assert_eq!(writer.get(sk, "bar").expect("read"), None);
-        writer.put(sk, "bar", &Value::Blob(&u16_to_u8(&u16_array))).expect("wrote");
+        writer
+            .put(sk, "bar", &Value::Blob(&u16_to_u8(&u16_array)))
+            .expect("wrote");
         let u8_array = match writer.get(sk, "bar").expect("read") {
             Some(Value::Blob(val)) => val,
             _ => &[],
@@ -680,20 +746,28 @@ mod tests {
     #[test]
     #[should_panic(expected = "not yet implemented")]
     fn test_delete_value() {
-        let root = Builder::new().prefix("test_delete_value").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_delete_value")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: Store = k.open_or_create_with_flags("sk", DatabaseFlags::DUP_SORT).expect("opened");
+        let sk: Store = k.open_or_create_with_flags("sk", DatabaseFlags::DUP_SORT)
+            .expect("opened");
 
         let mut writer = k.write().expect("writer");
         writer.put(sk, "foo", &Value::I64(1234)).expect("wrote");
         writer.put(sk, "foo", &Value::I64(1235)).expect("wrote");
-        writer.delete_value(sk, "foo", &Value::I64(1234)).expect("deleted");
+        writer.delete_value(sk, "foo", &Value::I64(1234)).expect(
+            "deleted",
+        );
     }
 
     #[test]
     fn test_iter() {
-        let root = Builder::new().prefix("test_iter").tempdir().expect("tempdir");
+        let root = Builder::new().prefix("test_iter").tempdir().expect(
+            "tempdir",
+        );
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create("sk").expect("opened");
@@ -707,11 +781,19 @@ mod tests {
 
         let mut writer = k.write().expect("writer");
         writer.put(sk, "foo", &Value::I64(1234)).expect("wrote");
-        writer.put(sk, "noo", &Value::F64(1234.0.into())).expect("wrote");
+        writer.put(sk, "noo", &Value::F64(1234.0.into())).expect(
+            "wrote",
+        );
         writer.put(sk, "bar", &Value::Bool(true)).expect("wrote");
-        writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect("wrote");
-        writer.put(sk, "héllò, töűrîst", &Value::Str("Emil.RuleZ!")).expect("wrote");
-        writer.put(sk, "你好，遊客", &Value::Str("米克規則")).expect("wrote");
+        writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect(
+            "wrote",
+        );
+        writer
+            .put(sk, "héllò, töűrîst", &Value::Str("Emil.RuleZ!"))
+            .expect("wrote");
+        writer
+            .put(sk, "你好，遊客", &Value::Str("米克規則"))
+            .expect("wrote");
         writer.commit().expect("committed");
 
         let reader = k.read().unwrap();
@@ -767,16 +849,23 @@ mod tests {
 
     #[test]
     fn test_iter_from_key_greater_than_existing() {
-        let root = Builder::new().prefix("test_iter_from_key_greater_than_existing").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_iter_from_key_greater_than_existing")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let sk: Store = k.open_or_create("sk").expect("opened");
 
         let mut writer = k.write().expect("writer");
         writer.put(sk, "foo", &Value::I64(1234)).expect("wrote");
-        writer.put(sk, "noo", &Value::F64(1234.0.into())).expect("wrote");
+        writer.put(sk, "noo", &Value::F64(1234.0.into())).expect(
+            "wrote",
+        );
         writer.put(sk, "bar", &Value::Bool(true)).expect("wrote");
-        writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect("wrote");
+        writer.put(sk, "baz", &Value::Str("héllo, yöu")).expect(
+            "wrote",
+        );
         writer.commit().expect("committed");
 
         let reader = k.read().unwrap();
@@ -786,7 +875,10 @@ mod tests {
 
     #[test]
     fn test_multiple_store_read_write() {
-        let root = Builder::new().prefix("test_multiple_store_read_write").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_multiple_store_read_write")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
@@ -799,16 +891,28 @@ mod tests {
         writer.put(s2, "foo", &Value::I64(123)).expect("wrote");
         writer.put(s3, "foo", &Value::Bool(true)).expect("wrote");
 
-        assert_eq!(writer.get(s1, "foo").expect("read"), Some(Value::Str("bar")));
+        assert_eq!(
+            writer.get(s1, "foo").expect("read"),
+            Some(Value::Str("bar"))
+        );
         assert_eq!(writer.get(s2, "foo").expect("read"), Some(Value::I64(123)));
-        assert_eq!(writer.get(s3, "foo").expect("read"), Some(Value::Bool(true)));
+        assert_eq!(
+            writer.get(s3, "foo").expect("read"),
+            Some(Value::Bool(true))
+        );
 
         writer.commit().expect("committed");
 
         let reader = k.read().expect("unbound_reader");
-        assert_eq!(reader.get(s1, "foo").expect("read"), Some(Value::Str("bar")));
+        assert_eq!(
+            reader.get(s1, "foo").expect("read"),
+            Some(Value::Str("bar"))
+        );
         assert_eq!(reader.get(s2, "foo").expect("read"), Some(Value::I64(123)));
-        assert_eq!(reader.get(s3, "foo").expect("read"), Some(Value::Bool(true)));
+        assert_eq!(
+            reader.get(s3, "foo").expect("read"),
+            Some(Value::Bool(true))
+        );
         reader.abort();
 
         // test delete across multiple stores
@@ -826,7 +930,10 @@ mod tests {
 
     #[test]
     fn test_multiple_store_iter() {
-        let root = Builder::new().prefix("test_multiple_store_iter").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_multiple_store_iter")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let s1: Store = k.open_or_create("store_1").expect("opened");
@@ -835,18 +942,34 @@ mod tests {
         let mut writer = k.write().expect("writer");
         // Write to "s1"
         writer.put(s1, "foo", &Value::I64(1234)).expect("wrote");
-        writer.put(s1, "noo", &Value::F64(1234.0.into())).expect("wrote");
+        writer.put(s1, "noo", &Value::F64(1234.0.into())).expect(
+            "wrote",
+        );
         writer.put(s1, "bar", &Value::Bool(true)).expect("wrote");
-        writer.put(s1, "baz", &Value::Str("héllo, yöu")).expect("wrote");
-        writer.put(s1, "héllò, töűrîst", &Value::Str("Emil.RuleZ!")).expect("wrote");
-        writer.put(s1, "你好，遊客", &Value::Str("米克規則")).expect("wrote");
+        writer.put(s1, "baz", &Value::Str("héllo, yöu")).expect(
+            "wrote",
+        );
+        writer
+            .put(s1, "héllò, töűrîst", &Value::Str("Emil.RuleZ!"))
+            .expect("wrote");
+        writer
+            .put(s1, "你好，遊客", &Value::Str("米克規則"))
+            .expect("wrote");
         // Writer to "s2"
         writer.put(s2, "foo", &Value::I64(1234)).expect("wrote");
-        writer.put(s2, "noo", &Value::F64(1234.0.into())).expect("wrote");
+        writer.put(s2, "noo", &Value::F64(1234.0.into())).expect(
+            "wrote",
+        );
         writer.put(s2, "bar", &Value::Bool(true)).expect("wrote");
-        writer.put(s2, "baz", &Value::Str("héllo, yöu")).expect("wrote");
-        writer.put(s2, "héllò, töűrîst", &Value::Str("Emil.RuleZ!")).expect("wrote");
-        writer.put(s2, "你好，遊客", &Value::Str("米克規則")).expect("wrote");
+        writer.put(s2, "baz", &Value::Str("héllo, yöu")).expect(
+            "wrote",
+        );
+        writer
+            .put(s2, "héllò, töűrîst", &Value::Str("Emil.RuleZ!"))
+            .expect("wrote");
+        writer
+            .put(s2, "你好，遊客", &Value::Str("米克規則"))
+            .expect("wrote");
         writer.commit().expect("committed");
 
         let reader = k.read().unwrap();
@@ -938,10 +1061,15 @@ mod tests {
 
     #[test]
     fn test_store_multiple_thread() {
-        let root = Builder::new().prefix("test_multiple_thread").tempdir().expect("tempdir");
+        let root = Builder::new()
+            .prefix("test_multiple_thread")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let rkv_arc = Arc::new(RwLock::new(Rkv::new(root.path()).expect("new succeeded")));
-        let store = rkv_arc.read().unwrap().open_or_create_default().expect("opened");
+        let store = rkv_arc.read().unwrap().open_or_create_default().expect(
+            "opened",
+        );
 
         let num_threads = 10;
         let mut write_handles = Vec::with_capacity(num_threads as usize);
@@ -958,7 +1086,9 @@ mod tests {
             write_handles.push(thread::spawn(move || {
                 let rkv = rkv_arc.write().expect("rkv");
                 let mut writer = rkv.write().expect("writer");
-                writer.put(store, i.to_string(), &Value::U64(i)).expect("written");
+                writer.put(store, i.to_string(), &Value::U64(i)).expect(
+                    "written",
+                );
                 writer.commit().unwrap();
             }));
         }
@@ -986,7 +1116,10 @@ mod tests {
 
         // Sum the values returned from the threads and confirm that they're
         // equal to the sum of values written to the threads.
-        let thread_sum: u64 = read_handles.into_iter().map(|handle| handle.join().expect("value")).sum();
+        let thread_sum: u64 = read_handles
+            .into_iter()
+            .map(|handle| handle.join().expect("value"))
+            .sum();
         assert_eq!(thread_sum, (0..num_threads).sum());
     }
 }

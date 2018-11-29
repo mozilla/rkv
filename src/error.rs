@@ -21,10 +21,7 @@ pub enum DataError {
     UnknownType(u8),
 
     #[fail(display = "unexpected type tag: expected {}, got {}", expected, actual)]
-    UnexpectedType {
-        expected: Type,
-        actual: Type,
-    },
+    UnexpectedType { expected: Type, actual: Type },
 
     #[fail(display = "empty data; expected tag")]
     Empty,

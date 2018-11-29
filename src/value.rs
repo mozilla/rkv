@@ -10,15 +10,9 @@
 
 use ordered_float::OrderedFloat;
 
-use bincode::{
-    deserialize,
-    serialize,
-};
+use bincode::{deserialize, serialize};
 
-use uuid::{
-    Bytes,
-    Uuid,
-};
+use uuid::{Bytes, Uuid};
 
 use error::DataError;
 
@@ -138,9 +132,11 @@ impl<'s> Value<'s> {
     fn from_type_and_data(t: Type, data: &'s [u8]) -> Result<Value<'s>, DataError> {
         if t == Type::Uuid {
             return deserialize(data)
-                .map_err(|e| DataError::DecodingError {
-                    value_type: t,
-                    err: e,
+                .map_err(|e| {
+                    DataError::DecodingError {
+                        value_type: t,
+                        err: e,
+                    }
                 })
                 .map(uuid)?;
         }
@@ -158,9 +154,11 @@ impl<'s> Value<'s> {
                 // Processed above to avoid verbose duplication of error transforms.
                 unreachable!()
             },
-        }.map_err(|e| DataError::DecodingError {
-            value_type: t,
-            err: e,
+        }.map_err(|e| {
+            DataError::DecodingError {
+                value_type: t,
+                err: e,
+            }
         })
     }
 
