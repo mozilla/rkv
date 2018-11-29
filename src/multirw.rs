@@ -15,8 +15,8 @@ use std::rc::Rc;
 use lmdb::{
     Cursor,
     Database,
-    IterDup as LmdbIterDup,
     Iter as LmdbIter,
+    IterDup as LmdbIterDup,
     RoCursor,
     RoTransaction,
     RwTransaction,
@@ -60,16 +60,14 @@ pub struct MultiIter<'env> {
 
 pub struct Iter<'env> {
     iter: LmdbIter<'env>,
-    cursor: RoCursor<'env>,
 }
 
 pub struct MultiCursor<'env, K> 
 where
     K: AsRef<[u8]>
 {
-    iter: Option<LmdbIterDup<'env>>,
-    cursor: Option<RoCursor<'env>>,
-    writer: MultiWriter<'env, K>,
+    tx: RwTransaction<'env>,
+    phantom: PhantomData<K>,
 }
 
 impl<'env, K> MultiCursor<'env, K>
@@ -77,30 +75,18 @@ where
     K: AsRef<[u8]> 
 {
 
-    pub(crate) fn new(
-        iter: LmdbIterDup<'env>,
-        cursor: RoCursor<'env>,
-        writer: MultiWriter<'env, K>)
-    -> MultiCursor<'env, K> {
-        MultiCursor {
-            iter: Some(iter),
-            cursor: Some(cursor),
-            writer: writer,
-        }
-    }
-
-    /// Update the location of this cursor to point to the provided key. 
-    /// This cursor will start at the lexographically smallest value that is equal-to or
-    /// greater-than the provided key. 
-    pub fn get(&mut self, k: K) -> Result<(), StoreError> {
-        self.iter = self.cursor.as_mut().map(|c| c.iter_dup_from(&k));
-        Ok(())
+    /// Provides a cursor to all of the values for the duplicate entries that match this key
+    pub fn get(&self, store: MultiStore, k: K) -> Result<Iter, StoreError> {
+        let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
+        let iter = cursor.iter_dup_of(k);
+        //Ok(Iter{ iter, cursor })
+        Ok(Iter{ iter })
     }
 
     /// Consume this MultiCursor and give the `MultiWriter` back
     /// So that it may perform additional tasks
-    pub fn close(self) -> MultiWriter<'env, K> {
-        self.writer
+    pub fn into_writer(self) -> MultiWriter<'env, K> {
+        MultiWriter { tx: self.tx, phantom: PhantomData }
     }
 }
 
@@ -114,18 +100,12 @@ where
             phantom: PhantomData,
         }
     }
-
-    /// Provides a cursor to the lexographically smallest value that is equal-to, or greater-than
-    /// the provided key.
+    
     /// This cursor consumes the writer, as it is not safe to attempt to access records while using
     /// put or delete, as the location of the records might change
-    pub fn get(self, store: MultiStore, k: K) -> Result<MultiCursor<'env, K>, StoreError> {
-        let mut mc = MultiCursor { iter: None, cursor: None, writer: self };
-        mc.cursor = Some(mc.writer.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?);
-        mc.iter = mc.cursor.as_mut().map(|c| c.iter_dup_from(&k));
-        Ok(mc)
+    pub fn into_cursor(self) -> MultiCursor<'env, K> {
+        MultiCursor { tx: self.tx, phantom: PhantomData }
     }
-
 
     /// Insert a value at the specified key. 
     /// This put will allow duplicate entries.  If you wish to have duplicate entries
@@ -166,15 +146,12 @@ where
         }
     }
 
-    /// Provides an iterator starting at the lexographically smallest value that is
-    /// equal-to, or greater-than the provided key.
-    pub fn get(&self, store: MultiStore, k: K) -> Result<MultiIter, StoreError> {
+    /// Provides a cursor to all of the values for the duplicate entries that match this key
+    pub fn get(&self, store: MultiStore, k: K) -> Result<Iter, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
-        let iter = cursor.iter_dup_from(&k);
-        Ok(MultiIter {
-            iter,
-            cursor,
-        })
+        let iter = cursor.iter_dup_of(k);
+        //Ok(MultiIter { iter, cursor, })
+        Ok(Iter{iter})
     }
 
     /// Cancel this read transaction (not particularly useful)
@@ -203,20 +180,6 @@ where
     }
 }
 
-impl<'env, K> Iterator for MultiCursor<'env, K>
-where
-    K: AsRef<[u8]>
-{
-    type Item = Iter<'env>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.unwrap().next() {
-            None => None,
-            Some(iter) => Some(Iter{iter, cursor: self.cursor.unwrap()}),
-        }
-    }
-}
-
 impl<'env> Iterator for MultiIter<'env>
 {
     type Item = Iter<'env>;
@@ -224,7 +187,7 @@ impl<'env> Iterator for MultiIter<'env>
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             None => None,
-            Some(iter) => Some(Iter{iter, cursor: self.cursor}),
+            Some(iter) => Some(Iter{iter}),
         }
     }
 }

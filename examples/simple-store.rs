@@ -14,22 +14,33 @@ use rkv::{
     Manager,
     Rkv,
     Value,
-    Writer,
-    Store,
+    MultiStore,
+    MultiWriter,
 };
 use tempfile::Builder;
 
 use std::fs;
 
-fn test_getput<K: AsRef<[u8]>>(store: Store, writer: &mut Writer<&str>) {
+fn test_getput<'env, 's>(store: MultiStore, writer: MultiWriter<'env, &'s str>, ids: &'s mut Vec<String>) ->  MultiWriter<'env, &'s str> {
     let keys = vec!["str1", "str2", "str3"];
+    // we convert the writer into a cursor so that we can safely read
+    let curs = writer.into_cursor();
     for k in keys.iter() {
-        if let Value::Str(s) = writer.get(store, k).unwrap().unwrap() {
-            let r = writer.put(store, s, &Value::Blob(b"weeeeeee")).unwrap();
-        } else {
-            panic!("Failed to get string value");
+        // this is a multi-valued database, so get returns an iterator
+        let iter = curs.get(store, k).unwrap();
+        for (_key, val) in iter {
+            if let Value::Str(s) = val.unwrap().unwrap() {
+                ids.push(s.to_owned());
+            } else {
+                panic!("didn't get a string back!");
+            }
         }
     }
+    let mut writer = curs.into_writer();
+    for i in 0 .. ids.len() {
+        let _r = writer.put(store, &ids[i], &Value::Blob(b"weeeeeee")).unwrap();
+    }
+    writer 
 }
 
 fn main() {
@@ -43,6 +54,8 @@ fn main() {
 
     // Creates a store called "store"
     let store = k.open_or_create("store").unwrap();
+
+    let multistore = k.open_or_create_multi("multistore").unwrap();
 
     println!("Inserting data...");
     {
@@ -61,11 +74,18 @@ fn main() {
     
     println!("Testing getput");
     {
-        let mut writer = k.write().unwrap();
-        writer.put(store, "str1", &Value::Str("string uno")).unwrap();
-        writer.put(store, "str2", &Value::Str("string dos")).unwrap();
-        writer.put(store, "str3", &Value::Str("string tres")).unwrap();
-        test_getput(store, &mut writer);
+        let mut ids = Vec::new();
+        let mut writer = k.write_multi().unwrap();
+        writer.put(multistore, "str1", &Value::Str("string uno")).unwrap();
+        writer.put(multistore, "str1", &Value::Str("string dos")).unwrap();
+        writer.put(multistore, "str1", &Value::Str("string tres")).unwrap();
+        writer.put(multistore, "str2", &Value::Str("string quatro")).unwrap();
+        writer.put(multistore, "str2", &Value::Str("string cinco")).unwrap();
+        writer.put(multistore, "str2", &Value::Str("string seis")).unwrap();
+        writer.put(multistore, "str3", &Value::Str("string seite")).unwrap();
+        writer.put(multistore, "str3", &Value::Str("string ocho")).unwrap();
+        writer.put(multistore, "str3", &Value::Str("string nueve")).unwrap();
+        let writer = test_getput(multistore, writer, &mut ids);
         writer.commit().unwrap();
     }
     println!("Looking up keys...");
