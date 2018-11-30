@@ -158,7 +158,8 @@ impl<'s> Value<'s> {
                 // Processed above to avoid verbose duplication of error transforms.
                 unreachable!()
             },
-        }.map_err(|e| DataError::DecodingError {
+        }
+        .map_err(|e| DataError::DecodingError {
             value_type: t,
             err: e,
         })
@@ -178,7 +179,8 @@ impl<'s> Value<'s> {
                 // Processed above to avoid verbose duplication of error transforms.
                 serialize(&(Type::Uuid.to_tag(), v))
             },
-        }.map_err(DataError::EncodingError)
+        }
+        .map_err(DataError::EncodingError)
     }
 }
 
