@@ -522,7 +522,8 @@ mod tests {
         let mut existing = match writer.get(sk, "foo").expect("read") {
             Some(Value::Str(val)) => val,
             _ => "",
-        }.to_string();
+        }
+        .to_string();
         existing.push('…');
         writer.put(sk, "foo", &Value::Str(&existing)).expect("write");
         writer.commit().expect("commit");

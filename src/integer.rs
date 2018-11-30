@@ -42,7 +42,7 @@ where
     T: Serialize,
 {
     fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
-        serialize(self)         // TODO: limited key length.
+        serialize(self) // TODO: limited key length.
             .map_err(|e| e.into())
     }
 }
