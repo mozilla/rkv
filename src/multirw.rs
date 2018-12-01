@@ -11,7 +11,6 @@
 use lmdb;
 
 use std::marker::PhantomData;
-use std::rc::Rc;
 use lmdb::{Cursor, Database, Iter as LmdbIter, IterDup as LmdbIterDup, RoCursor, RoTransaction, RwTransaction,
            Transaction};
 

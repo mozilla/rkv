@@ -204,6 +204,6 @@ pub use manager::Manager;
 
 pub use readwrite::{Reader, Store, Writer};
 
-pub use multirw::{MultiReader, MultiWriter, MultiCursor, MultiStore};
+pub use multirw::{MultiReader, MultiWriter, MultiCursor, MultiStore, Iter, MultiIter};
 
 pub use value::{OwnedValue, Value};
