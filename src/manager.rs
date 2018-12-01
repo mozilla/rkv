@@ -10,15 +10,25 @@
 
 use std::collections::BTreeMap;
 
-use std::io::{self, Error, ErrorKind};
+use std::io::{
+    self,
+    Error,
+    ErrorKind,
+};
 
 use std::collections::btree_map::Entry;
 
 use std::os::raw::c_uint;
 
-use std::path::{Path, PathBuf};
+use std::path::{
+    Path,
+    PathBuf,
+};
 
-use std::sync::{Arc, RwLock};
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 use url::Url;
 
@@ -40,12 +50,8 @@ where
 {
     let canonical = path.into().canonicalize()?;
     if cfg!(target_os = "windows") {
-        let url = Url::from_file_path(&canonical).map_err(|_e| {
-            Error::new(ErrorKind::Other, "URL passing error")
-        })?;
-        return url.to_file_path().map_err(|_e| {
-            Error::new(ErrorKind::Other, "path canonicalization error")
-        });
+        let url = Url::from_file_path(&canonical).map_err(|_e| Error::new(ErrorKind::Other, "URL passing error"))?;
+        return url.to_file_path().map_err(|_e| Error::new(ErrorKind::Other, "path canonicalization error"));
     }
     Ok(canonical)
 }
@@ -56,7 +62,9 @@ pub struct Manager {
 
 impl Manager {
     fn new() -> Manager {
-        Manager { environments: Default::default() }
+        Manager {
+            environments: Default::default(),
+        }
     }
 
     pub fn singleton() -> &'static RwLock<Manager> {
@@ -123,9 +131,7 @@ mod tests {
     /// Test that the manager will return the same Rkv instance each time for each path.
     #[test]
     fn test_same() {
-        let root = Builder::new().prefix("test_same").tempdir().expect(
-            "tempdir",
-        );
+        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
         let mut manager = Manager::new();
@@ -141,9 +147,7 @@ mod tests {
     /// Test that the manager will return the same Rkv instance each time for each path.
     #[test]
     fn test_same_with_capacity() {
-        let root = Builder::new().prefix("test_same").tempdir().expect(
-            "tempdir",
-        );
+        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
         let mut manager = Manager::new();
@@ -151,9 +155,7 @@ mod tests {
         let p = root.path();
         assert!(manager.get(p).expect("success").is_none());
 
-        let created_arc = manager
-            .get_or_create_with_capacity(p, 10, Rkv::with_capacity)
-            .expect("created");
+        let created_arc = manager.get_or_create_with_capacity(p, 10, Rkv::with_capacity).expect("created");
         let fetched_arc = manager.get(p).expect("success").expect("existed");
         assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
     }

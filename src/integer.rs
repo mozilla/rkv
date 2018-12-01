@@ -16,11 +16,18 @@ use serde::Serialize;
 
 use lmdb::Database;
 
-use error::{DataError, StoreError};
+use error::{
+    DataError,
+    StoreError,
+};
 
 use value::Value;
 
-use readwrite::{Reader, Store, Writer};
+use readwrite::{
+    Reader,
+    Store,
+    Writer,
+};
 
 pub trait EncodableKey {
     fn to_bytes(&self) -> Result<Vec<u8>, DataError>;
@@ -35,7 +42,7 @@ where
     T: Serialize,
 {
     fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
-        serialize(self)         // TODO: limited key length.
+        serialize(self) // TODO: limited key length.
             .map_err(|e| e.into())
     }
 }
@@ -78,7 +85,9 @@ where
     K: PrimitiveInt,
 {
     pub(crate) fn new(reader: Reader<Key<K>>) -> IntegerReader<K> {
-        IntegerReader { inner: reader }
+        IntegerReader {
+            inner: reader,
+        }
     }
 
     pub fn get(&self, store: IntegerStore, k: K) -> Result<Option<Value>, StoreError> {
@@ -102,7 +111,9 @@ where
     K: PrimitiveInt,
 {
     pub(crate) fn new(writer: Writer<Key<K>>) -> IntegerWriter<K> {
-        IntegerWriter { inner: writer }
+        IntegerWriter {
+            inner: writer,
+        }
     }
 
     pub fn get(&self, store: IntegerStore, k: K) -> Result<Option<Value>, StoreError> {
@@ -139,14 +150,11 @@ mod tests {
     use std::fs;
 
     use super::*;
-    use ::*;
+    use *;
 
     #[test]
     fn test_integer_keys() {
-        let root = Builder::new()
-            .prefix("test_integer_keys")
-            .tempdir()
-            .expect("tempdir");
+        let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         let s = k.open_or_create_integer("s").expect("open");
@@ -154,16 +162,10 @@ mod tests {
         let mut writer = k.write_int::<u32>().expect("writer");
 
         writer.put(s, 123, &Value::Str("hello!")).expect("write");
-        assert_eq!(
-            writer.get(s, 123).expect("read"),
-            Some(Value::Str("hello!"))
-        );
+        assert_eq!(writer.get(s, 123).expect("read"), Some(Value::Str("hello!")));
         writer.commit().expect("committed");
 
         let reader = k.read_int::<u32>().expect("reader");
-        assert_eq!(
-            reader.get(s, 123).expect("read"),
-            Some(Value::Str("hello!"))
-        );
+        assert_eq!(reader.get(s, 123).expect("read"), Some(Value::Str("hello!")));
     }
 }

@@ -184,26 +184,53 @@ extern crate serde; // So we can specify trait bounds. Everything else is bincod
 extern crate url;
 extern crate uuid;
 
-pub use lmdb::{DatabaseFlags, EnvironmentBuilder, EnvironmentFlags, WriteFlags};
+pub use lmdb::{
+    DatabaseFlags,
+    EnvironmentBuilder,
+    EnvironmentFlags,
+    WriteFlags,
+};
 
 mod env;
 pub mod error;
 mod integer;
 mod manager;
-mod readwrite;
 mod multirw;
+mod readwrite;
 pub mod value;
 
 pub use env::Rkv;
 
-pub use error::{DataError, StoreError};
+pub use error::{
+    DataError,
+    StoreError,
+};
 
-pub use integer::{IntegerReader, IntegerStore, IntegerWriter, PrimitiveInt};
+pub use integer::{
+    IntegerReader,
+    IntegerStore,
+    IntegerWriter,
+    PrimitiveInt,
+};
 
 pub use manager::Manager;
 
-pub use readwrite::{Reader, Store, Writer};
+pub use readwrite::{
+    Reader,
+    Store,
+    Writer,
+};
 
-pub use multirw::{MultiReader, MultiWriter, MultiCursor, MultiStore, Iter, MultiIter};
+pub use multirw::{
+    Iter,
+    MultiCursor,
+    MultiIter,
+    MultiReader,
+    MultiStore,
+    MultiWriter,
+};
 
-pub use value::{OwnedValue, Value};
+pub use value::{
+    OwnedValue,
+    Value,
+};

@@ -12,7 +12,15 @@ use lmdb;
 
 use std::marker::PhantomData;
 
-use lmdb::{Cursor, Database, Iter as LmdbIter, RoCursor, RoTransaction, RwTransaction, Transaction};
+use lmdb::{
+    Cursor,
+    Database,
+    Iter as LmdbIter,
+    RoCursor,
+    RoTransaction,
+    RwTransaction,
+    Transaction,
+};
 
 use lmdb::WriteFlags;
 
@@ -22,11 +30,7 @@ use value::Value;
 
 fn read_transform(val: Result<&[u8], lmdb::Error>) -> Result<Option<Value>, StoreError> {
     match val {
-        Ok(bytes) => {
-            Value::from_tagged_slice(bytes).map(Some).map_err(
-                StoreError::DataError,
-            )
-        },
+        Ok(bytes) => Value::from_tagged_slice(bytes).map(Some).map_err(StoreError::DataError),
         Err(lmdb::Error::NotFound) => Ok(None),
         Err(e) => Err(StoreError::LmdbError(e)),
     }
@@ -73,15 +77,11 @@ where
     pub fn put(&mut self, store: Store, k: K, v: &Value) -> Result<(), StoreError> {
         // TODO: don't allocate twice.
         let bytes = v.to_bytes()?;
-        self.tx
-            .put(store.0, &k, &bytes, WriteFlags::empty())
-            .map_err(StoreError::LmdbError)
+        self.tx.put(store.0, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
     pub fn delete(&mut self, store: Store, k: K) -> Result<(), StoreError> {
-        self.tx.del(store.0, &k, None).map_err(
-            StoreError::LmdbError,
-        )
+        self.tx.del(store.0, &k, None).map_err(StoreError::LmdbError)
     }
 
     pub fn delete_value(&mut self, _store: Store, _k: K, _v: &Value) -> Result<(), StoreError> {
@@ -123,9 +123,7 @@ where
     }
 
     pub fn iter_start(&self, store: Store) -> Result<Iter, StoreError> {
-        let mut cursor = self.tx.open_ro_cursor(store.0).map_err(
-            StoreError::LmdbError,
-        )?;
+        let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
         // the latter panics at "called `Result::unwrap()` on an `Err` value:
@@ -137,15 +135,19 @@ where
         //
         let iter = cursor.iter();
 
-        Ok(Iter { iter, cursor })
+        Ok(Iter {
+            iter,
+            cursor,
+        })
     }
 
     pub fn iter_from(&self, store: Store, k: K) -> Result<Iter, StoreError> {
-        let mut cursor = self.tx.open_ro_cursor(store.0).map_err(
-            StoreError::LmdbError,
-        )?;
+        let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
-        Ok(Iter { iter, cursor })
+        Ok(Iter {
+            iter,
+            cursor,
+        })
     }
 }
 
