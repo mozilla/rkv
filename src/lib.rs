@@ -224,7 +224,7 @@ pub use readwrite::{
 pub use multirw::{
     Iter,
     MultiCursor,
-    MultiIter,
+//    MultiIter,
     MultiReader,
     MultiStore,
     MultiWriter,

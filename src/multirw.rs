@@ -14,7 +14,7 @@ use lmdb::{
     Cursor,
     Database,
     Iter as LmdbIter,
-    IterDup as LmdbIterDup,
+//    IterDup as LmdbIterDup,
     RoCursor,
     RoTransaction,
     RwTransaction,
@@ -26,11 +26,19 @@ use lmdb::WriteFlags;
 
 use error::StoreError;
 
-use value::Value;
+use value::{OwnedValue, Value};
 
 fn read_transform(val: Result<&[u8], lmdb::Error>) -> Result<Option<Value>, StoreError> {
     match val {
         Ok(bytes) => Value::from_tagged_slice(bytes).map(Some).map_err(StoreError::DataError),
+        Err(lmdb::Error::NotFound) => Ok(None),
+        Err(e) => Err(StoreError::LmdbError(e)),
+    }
+}
+
+fn read_transform_owned(val: Result<&[u8], lmdb::Error>) -> Result<Option<OwnedValue>, StoreError> {
+    match val {
+        Ok(bytes) => Value::from_tagged_slice(bytes).map(|v| Some(OwnedValue::from(&v))).map_err(StoreError::DataError),
         Err(lmdb::Error::NotFound) => Ok(None),
         Err(e) => Err(StoreError::LmdbError(e)),
     }
@@ -52,13 +60,16 @@ where
     phantom: PhantomData<K>,
 }
 
+/*
 pub struct MultiIter<'env> {
     iter: LmdbIterDup<'env>,
     cursor: RoCursor<'env>,
 }
+*/
 
 pub struct Iter<'env> {
     iter: LmdbIter<'env>,
+    cursor: RoCursor<'env>,
 }
 
 pub struct MultiCursor<'env, K>
@@ -77,17 +88,13 @@ where
     pub fn get(&self, store: MultiStore, k: K) -> Result<Iter, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_dup_of(k);
-        //Ok(Iter{ iter, cursor })
-        Ok(Iter {
-            iter,
-        })
+        Ok(Iter{ iter, cursor })
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
     pub fn get_first(&self, store: MultiStore, k: K) -> Result<Option<Value>, StoreError> {
-        let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
-        let mut iter = cursor.iter_dup_of(k);
-        read_transform(iter.next().ok_or(lmdb::Error::NotFound).map(|e| e.1))
+        let result = self.tx.get(store.0, &k);
+        read_transform(result)
     }
 
     /// Consume this MultiCursor and give the `MultiWriter` back
@@ -134,6 +141,10 @@ where
         let bytes = v.to_bytes()?;
         self.tx.put(store.0, &k, &bytes, flags).map_err(StoreError::LmdbError)
     }
+    
+    pub fn delete_all(&mut self, store: MultiStore, k: K) -> Result<(), StoreError> {
+        self.tx.del(store.0, &k, None).map_err(StoreError::LmdbError)
+    }
 
     pub fn delete(&mut self, store: MultiStore, k: K, v: &Value) -> Result<(), StoreError> {
         self.tx.del(store.0, &k, Some(&v.to_bytes()?)).map_err(StoreError::LmdbError)
@@ -166,14 +177,15 @@ where
         //Ok(MultiIter { iter, cursor, })
         Ok(Iter {
             iter,
+            cursor,
         })
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
-    pub fn get_first(&self, store: MultiStore, k: K) -> Result<Option<Value>, StoreError> {
+    pub fn get_first(&self, store: MultiStore, k: K) -> Result<Option<OwnedValue>, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
         let mut iter = cursor.iter_dup_of(k);
-        read_transform(iter.next().ok_or(lmdb::Error::NotFound).map(|e| e.1))
+        read_transform_owned(iter.next().ok_or(lmdb::Error::NotFound).map(|e| e.1))
     }
 
     /// Cancel this read transaction
@@ -181,6 +193,8 @@ where
         self.tx.abort();
     }
 
+    /* TODO - Figure out how to solve the need to have the cursor stick around when 
+     *        we are producing iterators from MultiIter 
     /// Provides an iterator starting at the lexographically smallest value in the store
     pub fn iter_start(&self, store: MultiStore) -> Result<MultiIter, StoreError> {
         let mut cursor = self.tx.open_ro_cursor(store.0).map_err(StoreError::LmdbError)?;
@@ -200,8 +214,10 @@ where
             cursor,
         })
     }
+    */
 }
 
+/*
 impl<'env> Iterator for MultiIter<'env> {
     type Item = Iter<'env>;
 
@@ -210,10 +226,12 @@ impl<'env> Iterator for MultiIter<'env> {
             None => None,
             Some(iter) => Some(Iter {
                 iter,
+                cursor,
             }),
         }
     }
 }
+*/
 
 impl<'env> Iterator for Iter<'env> {
     type Item = (&'env [u8], Result<Option<Value<'env>>, StoreError>);

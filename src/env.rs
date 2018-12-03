@@ -126,7 +126,7 @@ impl Rkv {
         T: Into<Option<&'s str>>,
     {
         let mut flags = DatabaseFlags::empty();
-        flags.toggle(DatabaseFlags::DUP_SORT);
+        flags.set(DatabaseFlags::DUP_SORT, true);
         let db = self.env.create_db(name.into(), flags).map_err(|e| match e {
             lmdb::Error::BadRslot => StoreError::open_during_transaction(),
             _ => e.into(),
@@ -482,6 +482,38 @@ mod tests {
             assert_eq!(r.get(sk, "bar").expect("read"), None);
             assert_eq!(r.get(sk, "baz").expect("read"), None);
         }
+    }
+
+    #[test]
+    fn test_multi_put_get_del() {
+        let root = Builder::new().prefix("test_open_store_for_read").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let multistore = k.open_or_create_multi("multistore").unwrap();
+        let mut writer = k.write_multi().unwrap();
+        writer.put(multistore, "str1", &Value::Str("str1 foo")).unwrap();
+        writer.put(multistore, "str1", &Value::Str("str1 bar")).unwrap();
+        writer.put(multistore, "str2", &Value::Str("str2 foo")).unwrap();
+        writer.put(multistore, "str2", &Value::Str("str2 bar")).unwrap();
+        writer.put(multistore, "str3", &Value::Str("str3 foo")).unwrap();
+        writer.put(multistore, "str3", &Value::Str("str3 bar")).unwrap();
+        writer.commit().unwrap();
+        let writer = k.write_multi().unwrap();
+        let curs = writer.into_cursor();
+        {
+            let mut iter = curs.get(multistore, "str1").unwrap();
+            let (id, val) = iter.next().unwrap();
+                assert_eq!((id, val.unwrap().unwrap()), (&b"str1"[..], Value::Str("str1 bar")));
+            let (id, val) = iter.next().unwrap();
+                assert_eq!((id, val.unwrap().unwrap()), (&b"str1"[..], Value::Str("str1 foo")));
+        }
+        let writer = curs.into_writer();
+        writer.commit().unwrap();
+        let mut writer = k.write_multi().unwrap();
+        writer.delete(multistore, "str1", &Value::Str("str1 foo")).unwrap();
+        writer.delete(multistore, "str2", &Value::Str("str2 bar")).unwrap();
+        writer.delete(multistore, "str3", &Value::Str("str3 bar")).unwrap();
+        writer.commit().unwrap();
     }
 
     #[test]

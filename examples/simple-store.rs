@@ -47,6 +47,19 @@ fn test_getput<'env, 's>(
     writer
 }
 
+fn test_delete<'env, 's>(
+    store: MultiStore,
+    mut writer: MultiWriter<'env, &'s str>,
+) -> MultiWriter<'env, &'s str> {
+    let keys = vec!["str1", "str2", "str3"];
+    let vals = vec!["string uno", "string quatro", "string siete"];
+    // we convert the writer into a cursor so that we can safely read
+    for i in 0..keys.len() {
+        writer.delete(store, &keys[i], &Value::Str(vals[i])).unwrap();
+    }
+    writer
+}
+
 fn main() {
     let root = Builder::new().prefix("simple-db").tempdir().unwrap();
     fs::create_dir_all(root.path()).unwrap();
@@ -86,10 +99,13 @@ fn main() {
         writer.put(multistore, "str2", &Value::Str("string quatro")).unwrap();
         writer.put(multistore, "str2", &Value::Str("string cinco")).unwrap();
         writer.put(multistore, "str2", &Value::Str("string seis")).unwrap();
-        writer.put(multistore, "str3", &Value::Str("string seite")).unwrap();
+        writer.put(multistore, "str3", &Value::Str("string siete")).unwrap();
         writer.put(multistore, "str3", &Value::Str("string ocho")).unwrap();
         writer.put(multistore, "str3", &Value::Str("string nueve")).unwrap();
         let writer = test_getput(multistore, writer, &mut ids);
+        writer.commit().unwrap();
+        let writer = k.write_multi().unwrap();
+        let writer = test_delete(multistore, writer);
         writer.commit().unwrap();
     }
     println!("Looking up keys...");
