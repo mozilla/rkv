@@ -160,18 +160,16 @@ mod tests {
         let s = k.open_or_create_integer("s").expect("open");
 
         macro_rules! test_integer_keys {
-            ($type:ty, $key:expr) => {
-                {
-                    let mut writer = k.write_int::<$type>().expect("writer");
+            ($type:ty, $key:expr) => {{
+                let mut writer = k.write_int::<$type>().expect("writer");
 
-                    writer.put(s, $key, &Value::Str("hello!")).expect("write");
-                    assert_eq!(writer.get(s, $key).expect("read"), Some(Value::Str("hello!")));
-                    writer.commit().expect("committed");
+                writer.put(s, $key, &Value::Str("hello!")).expect("write");
+                assert_eq!(writer.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                writer.commit().expect("committed");
 
-                    let reader = k.read_int::<$type>().expect("reader");
-                    assert_eq!(reader.get(s, $key).expect("read"), Some(Value::Str("hello!")));
-                }
-            }
+                let reader = k.read_int::<$type>().expect("reader");
+                assert_eq!(reader.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+            }};
         }
 
         test_integer_keys!(u32, 123);
