@@ -159,13 +159,30 @@ mod tests {
         let k = Rkv::new(root.path()).expect("new succeeded");
         let s = k.open_or_create_integer("s").expect("open");
 
-        let mut writer = k.write_int::<u32>().expect("writer");
+        macro_rules! test_integer_keys {
+            ($type:ty, $key:expr) => {
+                {
+                    let mut writer = k.write_int::<$type>().expect("writer");
 
-        writer.put(s, 123, &Value::Str("hello!")).expect("write");
-        assert_eq!(writer.get(s, 123).expect("read"), Some(Value::Str("hello!")));
-        writer.commit().expect("committed");
+                    writer.put(s, $key, &Value::Str("hello!")).expect("write");
+                    assert_eq!(writer.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                    writer.commit().expect("committed");
 
-        let reader = k.read_int::<u32>().expect("reader");
-        assert_eq!(reader.get(s, 123).expect("read"), Some(Value::Str("hello!")));
+                    let reader = k.read_int::<$type>().expect("reader");
+                    assert_eq!(reader.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                }
+            }
+        }
+
+        test_integer_keys!(u32, 123);
+
+        // The integer module provides only the u32 variant of IntegerStore,
+        // but consumers can use others by implementing PrimitiveInt for their
+        // desired type.  Here we implement and test PrimitiveInt for the i32
+        // and u64 types.
+        impl PrimitiveInt for i32 {}
+        impl PrimitiveInt for u64 {}
+        test_integer_keys!(u64, 123);
+        test_integer_keys!(i32, -123);
     }
 }
