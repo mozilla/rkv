@@ -35,7 +35,9 @@ pub trait EncodableKey {
 
 pub trait PrimitiveInt: EncodableKey {}
 
+impl PrimitiveInt for u16 {}
 impl PrimitiveInt for u32 {}
+impl PrimitiveInt for u64 {}
 
 impl<T> EncodableKey for T
 where
@@ -124,11 +126,11 @@ where
         self.inner.put(store.0, Key::new(k)?, v)
     }
 
-    fn abort(self) {
+    pub fn abort(self) {
         self.inner.abort();
     }
 
-    fn commit(self) -> Result<(), StoreError> {
+    pub fn commit(self) -> Result<(), StoreError> {
         self.inner.commit()
     }
 }
@@ -172,15 +174,11 @@ mod tests {
             }};
         }
 
-        test_integer_keys!(u32, 123);
-
-        // The integer module provides only the u32 variant of IntegerStore,
-        // but consumers can use others by implementing PrimitiveInt for their
-        // desired type.  Here we implement and test PrimitiveInt for the i32
-        // and u64 types.
-        impl PrimitiveInt for i32 {}
-        impl PrimitiveInt for u64 {}
-        test_integer_keys!(u64, 123);
-        test_integer_keys!(i32, -123);
+        test_integer_keys!(u16, std::u16::MIN);
+        test_integer_keys!(u16, std::u16::MAX);
+        test_integer_keys!(u32, std::u32::MIN);
+        test_integer_keys!(u32, std::u32::MAX);
+        test_integer_keys!(u64, std::u64::MIN);
+        test_integer_keys!(u64, std::u64::MAX);
     }
 }
