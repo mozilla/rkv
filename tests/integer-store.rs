@@ -45,23 +45,35 @@ fn test_integer_keys() {
         }};
     }
 
-    // The integer module provides u16, u32, and u64 integer key variants
-    // of IntegerStore, so we can use them without further ado.
-    test_integer_keys!(u16, std::u16::MIN);
-    test_integer_keys!(u16, std::u16::MAX);
+    // The integer module provides only the u32 integer key variant
+    // of IntegerStore, so we can use it without further ado.
     test_integer_keys!(u32, std::u32::MIN);
     test_integer_keys!(u32, std::u32::MAX);
-    test_integer_keys!(u64, std::u64::MIN);
-    test_integer_keys!(u64, std::u64::MAX);
 
-    // If we want to use another integer key variant, we need to implement
+    // If you want to use another integer key variant, you need to implement
     // a newtype, implement PrimitiveInt, and implement or derive Serialize
     // for it.  Here we do so for the i32 type.
+
+    // DANGER!  Doing this enables you to open a store with multiple,
+    // different integer key types, which may result in unexpected behavior.
+    // Make sure you know what you're doing!
 
     #[derive(Serialize)]
     struct I32(i32);
     impl PrimitiveInt for I32 {}
-
     test_integer_keys!(I32, I32(std::i32::MIN));
     test_integer_keys!(I32, I32(std::i32::MAX));
+
+    #[derive(Serialize)]
+    struct U16(u16);
+    impl PrimitiveInt for U16 {}
+    test_integer_keys!(U16, U16(std::u16::MIN));
+    test_integer_keys!(U16, U16(std::u16::MAX));
+
+    #[derive(Serialize)]
+    struct U64(u64);
+    impl PrimitiveInt for U64 {}
+    test_integer_keys!(U64, U64(std::u64::MIN));
+    test_integer_keys!(U64, U64(std::u64::MAX));
+
 }

@@ -35,9 +35,7 @@ pub trait EncodableKey {
 
 pub trait PrimitiveInt: EncodableKey {}
 
-impl PrimitiveInt for u16 {}
 impl PrimitiveInt for u32 {}
-impl PrimitiveInt for u64 {}
 
 impl<T> EncodableKey for T
 where
@@ -174,11 +172,7 @@ mod tests {
             }};
         }
 
-        test_integer_keys!(u16, std::u16::MIN);
-        test_integer_keys!(u16, std::u16::MAX);
         test_integer_keys!(u32, std::u32::MIN);
         test_integer_keys!(u32, std::u32::MAX);
-        test_integer_keys!(u64, std::u64::MIN);
-        test_integer_keys!(u64, std::u64::MAX);
     }
 }
