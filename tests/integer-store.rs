@@ -75,5 +75,4 @@ fn test_integer_keys() {
     impl PrimitiveInt for U64 {}
     test_integer_keys!(U64, U64(std::u64::MIN));
     test_integer_keys!(U64, U64(std::u64::MAX));
-
 }
