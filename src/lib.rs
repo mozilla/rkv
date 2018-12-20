@@ -168,19 +168,12 @@
 
 #![allow(dead_code)]
 
-#[macro_use]
-extern crate arrayref;
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate lazy_static;
-
-extern crate bincode;
-extern crate lmdb;
-extern crate ordered_float;
-extern crate serde; // So we can specify trait bounds. Everything else is bincode.
-extern crate url;
-extern crate uuid;
+use bincode;
+use lmdb;
+use ordered_float;
+use serde; // So we can specify trait bounds. Everything else is bincode.
+use url;
+use uuid;
 
 pub use lmdb::{
     DatabaseFlags,
@@ -196,29 +189,29 @@ mod manager;
 mod readwrite;
 pub mod value;
 
-pub use env::Rkv;
+pub use self::env::Rkv;
 
-pub use error::{
+pub use self::error::{
     DataError,
     StoreError,
 };
 
-pub use integer::{
+pub use self::integer::{
     IntegerReader,
     IntegerStore,
     IntegerWriter,
     PrimitiveInt,
 };
 
-pub use manager::Manager;
+pub use self::manager::Manager;
 
-pub use readwrite::{
+pub use self::readwrite::{
     Reader,
     Store,
     Writer,
 };
 
-pub use value::{
+pub use self::value::{
     OwnedValue,
     Value,
 };

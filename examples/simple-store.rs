@@ -7,10 +7,10 @@
 //!
 //!     cargo run --example simple-store
 
-extern crate rkv;
-extern crate tempfile;
+use rkv;
+use tempfile;
 
-use rkv::{
+use self::rkv::{
     Manager,
     Rkv,
     Value,

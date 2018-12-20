@@ -16,14 +16,14 @@ use serde::Serialize;
 
 use lmdb::Database;
 
-use error::{
+use crate::error::{
     DataError,
     StoreError,
 };
 
-use value::Value;
+use crate::value::Value;
 
-use readwrite::{
+use crate::readwrite::{
     Reader,
     Store,
     Writer,
@@ -150,7 +150,7 @@ mod tests {
     use std::fs;
 
     use super::*;
-    use *;
+    use crate::*;
 
     #[test]
     fn test_integer_keys() {

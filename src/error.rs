@@ -12,8 +12,9 @@ use std::path::PathBuf;
 
 use bincode;
 use lmdb;
+use failure::Fail;
 
-use value::Type;
+use crate::value::Type;
 
 #[derive(Debug, Fail)]
 pub enum DataError {
