@@ -14,7 +14,11 @@ use bincode::serialize;
 
 use serde::Serialize;
 
-use lmdb::Database;
+use lmdb::{
+    Database,
+    Transaction, 
+    RwTransaction,
+};
 
 use crate::error::{
     DataError,
@@ -23,10 +27,8 @@ use crate::error::{
 
 use crate::value::Value;
 
-use crate::readwrite::{
-    Reader,
-    Store,
-    Writer,
+use crate::store::single::{
+    SingleStore,
 };
 
 pub trait EncodableKey {
@@ -73,55 +75,29 @@ where
     }
 }
 
-pub struct IntegerReader<'env, K>
+pub struct IntegerStore<K>
 where
     K: PrimitiveInt,
 {
-    inner: Reader<'env, Key<K>>,
+    inner: SingleStore,
 }
 
-impl<'env, K> IntegerReader<'env, K>
+impl<'env, K> IntegerStore<K>
 where
     K: PrimitiveInt,
 {
-    pub(crate) fn new(reader: Reader<Key<K>>) -> IntegerReader<K> {
-        IntegerReader {
-            inner: reader,
+    pub(crate) fn new(store: SingleStore) -> IntegerStore<K> {
+        IntegerStore {
+            inner: store,
         }
     }
 
-    pub fn get(&self, store: IntegerStore, k: K) -> Result<Option<Value>, StoreError> {
-        self.inner.get(store.0, Key::new(k)?)
+    pub fn get<T: Transaction>(&self, txn: &T, k: K) -> Result<Option<Value>, StoreError> {
+        self.inner.get(txn, Key::new(k)?)
     }
 
-    pub fn abort(self) {
-        self.inner.abort();
-    }
-}
-
-pub struct IntegerWriter<'env, K>
-where
-    K: PrimitiveInt,
-{
-    inner: Writer<'env, Key<K>>,
-}
-
-impl<'env, K> IntegerWriter<'env, K>
-where
-    K: PrimitiveInt,
-{
-    pub(crate) fn new(writer: Writer<Key<K>>) -> IntegerWriter<K> {
-        IntegerWriter {
-            inner: writer,
-        }
-    }
-
-    pub fn get(&self, store: IntegerStore, k: K) -> Result<Option<Value>, StoreError> {
-        self.inner.get(store.0, Key::new(k)?)
-    }
-
-    pub fn put(&mut self, store: IntegerStore, k: K, v: &Value) -> Result<(), StoreError> {
-        self.inner.put(store.0, Key::new(k)?, v)
+    pub fn put(&mut self, txn: &RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+        self.inner.put(txn, Key::new(k)?, v)
     }
 
     pub fn abort(self) {
@@ -130,15 +106,6 @@ where
 
     pub fn commit(self) -> Result<(), StoreError> {
         self.inner.commit()
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct IntegerStore(Store);
-
-impl IntegerStore {
-    pub fn new(db: Database) -> IntegerStore {
-        IntegerStore(Store::new(db))
     }
 }
 
