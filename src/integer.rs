@@ -16,14 +16,14 @@ use serde::Serialize;
 
 use lmdb::Database;
 
-use error::{
+use crate::error::{
     DataError,
     StoreError,
 };
 
-use value::Value;
+use crate::value::Value;
 
-use readwrite::{
+use crate::readwrite::{
     Reader,
     Store,
     Writer,
@@ -124,11 +124,11 @@ where
         self.inner.put(store.0, Key::new(k)?, v)
     }
 
-    fn abort(self) {
+    pub fn abort(self) {
         self.inner.abort();
     }
 
-    fn commit(self) -> Result<(), StoreError> {
+    pub fn commit(self) -> Result<(), StoreError> {
         self.inner.commit()
     }
 }
@@ -150,7 +150,7 @@ mod tests {
     use std::fs;
 
     use super::*;
-    use *;
+    use crate::*;
 
     #[test]
     fn test_integer_keys() {
@@ -159,13 +159,20 @@ mod tests {
         let k = Rkv::new(root.path()).expect("new succeeded");
         let s = k.open_or_create_integer("s").expect("open");
 
-        let mut writer = k.write_int::<u32>().expect("writer");
+        macro_rules! test_integer_keys {
+            ($type:ty, $key:expr) => {{
+                let mut writer = k.write_int::<$type>().expect("writer");
 
-        writer.put(s, 123, &Value::Str("hello!")).expect("write");
-        assert_eq!(writer.get(s, 123).expect("read"), Some(Value::Str("hello!")));
-        writer.commit().expect("committed");
+                writer.put(s, $key, &Value::Str("hello!")).expect("write");
+                assert_eq!(writer.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                writer.commit().expect("committed");
 
-        let reader = k.read_int::<u32>().expect("reader");
-        assert_eq!(reader.get(s, 123).expect("read"), Some(Value::Str("hello!")));
+                let reader = k.read_int::<$type>().expect("reader");
+                assert_eq!(reader.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+            }};
+        }
+
+        test_integer_keys!(u32, std::u32::MIN);
+        test_integer_keys!(u32, std::u32::MAX);
     }
 }

@@ -78,7 +78,7 @@
 //!     // until the first completes.
 //!     let mut writer = env.write().unwrap();
 //!
-//!     // Writer takes a `Store` reference as the first argument.
+//!     // Writer takes a `Store` as the first argument.
 //!     // Keys are `AsRef<[u8]>`, while values are `Value` enum instances.
 //!     // Use the `Blob` variant to store arbitrary collections of bytes.
 //!     writer.put(store, "int", &Value::I64(1234)).unwrap();
@@ -170,67 +170,51 @@
 
 #![allow(dead_code)]
 
-#[macro_use]
-extern crate arrayref;
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate lazy_static;
-
-extern crate bincode;
-extern crate lmdb;
-extern crate ordered_float;
-extern crate serde; // So we can specify trait bounds. Everything else is bincode.
-extern crate url;
-extern crate uuid;
+use bincode;
+use lmdb;
+use ordered_float;
+use serde; // So we can specify trait bounds. Everything else is bincode.
+use url;
+use uuid;
 
 pub use lmdb::{
     DatabaseFlags,
     EnvironmentBuilder,
     EnvironmentFlags,
     WriteFlags,
+    RoTransaction,
+    RwTransaction,
+    Transaction,
 };
 
 mod env;
 pub mod error;
-mod integer;
 mod manager;
-mod multirw;
-mod readwrite;
 pub mod value;
+pub mod store;
 
-pub use env::Rkv;
+use lmdb::{
+    Cursor,
+    Database,
+    Iter as LmdbIter,
+    RoCursor,
+};
 
-pub use error::{
+pub use self::store::multi::{MultiStore};
+pub use self::store::single::{SingleStore};
+pub use self::store::integer::{IntegerStore, PrimitiveInt};
+pub use self::store::integermulti::MultiIntegerStore;
+
+pub use self::env::Rkv;
+
+pub use self::error::{
     DataError,
     StoreError,
 };
 
-pub use integer::{
-    IntegerReader,
-    IntegerStore,
-    IntegerWriter,
-    PrimitiveInt,
-};
+pub use self::manager::Manager;
 
-pub use manager::Manager;
-
-pub use readwrite::{
-    Reader,
-    Store,
-    Writer,
-};
-
-pub use multirw::{
-    Iter,
-    MultiCursor,
-//    MultiIter,
-    MultiReader,
-    MultiStore,
-    MultiWriter,
-};
-
-pub use value::{
+pub use self::value::{
     OwnedValue,
     Value,
 };

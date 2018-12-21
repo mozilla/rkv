@@ -23,9 +23,9 @@ use lmdb::{
     EnvironmentBuilder,
 };
 
-use error::StoreError;
+use crate::error::StoreError;
 
-use integer::{
+use crate::integer::{
     IntegerReader,
     IntegerStore,
     IntegerWriter,
@@ -33,7 +33,7 @@ use integer::{
     PrimitiveInt,
 };
 
-use readwrite::{
+use crate::readwrite::{
     Reader,
     Store,
     Writer,
@@ -253,7 +253,7 @@ mod tests {
     };
 
     use super::*;
-    use *;
+    use crate::*;
 
     /// We can't open a directory that doesn't exist.
     #[test]
