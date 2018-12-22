@@ -187,6 +187,7 @@ pub use lmdb::{
     RoTransaction,
     RwTransaction,
     Transaction,
+    Error as LmdbError, 
 };
 
 mod env;
