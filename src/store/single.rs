@@ -10,14 +10,11 @@
 
 use lmdb;
 
-use std::marker::PhantomData;
-
 use lmdb::{
     Cursor,
     Database,
     Iter as LmdbIter,
     RoCursor,
-    RoTransaction,
     RwTransaction,
     Transaction,
 };
@@ -55,23 +52,23 @@ impl SingleStore
         }
     }
 
-    pub fn get<T: Transaction, K: AsRef<[u8]>>(&self, txn: T, k: K) -> Result<Option<Value>, StoreError> {
+    pub fn get<'env, T: Transaction, K: AsRef<[u8]>>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
         let bytes = txn.get(self.db, &k);
         read_transform(bytes)
     }
 
     // TODO: flags
-    pub fn put<K: AsRef<[u8]>>(&mut self, txn: RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         // TODO: don't allocate twice.
         let bytes = v.to_bytes()?;
-        txn.put(txn, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
+        txn.put(self.db, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete<K: AsRef<[u8]>>(&mut self, txn: RwTransaction, k: K) -> Result<(), StoreError> {
+    pub fn delete<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         txn.del(self.db, &k, None).map_err(StoreError::LmdbError)
     }
 
-    pub fn iter_start<T: Transaction>(&self, txn: T) -> Result<Iter, StoreError> {
+    pub fn iter_start<'env, T: Transaction>(&self, txn: &'env T) -> Result<Iter<'env>, StoreError> {
         let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
@@ -90,21 +87,13 @@ impl SingleStore
         })
     }
 
-    pub fn iter_from<T: Transaction, K: AsRef<[u8]>>(&self, txn: T, k: K) -> Result<Iter, StoreError> {
+    pub fn iter_from<'env, T: Transaction, K: AsRef<[u8]>>(&self, txn: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
         let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {
             iter,
             cursor,
         })
-    }
-    
-    pub fn commit<T: Transaction>(&self, txn: T) -> Result<(), StoreError> {
-        txn.commit().map_err(StoreError::LmdbError)
-    }
-
-    pub fn abort<T: Transaction>(&self, txn: T) {
-        txn.abort();
     }
 }
 
@@ -114,7 +103,8 @@ impl<'env> Iterator for Iter<'env> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             None => None,
-            Some((key, bytes)) => Some((key, read_transform(Ok(bytes)))),
+            Some(Ok((key, bytes))) => Some((key, read_transform(Ok(bytes)))),
+            Some(Err(_)) => None,
         }
     }
 }

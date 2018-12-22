@@ -19,6 +19,7 @@ use rkv::{
     PrimitiveInt,
     Rkv,
     Value,
+    Transaction,
 };
 
 use self::tempfile::Builder;
@@ -30,25 +31,25 @@ fn test_integer_keys() {
     let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
     let k = Rkv::new(root.path()).expect("new succeeded");
-    let s = k.open_or_create_integer("s").expect("open");
+    let mut s = k.open_integer("s", true, None).expect("open");
 
     macro_rules! test_integer_keys {
-        ($type:ty, $key:expr) => {{
-            let mut writer = k.write_int::<$type>().expect("writer");
+        ($store:expr, $key:expr) => {{
+            let mut writer = k.write().expect("writer");
 
-            writer.put(s, $key, &Value::Str("hello!")).expect("write");
-            assert_eq!(writer.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+            $store.put(&mut writer, $key, &Value::Str("hello!")).expect("write");
+            assert_eq!($store.get(&writer , $key).expect("read"), Some(Value::Str("hello!")));
             writer.commit().expect("committed");
 
-            let reader = k.read_int::<$type>().expect("reader");
-            assert_eq!(reader.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+            let reader = k.read().expect("reader");
+            assert_eq!($store.get(&reader, $key).expect("read"), Some(Value::Str("hello!")));
         }};
     }
 
     // The integer module provides only the u32 integer key variant
     // of IntegerStore, so we can use it without further ado.
-    test_integer_keys!(u32, std::u32::MIN);
-    test_integer_keys!(u32, std::u32::MAX);
+    test_integer_keys!(s, std::u32::MIN);
+    test_integer_keys!(s, std::u32::MAX);
 
     // If you want to use another integer key variant, you need to implement
     // a newtype, implement PrimitiveInt, and implement or derive Serialize
@@ -57,22 +58,28 @@ fn test_integer_keys() {
     // DANGER!  Doing this enables you to open a store with multiple,
     // different integer key types, which may result in unexpected behavior.
     // Make sure you know what you're doing!
+    
+    let mut t = k.open_integer("s", true, None).expect("open");
 
     #[derive(Serialize)]
     struct I32(i32);
     impl PrimitiveInt for I32 {}
-    test_integer_keys!(I32, I32(std::i32::MIN));
-    test_integer_keys!(I32, I32(std::i32::MAX));
+    test_integer_keys!(t, I32(std::i32::MIN));
+    test_integer_keys!(t, I32(std::i32::MAX));
+    
+    let mut u = k.open_integer("s", true, None).expect("open");
 
     #[derive(Serialize)]
     struct U16(u16);
     impl PrimitiveInt for U16 {}
-    test_integer_keys!(U16, U16(std::u16::MIN));
-    test_integer_keys!(U16, U16(std::u16::MAX));
+    test_integer_keys!(u, U16(std::u16::MIN));
+    test_integer_keys!(u, U16(std::u16::MAX));
+    
+    let mut v = k.open_integer("s", true, None).expect("open");
 
     #[derive(Serialize)]
     struct U64(u64);
     impl PrimitiveInt for U64 {}
-    test_integer_keys!(U64, U64(std::u64::MIN));
-    test_integer_keys!(U64, U64(std::u64::MAX));
+    test_integer_keys!(v, U64(std::u64::MIN));
+    test_integer_keys!(v, U64(std::u64::MAX));
 }

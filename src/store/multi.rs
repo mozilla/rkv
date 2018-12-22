@@ -60,14 +60,14 @@ impl MultiStore
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
-    pub fn get<T: Transaction, K: AsRef<[u8]>>(&self, txn: T, k: K) -> Result<Iter, StoreError> {
+    pub fn get<'env, T: Transaction, K: AsRef<[u8]>>(&self, txn: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
         let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_dup_of(k);
         Ok(Iter{ iter, cursor })
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
-    pub fn get_first<T: Transaction, K: AsRef<[u8]>>(&self, txn: T, k: K) -> Result<Option<Value>, StoreError> {
+    pub fn get_first<'env, T: Transaction, K: AsRef<[u8]>>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
         let result = txn.get(self.db,  &k);
         read_transform(result)
     }
@@ -76,30 +76,22 @@ impl MultiStore
     /// Insert a value at the specified key.
     /// This put will allow duplicate entries.  If you wish to have duplicate entries
     /// rejected, use the `put_with_flags` function and specify NO_DUP_DATA
-    pub fn put<K: AsRef<[u8]>>(&mut self, txn: RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         let bytes = v.to_bytes()?;
         txn.put(self.db, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
-    pub fn put_with_flags<K: AsRef<[u8]>>(&mut self, txn: RwTransaction, k: K, v: &Value, flags: WriteFlags) -> Result<(), StoreError> {
+    pub fn put_with_flags<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K, v: &Value, flags: WriteFlags) -> Result<(), StoreError> {
         let bytes = v.to_bytes()?;
         txn.put(self.db, &k, &bytes, flags).map_err(StoreError::LmdbError)
     }
     
-    pub fn delete_all<K: AsRef<[u8]>>(&mut self, txn: RwTransaction, k: K) -> Result<(), StoreError> {
+    pub fn delete_all<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         txn.del(self.db, &k, None).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete<K: AsRef<[u8]>>(&mut self, txn: RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn delete<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         txn.del(self.db, &k, Some(&v.to_bytes()?)).map_err(StoreError::LmdbError)
-    }
-
-    pub fn commit<T: Transaction>(&self, txn: T) -> Result<(), StoreError> {
-        txn.commit().map_err(StoreError::LmdbError)
-    }
-
-    pub fn abort<T: Transaction>(&self, txn: T) {
-        txn.abort();
     }
 
     /* TODO - Figure out how to solve the need to have the cursor stick around when 
@@ -148,7 +140,8 @@ impl<'env> Iterator for Iter<'env> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             None => None,
-            Some((key, bytes)) => Some((key, read_transform(Ok(bytes)))),
+            Some(Ok((key, bytes))) => Some((key, read_transform(Ok(bytes)))),
+            Some(Err(_)) => None,
         }
     }
 }

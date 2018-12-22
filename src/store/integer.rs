@@ -67,7 +67,7 @@ impl<K> Key<K>
 where
     K: EncodableKey,
 {
-    fn new(k: K) -> Result<Key<K>, DataError> {
+    pub(crate) fn new(k: K) -> Result<Key<K>, DataError> {
         Ok(Key {
             bytes: k.to_bytes()?,
             phantom: PhantomData,
@@ -80,32 +80,30 @@ where
     K: PrimitiveInt,
 {
     inner: SingleStore,
+    phantom: PhantomData<K>,
 }
 
-impl<'env, K> IntegerStore<K>
+impl<K> IntegerStore<K>
 where
     K: PrimitiveInt,
 {
-    pub(crate) fn new(store: SingleStore) -> IntegerStore<K> {
+    pub(crate) fn new(db: Database) -> IntegerStore<K> {
         IntegerStore {
-            inner: store,
+            inner: SingleStore::new(db),
+            phantom: PhantomData,
         }
     }
 
-    pub fn get<T: Transaction>(&self, txn: &T, k: K) -> Result<Option<Value>, StoreError> {
+    pub fn get<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
         self.inner.get(txn, Key::new(k)?)
     }
 
-    pub fn put(&mut self, txn: &RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         self.inner.put(txn, Key::new(k)?, v)
     }
 
-    pub fn abort(self) {
-        self.inner.abort();
-    }
-
-    pub fn commit(self) -> Result<(), StoreError> {
-        self.inner.commit()
+    pub fn delete(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
+        self.inner.delete(txn, Key::new(k)?)
     }
 }
 
@@ -124,18 +122,18 @@ mod tests {
         let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let s = k.open_or_create_integer("s").expect("open");
+        let mut s = k.open_integer("s", true, None).expect("open");
 
         macro_rules! test_integer_keys {
             ($type:ty, $key:expr) => {{
-                let mut writer = k.write_int::<$type>().expect("writer");
+                let mut writer = k.write().expect("writer");
 
-                writer.put(s, $key, &Value::Str("hello!")).expect("write");
-                assert_eq!(writer.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                s.put(&mut writer, $key, &Value::Str("hello!")).expect("write");
+                assert_eq!(s.get(&writer, $key).expect("read"), Some(Value::Str("hello!")));
                 writer.commit().expect("committed");
 
-                let reader = k.read_int::<$type>().expect("reader");
-                assert_eq!(reader.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                let reader = k.read().expect("reader");
+                assert_eq!(s.get(&reader, $key).expect("read"), Some(Value::Str("hello!")));
             }};
         }
 

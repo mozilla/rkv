@@ -10,10 +10,13 @@
 
 
 use lmdb::{
+    Database,
     Transaction, 
     RwTransaction,
     WriteFlags,
 };
+
+use std::marker::PhantomData;
 
 use crate::error::{
     StoreError,
@@ -36,48 +39,42 @@ where
     K: PrimitiveInt,
 {
     inner: MultiStore,
+    phantom: PhantomData<K>,
 }
 
-impl<'env, K> MultiIntegerStore<K>
+impl<K> MultiIntegerStore<K>
 where
     K: PrimitiveInt,
 {
-    pub(crate) fn new(store: MultiStore) -> MultiIntegerStore<K> {
+    pub(crate) fn new(db: Database) -> MultiIntegerStore<K> {
         MultiIntegerStore {
-            inner: store,
+            inner: MultiStore::new(db),
+            phantom: PhantomData,
         }
     }
 
-    pub fn get<T: Transaction>(&self, txn: &T, k: K) -> Result<Option<Iter>, StoreError> {
+    pub fn get<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
         self.inner.get(txn, Key::new(k)?)
     }
     
-    pub fn get_first<T: Transaction>(&self, txn: &T, k: K) -> Result<Option<Value>, StoreError> {
+    pub fn get_first<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
         self.inner.get_first(txn, Key::new(k)?)
     }
 
-    pub fn put(&mut self, txn: &RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         self.inner.put(txn, Key::new(k)?, v)
     }
     
-    pub fn put_with_flags(&mut self, txn: &RwTransaction, k: K, v: &Value, flags: WriteFlags) -> Result<(), StoreError> {
-        self.inner.put(txn, Key::new(k)?, v, flags)
+    pub fn put_with_flags(&mut self, txn: &mut RwTransaction, k: K, v: &Value, flags: WriteFlags) -> Result<(), StoreError> {
+        self.inner.put_with_flags(txn, Key::new(k)?, v, flags)
     }
     
-    pub fn delete_all<K: AsRef<[u8]>>(&mut self, txn: &RwTransaction, k: K) -> Result<(), StoreError> {
-        self.inner.del(txn, Key::new(k)?, None)
+    pub fn delete_all(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
+        self.inner.delete_all(txn, Key::new(k)?)
     }
 
-    pub fn delete<K: AsRef<[u8]>>(&mut self, txn: &RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        self.inner.del(txn, Key::new(k), v).map_err(StoreError::LmdbError)
-    }
-
-    pub fn abort(self) {
-        self.inner.abort();
-    }
-
-    pub fn commit(self) -> Result<(), StoreError> {
-        self.inner.commit()
+    pub fn delete(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+        self.inner.delete(txn, Key::new(k)?, v)
     }
 }
 
@@ -96,18 +93,18 @@ mod tests {
         let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let s = k.open_or_create_integer("s").expect("open");
+        let mut s = k.open_multi_integer("s", true, None).expect("open");
 
         macro_rules! test_integer_keys {
             ($type:ty, $key:expr) => {{
-                let mut writer = k.write_int::<$type>().expect("writer");
+                let mut writer = k.write().expect("writer");
 
-                writer.put(s, $key, &Value::Str("hello!")).expect("write");
-                assert_eq!(writer.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                s.put(&mut writer, $key, &Value::Str("hello!")).expect("write");
+                assert_eq!(s.get_first(&writer, $key).expect("read"), Some(Value::Str("hello!")));
                 writer.commit().expect("committed");
 
-                let reader = k.read_int::<$type>().expect("reader");
-                assert_eq!(reader.get(s, $key).expect("read"), Some(Value::Str("hello!")));
+                let reader = k.read().expect("reader");
+                assert_eq!(s.get_first(&reader, $key).expect("read"), Some(Value::Str("hello!")));
             }};
         }
 
