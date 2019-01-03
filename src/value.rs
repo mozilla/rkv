@@ -8,12 +8,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use ordered_float::OrderedFloat;
 use arrayref::array_ref;
 use bincode::{
     deserialize,
     serialize,
 };
+use ordered_float::OrderedFloat;
 
 use uuid::{
     Bytes,
