@@ -112,7 +112,7 @@ impl Rkv {
         } else {
             self.open(name)
         };
-        db.map(|d| SingleStore::new(d))
+        db.map(SingleStore::new)
     }
 
     /// Create or Open an existing database in (Integer -> Single Value) mode.
@@ -138,7 +138,7 @@ impl Rkv {
         } else {
             self.open(name)
         };
-        db.map(|d| IntegerStore::new(d))
+        db.map(IntegerStore::new)
     }
 
     /// Create or Open an existing database in (&[u8] -> Multiple Values) mode.
@@ -164,7 +164,7 @@ impl Rkv {
         } else {
             self.open(name)
         };
-        db.map(|d| MultiStore::new(d))
+        db.map(MultiStore::new)
     }
 
     /// Create or Open an existing database in (Integer -> Multiple Values) mode.
@@ -191,7 +191,7 @@ impl Rkv {
         } else {
             self.open(name)
         };
-        db.map(|d| MultiIntegerStore::new(d))
+        db.map(MultiIntegerStore::new)
     }
 
     fn open<'s, T>(&self, name: T) -> Result<Database, StoreError>
