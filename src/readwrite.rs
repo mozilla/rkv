@@ -24,9 +24,9 @@ use lmdb::{
 
 use lmdb::WriteFlags;
 
-use error::StoreError;
+use crate::error::StoreError;
 
-use value::Value;
+use crate::value::Value;
 
 fn read_transform(val: Result<&[u8], lmdb::Error>) -> Result<Option<Value>, StoreError> {
     match val {

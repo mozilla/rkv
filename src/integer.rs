@@ -16,14 +16,14 @@ use serde::Serialize;
 
 use lmdb::Database;
 
-use error::{
+use crate::error::{
     DataError,
     StoreError,
 };
 
-use value::Value;
+use crate::value::Value;
 
-use readwrite::{
+use crate::readwrite::{
     Reader,
     Store,
     Writer,
@@ -144,13 +144,11 @@ impl IntegerStore {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempfile;
-
-    use self::tempfile::Builder;
     use std::fs;
+    use tempfile::Builder;
 
     use super::*;
-    use *;
+    use crate::*;
 
     #[test]
     fn test_integer_keys() {

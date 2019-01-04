@@ -23,9 +23,9 @@ use lmdb::{
     EnvironmentBuilder,
 };
 
-use error::StoreError;
+use crate::error::StoreError;
 
-use integer::{
+use crate::integer::{
     IntegerReader,
     IntegerStore,
     IntegerWriter,
@@ -33,7 +33,7 @@ use integer::{
     PrimitiveInt,
 };
 
-use readwrite::{
+use crate::readwrite::{
     Reader,
     Store,
     Writer,
@@ -179,29 +179,23 @@ impl Rkv {
 
 #[cfg(test)]
 mod tests {
-    extern crate byteorder;
-    extern crate tempfile;
-
-    use self::byteorder::{
+    use byteorder::{
         ByteOrder,
         LittleEndian,
     };
-
-    use self::tempfile::Builder;
-
     use std::{
         fs,
         str,
+        sync::{
+            Arc,
+            RwLock,
+        },
         thread,
     };
-
-    use std::sync::{
-        Arc,
-        RwLock,
-    };
+    use tempfile::Builder;
 
     use super::*;
-    use *;
+    use crate::*;
 
     /// We can't open a directory that doesn't exist.
     #[test]
