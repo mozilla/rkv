@@ -22,8 +22,8 @@ use lmdb::{
     DatabaseFlags,
     Environment,
     EnvironmentBuilder,
-    RwTransaction,
     RoTransaction,
+    RwTransaction,
 };
 
 use crate::error::StoreError;
@@ -33,17 +33,11 @@ use crate::store::integer::{
     PrimitiveInt,
 };
 
-use crate::store::single::{
-    SingleStore,
-};
+use crate::store::single::SingleStore;
 
-use crate::store::multi::{
-    MultiStore,
-};
+use crate::store::multi::MultiStore;
 
-use crate::store::integermulti::{
-    MultiIntegerStore,
-};
+use crate::store::integermulti::MultiIntegerStore;
 
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
@@ -96,92 +90,107 @@ impl Rkv {
 
 /// SingleStore creation methods.
 impl Rkv {
-
     /// Create or Open an existing database in (&[u8] -> Single Value) mode.
     /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false. 
-    pub fn open_single<'s, T>(&self, name: T, create: bool, flags: Option<DatabaseFlags>) -> Result<SingleStore, StoreError>
+    /// so if you are sure that the database exists, call this with create=false.
+    pub fn open_single<'s, T>(
+        &self,
+        name: T,
+        create: bool,
+        flags: Option<DatabaseFlags>,
+    ) -> Result<SingleStore, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
         let db = if create {
-            let flags = 
-                if let Some(f) = flags {
-                    f
-                } else {
-                    DatabaseFlags::empty()
-                };
-                self.create(name, flags)
+            let flags = if let Some(f) = flags {
+                f
             } else {
-                self.open(name)
+                DatabaseFlags::empty()
             };
+            self.create(name, flags)
+        } else {
+            self.open(name)
+        };
         db.map(|d| SingleStore::new(d))
     }
 
     /// Create or Open an existing database in (Integer -> Single Value) mode.
     /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false. 
-    pub fn open_integer<'s, T, K: PrimitiveInt>(&self, name: T, create: bool, flags: Option<DatabaseFlags>) -> Result<IntegerStore<K>, StoreError>
+    /// so if you are sure that the database exists, call this with create=false.
+    pub fn open_integer<'s, T, K: PrimitiveInt>(
+        &self,
+        name: T,
+        create: bool,
+        flags: Option<DatabaseFlags>,
+    ) -> Result<IntegerStore<K>, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
         let db = if create {
-            let mut flags = 
-                if let Some(f) = flags {
-                    f
-                } else {
-                    DatabaseFlags::empty()
-                };
-                flags.set(DatabaseFlags::INTEGER_KEY, true);
-                self.create(name, flags)
+            let mut flags = if let Some(f) = flags {
+                f
             } else {
-                self.open(name)
+                DatabaseFlags::empty()
             };
+            flags.set(DatabaseFlags::INTEGER_KEY, true);
+            self.create(name, flags)
+        } else {
+            self.open(name)
+        };
         db.map(|d| IntegerStore::new(d))
     }
 
     /// Create or Open an existing database in (&[u8] -> Multiple Values) mode.
     /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false. 
-    pub fn open_multi<'s, T>(&self, name: T, create: bool, flags: Option<DatabaseFlags>) -> Result<MultiStore, StoreError>
+    /// so if you are sure that the database exists, call this with create=false.
+    pub fn open_multi<'s, T>(
+        &self,
+        name: T,
+        create: bool,
+        flags: Option<DatabaseFlags>,
+    ) -> Result<MultiStore, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
         let db = if create {
-            let mut flags = 
-                if let Some(f) = flags {
-                    f
-                } else {
-                    DatabaseFlags::empty()
-                };
-                flags.set(DatabaseFlags::DUP_SORT, true);
-                self.create(name, flags)
+            let mut flags = if let Some(f) = flags {
+                f
             } else {
-                self.open(name)
+                DatabaseFlags::empty()
             };
+            flags.set(DatabaseFlags::DUP_SORT, true);
+            self.create(name, flags)
+        } else {
+            self.open(name)
+        };
         db.map(|d| MultiStore::new(d))
     }
-    
+
     /// Create or Open an existing database in (Integer -> Multiple Values) mode.
     /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false. 
-    pub fn open_multi_integer<'s, T, K: PrimitiveInt>(&self, name: T, create: bool, flags: Option<DatabaseFlags>) -> Result<MultiIntegerStore<K>, StoreError>
+    /// so if you are sure that the database exists, call this with create=false.
+    pub fn open_multi_integer<'s, T, K: PrimitiveInt>(
+        &self,
+        name: T,
+        create: bool,
+        flags: Option<DatabaseFlags>,
+    ) -> Result<MultiIntegerStore<K>, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
         let db = if create {
-            let mut flags = 
-                if let Some(f) = flags {
-                    f
-                } else {
-                    DatabaseFlags::empty()
-                };
-                flags.set(DatabaseFlags::DUP_SORT, true);
-                flags.set(DatabaseFlags::INTEGER_KEY, true);
-                self.create(name, flags)
+            let mut flags = if let Some(f) = flags {
+                f
             } else {
-                self.open(name)
+                DatabaseFlags::empty()
             };
+            flags.set(DatabaseFlags::DUP_SORT, true);
+            flags.set(DatabaseFlags::INTEGER_KEY, true);
+            self.create(name, flags)
+        } else {
+            self.open(name)
+        };
         db.map(|d| MultiIntegerStore::new(d))
     }
 
@@ -208,39 +217,31 @@ impl Rkv {
 
 /// Read and write accessors.
 impl Rkv {
-    pub fn read(&self) -> Result<RoTransaction, StoreError>
-    {
+    pub fn read(&self) -> Result<RoTransaction, StoreError> {
         self.env.begin_ro_txn().map_err(|e| e.into())
     }
 
-    pub fn write(&self) -> Result<RwTransaction, StoreError>
-    {
+    pub fn write(&self) -> Result<RwTransaction, StoreError> {
         self.env.begin_rw_txn().map_err(|e| e.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    extern crate byteorder;
-    extern crate tempfile;
-
-    use self::byteorder::{
+    use byteorder::{
         ByteOrder,
         LittleEndian,
     };
-
-    use self::tempfile::Builder;
-
     use std::{
         fs,
         str,
+        sync::{
+            Arc,
+            RwLock,
+        },
         thread,
     };
-
-    use std::sync::{
-        Arc,
-        RwLock,
-    };
+    use tempfile::Builder;
 
     use super::*;
     use crate::*;
@@ -493,9 +494,9 @@ mod tests {
         {
             let mut iter = multistore.get(&mut writer, "str1").unwrap();
             let (id, val) = iter.next().unwrap();
-                assert_eq!((id, val.unwrap().unwrap()), (&b"str1"[..], Value::Str("str1 bar")));
+            assert_eq!((id, val.unwrap().unwrap()), (&b"str1"[..], Value::Str("str1 bar")));
             let (id, val) = iter.next().unwrap();
-                assert_eq!((id, val.unwrap().unwrap()), (&b"str1"[..], Value::Str("str1 foo")));
+            assert_eq!((id, val.unwrap().unwrap()), (&b"str1"[..], Value::Str("str1 foo")));
         }
         writer.commit().unwrap();
         let mut writer = k.write().unwrap();

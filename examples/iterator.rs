@@ -15,8 +15,8 @@ use self::rkv::{
     Rkv,
     SingleStore,
     StoreError,
-    Value,
     Transaction,
+    Value,
 };
 use tempfile::Builder;
 

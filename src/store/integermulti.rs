@@ -8,30 +8,27 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-
 use lmdb::{
     Database,
-    Transaction, 
     RwTransaction,
+    Transaction,
     WriteFlags,
 };
 
 use std::marker::PhantomData;
 
-use crate::error::{
-    StoreError,
-};
+use crate::error::StoreError;
 
 use crate::value::Value;
 
 use crate::store::multi::{
-    MultiStore,
     Iter,
+    MultiStore,
 };
 
 use crate::store::integer::{
-    PrimitiveInt,
     Key,
+    PrimitiveInt,
 };
 
 pub struct MultiIntegerStore<K>
@@ -56,7 +53,7 @@ where
     pub fn get<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
         self.inner.get(txn, Key::new(k)?)
     }
-    
+
     pub fn get_first<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
         self.inner.get_first(txn, Key::new(k)?)
     }
@@ -64,11 +61,17 @@ where
     pub fn put(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         self.inner.put(txn, Key::new(k)?, v)
     }
-    
-    pub fn put_with_flags(&mut self, txn: &mut RwTransaction, k: K, v: &Value, flags: WriteFlags) -> Result<(), StoreError> {
+
+    pub fn put_with_flags(
+        &mut self,
+        txn: &mut RwTransaction,
+        k: K,
+        v: &Value,
+        flags: WriteFlags,
+    ) -> Result<(), StoreError> {
         self.inner.put_with_flags(txn, Key::new(k)?, v, flags)
     }
-    
+
     pub fn delete_all(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         self.inner.delete_all(txn, Key::new(k)?)
     }

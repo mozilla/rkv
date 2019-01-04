@@ -34,8 +34,7 @@ fn read_transform(val: Result<&[u8], lmdb::Error>) -> Result<Option<Value>, Stor
 }
 
 #[derive(Copy, Clone)]
-pub struct SingleStore
-{
+pub struct SingleStore {
     db: Database,
 }
 
@@ -44,15 +43,18 @@ pub struct Iter<'env> {
     cursor: RoCursor<'env>,
 }
 
-impl SingleStore
-{
+impl SingleStore {
     pub(crate) fn new(db: Database) -> SingleStore {
         SingleStore {
             db,
         }
     }
 
-    pub fn get<'env, T: Transaction, K: AsRef<[u8]>>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
+    pub fn get<'env, T: Transaction, K: AsRef<[u8]>>(
+        &self,
+        txn: &'env T,
+        k: K,
+    ) -> Result<Option<Value<'env>>, StoreError> {
         let bytes = txn.get(self.db, &k);
         read_transform(bytes)
     }
@@ -87,7 +89,11 @@ impl SingleStore
         })
     }
 
-    pub fn iter_from<'env, T: Transaction, K: AsRef<[u8]>>(&self, txn: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
+    pub fn iter_from<'env, T: Transaction, K: AsRef<[u8]>>(
+        &self,
+        txn: &'env T,
+        k: K,
+    ) -> Result<Iter<'env>, StoreError> {
         let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {
@@ -108,4 +114,3 @@ impl<'env> Iterator for Iter<'env> {
         }
     }
 }
-

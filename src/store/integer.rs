@@ -16,8 +16,8 @@ use serde::Serialize;
 
 use lmdb::{
     Database,
-    Transaction, 
     RwTransaction,
+    Transaction,
 };
 
 use crate::error::{
@@ -27,9 +27,7 @@ use crate::error::{
 
 use crate::value::Value;
 
-use crate::store::single::{
-    SingleStore,
-};
+use crate::store::single::SingleStore;
 
 pub trait EncodableKey {
     fn to_bytes(&self) -> Result<Vec<u8>, DataError>;
@@ -109,10 +107,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    extern crate tempfile;
-
-    use self::tempfile::Builder;
     use std::fs;
+    use tempfile::Builder;
 
     use super::*;
     use crate::*;

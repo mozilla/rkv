@@ -26,7 +26,7 @@
 //! - [Rkv](struct.Rkv.html): an LMDB environment, which contains a set of key/value databases
 //! - [Store](struct.Store.html): an LMDB database, which contains a set of key/value pairs
 //! - [Transaction](https://github.com/mozilla/lmdb-rs/blob/master/src/transaction.rs#L16): A
-//! ReadOnly or Writeable transaction and a Transaction trait which abstracts over them. 
+//! ReadOnly or Writeable transaction and a Transaction trait which abstracts over them.
 //!
 //! Keys can be anything that implements `AsRef<[u8]>` or integers
 //!  (when accessing an [IntegerStore](struct.IntegerStore.html)).
@@ -42,9 +42,6 @@
 //!
 //! ## Basic Usage
 //! ```
-//! extern crate rkv;
-//! extern crate tempfile;
-//!
 //! use rkv::{Manager, Rkv, SingleStore, Value, Transaction};
 //! use std::fs;
 //! use tempfile::Builder;
@@ -172,29 +169,24 @@
 
 #![allow(dead_code)]
 
-use bincode;
 use lmdb;
-use ordered_float;
-use serde; // So we can specify trait bounds. Everything else is bincode.
-use url;
-use uuid;
 
 pub use lmdb::{
     DatabaseFlags,
     EnvironmentBuilder,
     EnvironmentFlags,
-    WriteFlags,
+    Error as LmdbError,
     RoTransaction,
     RwTransaction,
     Transaction,
-    Error as LmdbError, 
+    WriteFlags,
 };
 
 mod env;
 pub mod error;
 mod manager;
-pub mod value;
 pub mod store;
+pub mod value;
 
 pub use lmdb::{
     Cursor,
@@ -203,10 +195,13 @@ pub use lmdb::{
     RoCursor,
 };
 
-pub use self::store::multi::{MultiStore};
-pub use self::store::single::{SingleStore};
-pub use self::store::integer::{IntegerStore, PrimitiveInt};
+pub use self::store::integer::{
+    IntegerStore,
+    PrimitiveInt,
+};
 pub use self::store::integermulti::MultiIntegerStore;
+pub use self::store::multi::MultiStore;
+pub use self::store::single::SingleStore;
 
 pub use self::env::Rkv;
 

@@ -8,23 +8,15 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-extern crate bincode;
-extern crate rkv;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate tempfile;
-
 use rkv::{
     PrimitiveInt,
     Rkv,
-    Value,
     Transaction,
+    Value,
 };
-
-use self::tempfile::Builder;
-
+use serde_derive::Serialize;
 use std::fs;
+use tempfile::Builder;
 
 #[test]
 fn test_integer_keys() {
@@ -38,7 +30,7 @@ fn test_integer_keys() {
             let mut writer = k.write().expect("writer");
 
             $store.put(&mut writer, $key, &Value::Str("hello!")).expect("write");
-            assert_eq!($store.get(&writer , $key).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!($store.get(&writer, $key).expect("read"), Some(Value::Str("hello!")));
             writer.commit().expect("committed");
 
             let reader = k.read().expect("reader");
@@ -58,7 +50,7 @@ fn test_integer_keys() {
     // DANGER!  Doing this enables you to open a store with multiple,
     // different integer key types, which may result in unexpected behavior.
     // Make sure you know what you're doing!
-    
+
     let mut t = k.open_integer("s", true, None).expect("open");
 
     #[derive(Serialize)]
@@ -66,7 +58,7 @@ fn test_integer_keys() {
     impl PrimitiveInt for I32 {}
     test_integer_keys!(t, I32(std::i32::MIN));
     test_integer_keys!(t, I32(std::i32::MAX));
-    
+
     let mut u = k.open_integer("s", true, None).expect("open");
 
     #[derive(Serialize)]
@@ -74,7 +66,7 @@ fn test_integer_keys() {
     impl PrimitiveInt for U16 {}
     test_integer_keys!(u, U16(std::u16::MIN));
     test_integer_keys!(u, U16(std::u16::MAX));
-    
+
     let mut v = k.open_integer("s", true, None).expect("open");
 
     #[derive(Serialize)]

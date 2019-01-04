@@ -13,20 +13,16 @@ use tempfile;
 use self::rkv::{
     Manager,
     MultiStore,
+    Rkv,
     RwTransaction,
     Transaction,
-    Rkv,
     Value,
 };
 use tempfile::Builder;
 
 use std::fs;
 
-fn test_getput<'env, 's>(
-    mut store: MultiStore,
-    writer: &'env mut RwTransaction,
-    ids: &'s mut Vec<String>,
-) {
+fn test_getput<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction, ids: &'s mut Vec<String>) {
     let keys = vec!["str1", "str2", "str3"];
     // we convert the writer into a cursor so that we can safely read
     for k in keys.iter() {
@@ -45,10 +41,7 @@ fn test_getput<'env, 's>(
     }
 }
 
-fn test_delete<'env, 's>(
-    mut store: MultiStore,
-    writer: &'env mut RwTransaction,
-) {
+fn test_delete<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction) {
     let keys = vec!["str1", "str2", "str3"];
     let vals = vec!["string uno", "string quatro", "string siete"];
     // we convert the writer into a cursor so that we can safely read
