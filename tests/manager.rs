@@ -8,19 +8,15 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-extern crate rkv;
-extern crate tempfile;
-
 use rkv::{
     Manager,
     Rkv,
 };
-
-use self::tempfile::Builder;
-
-use std::fs;
-
-use std::sync::Arc;
+use std::{
+    fs,
+    sync::Arc,
+};
+use tempfile::Builder;
 
 #[test]
 // Identical to the same-named unit test, but this one confirms that it works

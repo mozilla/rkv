@@ -8,22 +8,14 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-extern crate bincode;
-extern crate rkv;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate tempfile;
-
 use rkv::{
     PrimitiveInt,
     Rkv,
     Value,
 };
-
-use self::tempfile::Builder;
-
+use serde_derive::Serialize;
 use std::fs;
+use tempfile::Builder;
 
 #[test]
 fn test_integer_keys() {
