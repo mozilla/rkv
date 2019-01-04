@@ -11,8 +11,8 @@
 use std::path::PathBuf;
 
 use bincode;
-use lmdb;
 use failure::Fail;
+use lmdb;
 
 use crate::value::Type;
 

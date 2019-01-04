@@ -122,10 +122,8 @@ impl Manager {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempfile;
-
-    use self::tempfile::Builder;
     use std::fs;
+    use tempfile::Builder;
 
     use super::*;
 

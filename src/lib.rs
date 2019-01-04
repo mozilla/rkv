@@ -38,9 +38,6 @@
 //!
 //! ## Basic Usage
 //! ```
-//! extern crate rkv;
-//! extern crate tempfile;
-//!
 //! use rkv::{Manager, Rkv, Store, Value};
 //! use std::fs;
 //! use tempfile::Builder;
