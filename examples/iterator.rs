@@ -7,10 +7,7 @@
 //!
 //!     cargo run --example iterator
 
-use rkv;
-use tempfile;
-
-use self::rkv::{
+use rkv::{
     Manager,
     Rkv,
     SingleStore,
