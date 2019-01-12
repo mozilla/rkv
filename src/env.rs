@@ -662,24 +662,24 @@ mod tests {
 
         // Reader.iter() returns (key, value) tuples ordered by key.
         let mut iter = reader.iter_start(sk).unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "bar");
-        assert_eq!(val.expect("value"), Some(Value::Bool(true)));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Bool(true)));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "baz");
-        assert_eq!(val.expect("value"), Some(Value::Str("héllo, yöu")));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Str("héllo, yöu")));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "foo");
-        assert_eq!(val.expect("value"), Some(Value::I64(1234)));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::I64(1234)));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "héllò, töűrîst");
-        assert_eq!(val.expect("value"), Some(Value::Str("Emil.RuleZ!")));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Str("Emil.RuleZ!")));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Iterators don't loop.  Once one returns None, additional calls
@@ -689,23 +689,23 @@ mod tests {
         // Reader.iter_from() begins iteration at the first key equal to
         // or greater than the given key.
         let mut iter = reader.iter_from(sk, "moo").unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Reader.iter_from() works as expected when the given key is a prefix
         // of a key in the store.
         let mut iter = reader.iter_from(sk, "no").unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
     }
 
@@ -797,86 +797,86 @@ mod tests {
 
         // Iterate through the whole store in "s1"
         let mut iter = reader.iter_start(s1).unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "bar");
-        assert_eq!(val.expect("value"), Some(Value::Bool(true)));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Bool(true)));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "baz");
-        assert_eq!(val.expect("value"), Some(Value::Str("héllo, yöu")));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Str("héllo, yöu")));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "foo");
-        assert_eq!(val.expect("value"), Some(Value::I64(1234)));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::I64(1234)));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "héllò, töűrîst");
-        assert_eq!(val.expect("value"), Some(Value::Str("Emil.RuleZ!")));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Str("Emil.RuleZ!")));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Iterate through the whole store in "s2"
         let mut iter = reader.iter_start(s2).unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "bar");
-        assert_eq!(val.expect("value"), Some(Value::Bool(true)));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Bool(true)));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "baz");
-        assert_eq!(val.expect("value"), Some(Value::Str("héllo, yöu")));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Str("héllo, yöu")));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "foo");
-        assert_eq!(val.expect("value"), Some(Value::I64(1234)));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::I64(1234)));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "héllò, töűrîst");
-        assert_eq!(val.expect("value"), Some(Value::Str("Emil.RuleZ!")));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::Str("Emil.RuleZ!")));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Iterate from a given key in "s1"
         let mut iter = reader.iter_from(s1, "moo").unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Iterate from a given key in "s2"
         let mut iter = reader.iter_from(s2, "moo").unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Iterate from a given prefix in "s1"
         let mut iter = reader.iter_from(s1, "no").unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
 
         // Iterate from a given prefix in "s2"
         let mut iter = reader.iter_from(s2, "no").unwrap();
-        let (key, val) = iter.next().unwrap();
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "noo");
-        assert_eq!(val.expect("value"), Some(Value::F64(1234.0.into())));
-        let (key, val) = iter.next().unwrap();
+        assert_eq!(val, Some(Value::F64(1234.0.into())));
+        let (key, val) = iter.next().unwrap().unwrap();
         assert_eq!(str::from_utf8(key).expect("key"), "你好，遊客");
-        assert_eq!(val.expect("value"), Some(Value::Str("米克規則")));
+        assert_eq!(val, Some(Value::Str("米克規則")));
         assert!(iter.next().is_none());
     }
 
