@@ -18,8 +18,8 @@ backtrace = ["failure/backtrace", "failure/std"]
 [dependencies]
 arrayref = "0.3"
 bincode = "1.0"
-lazy_static = "1.0"
 lmdb-rkv = "0.11"
+lazy_static = "1.0.2"
 ordered-float = "1.0"
 uuid = "0.7"
 serde = "1.0"
