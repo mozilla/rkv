@@ -12,6 +12,7 @@ use rkv::{
     MultiStore,
     Rkv,
     RwTransaction,
+    StoreOptions,
     Transaction,
     Value,
 };
@@ -19,7 +20,7 @@ use tempfile::Builder;
 
 use std::fs;
 
-fn test_getput<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction, ids: &'s mut Vec<String>) {
+fn getput<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction, ids: &'s mut Vec<String>) {
     let keys = vec!["str1", "str2", "str3"];
     // we convert the writer into a cursor so that we can safely read
     for k in keys.iter() {
@@ -38,7 +39,7 @@ fn test_getput<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction,
     }
 }
 
-fn test_delete<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction) {
+fn delete<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction) {
     let keys = vec!["str1", "str2", "str3"];
     let vals = vec!["string uno", "string quatro", "string siete"];
     // we convert the writer into a cursor so that we can safely read
@@ -57,9 +58,9 @@ fn main() {
     let k = created_arc.read().unwrap();
 
     // Creates a store called "store"
-    let mut store = k.open_single("store", true, None).unwrap();
+    let mut store = k.open_single("store", StoreOptions::create()).unwrap();
 
-    let mut multistore = k.open_multi("multistore", true, None).unwrap();
+    let mut multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
 
     println!("Inserting data...");
     {
@@ -89,10 +90,10 @@ fn main() {
         multistore.put(&mut writer, "str3", &Value::Str("string siete")).unwrap();
         multistore.put(&mut writer, "str3", &Value::Str("string ocho")).unwrap();
         multistore.put(&mut writer, "str3", &Value::Str("string nueve")).unwrap();
-        test_getput(multistore, &mut writer, &mut ids);
+        getput(multistore, &mut writer, &mut ids);
         writer.commit().unwrap();
         let mut writer = k.write().unwrap();
-        test_delete(multistore, &mut writer);
+        delete(multistore, &mut writer);
         writer.commit().unwrap();
     }
     println!("Looking up keys...");
@@ -155,7 +156,7 @@ fn main() {
 
     println!("Write and read on multiple stores...");
     {
-        let mut another_store = k.open_single("another_store", true, None).unwrap();
+        let mut another_store = k.open_single("another_store", StoreOptions::create()).unwrap();
         let mut writer = k.write().unwrap();
         store.put(&mut writer, "foo", &Value::Str("bar")).unwrap();
         another_store.put(&mut writer, "foo", &Value::Str("baz")).unwrap();

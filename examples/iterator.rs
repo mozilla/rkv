@@ -12,6 +12,7 @@ use rkv::{
     Rkv,
     SingleStore,
     StoreError,
+    StoreOptions,
     Transaction,
     Value,
 };
@@ -27,7 +28,7 @@ fn main() {
 
     let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).unwrap();
     let k = created_arc.read().unwrap();
-    let store = k.open_single("store", true, None).unwrap();
+    let store = k.open_single("store", StoreOptions::create()).unwrap();
 
     populate_store(&k, store).unwrap();
 

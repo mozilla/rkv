@@ -25,8 +25,6 @@
 //! - [Manager](struct.Manager.html): a singleton that controls access to LMDB environments
 //! - [Rkv](struct.Rkv.html): an LMDB environment, which contains a set of key/value databases
 //! - [Store](struct.Store.html): an LMDB database, which contains a set of key/value pairs
-//! - [Transaction](https://github.com/mozilla/lmdb-rs/blob/master/src/transaction.rs#L16): A
-//! ReadOnly or Writeable transaction and a Transaction trait which abstracts over them.
 //!
 //! Keys can be anything that implements `AsRef<[u8]>` or integers
 //!  (when accessing an [IntegerStore](struct.IntegerStore.html)).
@@ -42,7 +40,7 @@
 //!
 //! ## Basic Usage
 //! ```
-//! use rkv::{Manager, Rkv, SingleStore, Value, Transaction};
+//! use rkv::{Manager, Rkv, SingleStore, Value, Transaction, StoreOptions};
 //! use std::fs;
 //! use tempfile::Builder;
 //!
@@ -68,7 +66,7 @@
 //!
 //! // Call `Rkv.open_or_create_default()` to get a handle to the default
 //! // (unnamed) store for the environment.
-//! let mut store: SingleStore = env.open_single("mydb", true, None).unwrap();
+//! let mut store: SingleStore = env.open_single("mydb", StoreOptions::create()).unwrap();
 //!
 //! {
 //!     // Use a write transaction to mutate the store by calling
@@ -202,6 +200,7 @@ pub use self::store::integer::{
 pub use self::store::integermulti::MultiIntegerStore;
 pub use self::store::multi::MultiStore;
 pub use self::store::single::SingleStore;
+pub use self::store::Options as StoreOptions;
 
 pub use self::env::Rkv;
 
