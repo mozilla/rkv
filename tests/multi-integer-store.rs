@@ -20,22 +20,30 @@ use std::fs;
 use tempfile::Builder;
 
 #[test]
-fn test_integer_keys() {
+fn test_multi_integer_keys() {
     let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
     let k = Rkv::new(root.path()).expect("new succeeded");
-    let mut s = k.open_integer("s", StoreOptions::create()).expect("open");
+    let mut s = k.open_multi_integer("s", StoreOptions::create()).expect("open");
 
     macro_rules! test_integer_keys {
         ($store:expr, $key:expr) => {{
             let mut writer = k.write().expect("writer");
 
-            $store.put(&mut writer, $key, &Value::Str("hello!")).expect("write");
-            assert_eq!($store.get(&writer, $key).expect("read"), Some(Value::Str("hello!")));
+            $store.put(&mut writer, $key, &Value::Str("hello1")).expect("write");
+            $store.put(&mut writer, $key, &Value::Str("hello2")).expect("write");
+            $store.put(&mut writer, $key, &Value::Str("hello3")).expect("write");
+            let vals = $store.get(&writer, $key).expect("read")
+                .map(|(_, v)| v.expect("multi read"))
+                .collect::<Option<Vec<Value>>>();
+            assert_eq!(vals, Some(vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]));
             writer.commit().expect("committed");
 
             let reader = k.read().expect("reader");
-            assert_eq!($store.get(&reader, $key).expect("read"), Some(Value::Str("hello!")));
+            let vals = $store.get(&reader, $key).expect("read")
+                .map(|(_, v)| v.expect("multi read"))
+                .collect::<Option<Vec<Value>>>();
+            assert_eq!(vals, Some(vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]));
         }};
     }
 
@@ -52,7 +60,7 @@ fn test_integer_keys() {
     // different integer key types, which may result in unexpected behavior.
     // Make sure you know what you're doing!
 
-    let mut t = k.open_integer("s", StoreOptions::create()).expect("open");
+    let mut t = k.open_multi_integer("s", StoreOptions::create()).expect("open");
 
     #[derive(Serialize)]
     struct I32(i32);
@@ -60,7 +68,7 @@ fn test_integer_keys() {
     test_integer_keys!(t, I32(std::i32::MIN));
     test_integer_keys!(t, I32(std::i32::MAX));
 
-    let mut u = k.open_integer("s", StoreOptions::create()).expect("open");
+    let mut u = k.open_multi_integer("s", StoreOptions::create()).expect("open");
 
     #[derive(Serialize)]
     struct U16(u16);
@@ -68,7 +76,7 @@ fn test_integer_keys() {
     test_integer_keys!(u, U16(std::u16::MIN));
     test_integer_keys!(u, U16(std::u16::MAX));
 
-    let mut v = k.open_integer("s", StoreOptions::create()).expect("open");
+    let mut v = k.open_multi_integer("s", StoreOptions::create()).expect("open");
 
     #[derive(Serialize)]
     struct U64(u64);
