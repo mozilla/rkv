@@ -33,14 +33,18 @@ fn test_multi_integer_keys() {
             $store.put(&mut writer, $key, &Value::Str("hello1")).expect("write");
             $store.put(&mut writer, $key, &Value::Str("hello2")).expect("write");
             $store.put(&mut writer, $key, &Value::Str("hello3")).expect("write");
-            let vals = $store.get(&writer, $key).expect("read")
+            let vals = $store
+                .get(&writer, $key)
+                .expect("read")
                 .map(|(_, v)| v.expect("multi read"))
                 .collect::<Option<Vec<Value>>>();
             assert_eq!(vals, Some(vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]));
             writer.commit().expect("committed");
 
             let reader = k.read().expect("reader");
-            let vals = $store.get(&reader, $key).expect("read")
+            let vals = $store
+                .get(&reader, $key)
+                .expect("read")
                 .map(|(_, v)| v.expect("multi read"))
                 .collect::<Option<Vec<Value>>>();
             assert_eq!(vals, Some(vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]));
@@ -84,4 +88,3 @@ fn test_multi_integer_keys() {
     test_integer_keys!(v, U64(std::u64::MIN));
     test_integer_keys!(v, U64(std::u64::MAX));
 }
-

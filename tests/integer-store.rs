@@ -76,4 +76,3 @@ fn test_integer_keys() {
     test_integer_keys!(v, U64(std::u64::MIN));
     test_integer_keys!(v, U64(std::u64::MAX));
 }
-
