@@ -15,7 +15,8 @@
 //! - Avoid LMDB's sharp edges (e.g., obscure error codes for common situations).
 //! - Report errors via [failure](https://docs.rs/failure/).
 //! - Correctly restrict access to one handle per process via a [Manager](struct.Manager.html).
-//! - Use Rust's type system to make single-typed key stores (including LMDB's own integer-keyed stores) safe and ergonomic.
+//! - Use Rust's type system to make single-typed key stores (including LMDB's own integer-keyed stores)
+//!   safe and ergonomic.
 //! - Encode and decode values via [bincode](https://docs.rs/bincode/)/[serde](https://docs.rs/serde/)
 //!   and type tags, achieving platform-independent storage and input/output flexibility.
 //!
@@ -25,7 +26,8 @@
 //! - [Rkv](struct.Rkv.html): an LMDB environment, which contains a set of key/value databases
 //! - [Store](struct.Store.html): an LMDB database, which contains a set of key/value pairs
 //!
-//! Keys can be anything that implements `AsRef<[u8]>` or integers (when accessing an [IntegerStore](struct.IntegerStore.html)).
+//! Keys can be anything that implements `AsRef<[u8]>` or integers
+//!  (when accessing an [IntegerStore](struct.IntegerStore.html)).
 //! Values can be any of the types defined by the [Value](value/enum.Value.html) enum, including:
 //!
 //! - booleans (`Value::Bool`)
@@ -38,7 +40,7 @@
 //!
 //! ## Basic Usage
 //! ```
-//! use rkv::{Manager, Rkv, Store, Value};
+//! use rkv::{Manager, Rkv, SingleStore, Value, Transaction, StoreOptions};
 //! use std::fs;
 //! use tempfile::Builder;
 //!
@@ -64,7 +66,7 @@
 //!
 //! // Call `Rkv.open_or_create_default()` to get a handle to the default
 //! // (unnamed) store for the environment.
-//! let store: Store = env.open_or_create_default().unwrap();
+//! let mut store: SingleStore = env.open_single("mydb", StoreOptions::create()).unwrap();
 //!
 //! {
 //!     // Use a write transaction to mutate the store by calling
@@ -76,14 +78,14 @@
 //!     // Writer takes a `Store` as the first argument.
 //!     // Keys are `AsRef<[u8]>`, while values are `Value` enum instances.
 //!     // Use the `Blob` variant to store arbitrary collections of bytes.
-//!     writer.put(store, "int", &Value::I64(1234)).unwrap();
-//!     writer.put(store, "uint", &Value::U64(1234_u64)).unwrap();
-//!     writer.put(store, "float", &Value::F64(1234.0.into())).unwrap();
-//!     writer.put(store, "instant", &Value::Instant(1528318073700)).unwrap();
-//!     writer.put(store, "boolean", &Value::Bool(true)).unwrap();
-//!     writer.put(store, "string", &Value::Str("héllo, yöu")).unwrap();
-//!     writer.put(store, "json", &Value::Json(r#"{"foo":"bar", "number": 1}"#)).unwrap();
-//!     writer.put(store, "blob", &Value::Blob(b"blob")).unwrap();
+//!     store.put(&mut writer, "int", &Value::I64(1234)).unwrap();
+//!     store.put(&mut writer, "uint", &Value::U64(1234_u64)).unwrap();
+//!     store.put(&mut writer, "float", &Value::F64(1234.0.into())).unwrap();
+//!     store.put(&mut writer, "instant", &Value::Instant(1528318073700)).unwrap();
+//!     store.put(&mut writer, "boolean", &Value::Bool(true)).unwrap();
+//!     store.put(&mut writer, "string", &Value::Str("héllo, yöu")).unwrap();
+//!     store.put(&mut writer, "json", &Value::Json(r#"{"foo":"bar", "number": 1}"#)).unwrap();
+//!     store.put(&mut writer, "blob", &Value::Blob(b"blob")).unwrap();
 //!
 //!     // You must commit a write transaction before the writer goes out
 //!     // of scope, or the transaction will abort and the data won't persist.
@@ -98,17 +100,17 @@
 //!
 //!     // To retrieve data, call `Reader.get()`, passing it the target store
 //!     // and the key for the value to retrieve.
-//!     println!("Get int {:?}", reader.get(store, "int").unwrap());
-//!     println!("Get uint {:?}", reader.get(store, "uint").unwrap());
-//!     println!("Get float {:?}", reader.get(store, "float").unwrap());
-//!     println!("Get instant {:?}", reader.get(store, "instant").unwrap());
-//!     println!("Get boolean {:?}", reader.get(store, "boolean").unwrap());
-//!     println!("Get string {:?}", reader.get(store, "string").unwrap());
-//!     println!("Get json {:?}", reader.get(store, "json").unwrap());
-//!     println!("Get blob {:?}", reader.get(store, "blob").unwrap());
+//!     println!("Get int {:?}", store.get(&reader, "int").unwrap());
+//!     println!("Get uint {:?}", store.get(&reader, "uint").unwrap());
+//!     println!("Get float {:?}", store.get(&reader, "float").unwrap());
+//!     println!("Get instant {:?}", store.get(&reader, "instant").unwrap());
+//!     println!("Get boolean {:?}", store.get(&reader, "boolean").unwrap());
+//!     println!("Get string {:?}", store.get(&reader, "string").unwrap());
+//!     println!("Get json {:?}", store.get(&reader, "json").unwrap());
+//!     println!("Get blob {:?}", store.get(&reader, "blob").unwrap());
 //!
 //!     // Retrieving a non-existent value returns `Ok(None)`.
-//!     println!("Get non-existent value {:?}", reader.get(store, "non-existent"));
+//!     println!("Get non-existent value {:?}", store.get(&reader, "non-existent"));
 //!
 //!     // A read transaction will automatically close once the reader
 //!     // goes out of scope, so isn't necessary to close it explicitly,
@@ -118,11 +120,11 @@
 //! {
 //!     // Aborting a write transaction rolls back the change(s).
 //!     let mut writer = env.write().unwrap();
-//!     writer.put(store, "foo", &Value::Str("bar")).unwrap();
+//!     store.put(&mut writer, "foo", &Value::Str("bar")).unwrap();
 //!     writer.abort();
 //!
 //!     let reader = env.read().expect("reader");
-//!     println!("It should be None! ({:?})", reader.get(store, "foo").unwrap());
+//!     println!("It should be None! ({:?})", store.get(&reader, "foo").unwrap());
 //! }
 //!
 //! {
@@ -131,60 +133,74 @@
 //!     // implicitly be aborted once they go out of scope.
 //!     {
 //!         let mut writer = env.write().unwrap();
-//!         writer.put(store, "foo", &Value::Str("bar")).unwrap();
+//!         store.put(&mut writer, "foo", &Value::Str("bar")).unwrap();
 //!     }
 //!     let reader = env.read().expect("reader");
-//!     println!("It should be None! ({:?})", reader.get(store, "foo").unwrap());
+//!     println!("It should be None! ({:?})", store.get(&reader, "foo").unwrap());
 //! }
 //!
 //! {
 //!     // Deleting a key/value pair also requires a write transaction.
 //!     let mut writer = env.write().unwrap();
-//!     writer.put(store, "foo", &Value::Str("bar")).unwrap();
-//!     writer.put(store, "bar", &Value::Str("baz")).unwrap();
-//!     writer.delete(store, "foo").unwrap();
+//!     store.put(&mut writer, "foo", &Value::Str("bar")).unwrap();
+//!     store.put(&mut writer, "bar", &Value::Str("baz")).unwrap();
+//!     store.delete(&mut writer, "foo").unwrap();
 //!
 //!     // A write transaction also supports reading, the version of the
 //!     // store that it reads includes changes it has made regardless of
 //!     // the commit state of that transaction.
 //!     // In the code above, "foo" and "bar" were put into the store,
 //!     // then "foo" was deleted so only "bar" will return a result.
-//!     println!("It should be None! ({:?})", writer.get(store, "foo").unwrap());
-//!     println!("Get bar ({:?})", writer.get(store, "bar").unwrap());
+//!     println!("It should be None! ({:?})", store.get(&writer, "foo").unwrap());
+//!     println!("Get bar ({:?})", store.get(&writer, "bar").unwrap());
 //!     writer.commit().unwrap();
 //!     let reader = env.read().expect("reader");
-//!     println!("It should be None! ({:?})", reader.get(store, "foo").unwrap());
-//!     println!("Get bar {:?}", reader.get(store, "bar").unwrap());
+//!     println!("It should be None! ({:?})", store.get(&reader, "foo").unwrap());
+//!     println!("Get bar {:?}", store.get(&reader, "bar").unwrap());
 //!
 //!     // Committing a transaction consumes the writer, preventing you
 //!     // from reusing it by failing at compile time with an error.
 //!     // This line would report error[E0382]: use of moved value: `writer`.
-//!     // writer.put(store, "baz", &Value::Str("buz")).unwrap();
+//!     // store.put(&mut writer, "baz", &Value::Str("buz")).unwrap();
 //! }
 //! ```
 
 #![allow(dead_code)]
 
-use bincode;
 use lmdb;
-use ordered_float;
-use serde; // So we can specify trait bounds. Everything else is bincode.
-use url;
-use uuid;
 
 pub use lmdb::{
     DatabaseFlags,
     EnvironmentBuilder,
     EnvironmentFlags,
+    Error as LmdbError,
+    RoTransaction,
+    RwTransaction,
+    Transaction,
     WriteFlags,
 };
 
 mod env;
 pub mod error;
-mod integer;
 mod manager;
-mod readwrite;
+pub mod store;
 pub mod value;
+
+pub use lmdb::{
+    Cursor,
+    Database,
+    Iter as LmdbIter,
+    RoCursor,
+};
+
+pub use self::store::integer::{
+    IntegerStore,
+    PrimitiveInt,
+};
+pub use self::store::integermulti::MultiIntegerStore;
+pub use self::store::multi::MultiStore;
+pub use self::store::single::SingleStore;
+pub use self::store::Options as StoreOptions;
 
 pub use self::env::Rkv;
 
@@ -193,20 +209,7 @@ pub use self::error::{
     StoreError,
 };
 
-pub use self::integer::{
-    IntegerReader,
-    IntegerStore,
-    IntegerWriter,
-    PrimitiveInt,
-};
-
 pub use self::manager::Manager;
-
-pub use self::readwrite::{
-    Reader,
-    Store,
-    Writer,
-};
 
 pub use self::value::{
     OwnedValue,
