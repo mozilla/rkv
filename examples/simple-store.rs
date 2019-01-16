@@ -25,9 +25,9 @@ fn getput<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction, ids:
     // we convert the writer into a cursor so that we can safely read
     for k in keys.iter() {
         // this is a multi-valued database, so get returns an iterator
-        let iter = store.get(writer, k).unwrap();
-        for (_key, val) in iter {
-            if let Value::Str(s) = val.unwrap().unwrap() {
+        let mut iter = store.get(writer, k).unwrap();
+        while let Some(Ok((_key, val))) = iter.next() {
+            if let Value::Str(s) = val.unwrap() {
                 ids.push(s.to_owned());
             } else {
                 panic!("didn't get a string back!");

@@ -36,18 +36,20 @@ fn test_multi_integer_keys() {
             let vals = $store
                 .get(&writer, $key)
                 .expect("read")
+                .map(|result| result.expect("ok"))
                 .map(|(_, v)| v.expect("multi read"))
-                .collect::<Option<Vec<Value>>>();
-            assert_eq!(vals, Some(vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]));
+                .collect::<Vec<Value>>();
+            assert_eq!(vals, vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]);
             writer.commit().expect("committed");
 
             let reader = k.read().expect("reader");
             let vals = $store
                 .get(&reader, $key)
                 .expect("read")
+                .map(|result| result.expect("ok"))
                 .map(|(_, v)| v.expect("multi read"))
-                .collect::<Option<Vec<Value>>>();
-            assert_eq!(vals, Some(vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]));
+                .collect::<Vec<Value>>();
+            assert_eq!(vals, vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]);
         }};
     }
 

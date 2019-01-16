@@ -38,7 +38,7 @@ fn main() {
     // Reader::iter_start() iterates from the first item in the store, and
     // returns the (key, value) tuples in order.
     let mut iter = store.iter_start(&reader).unwrap();
-    while let Some((country, city)) = iter.next() {
+    while let Some(Ok((country, city))) = iter.next() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
 
@@ -47,14 +47,14 @@ fn main() {
     // Reader::iter_from() iterates from the first key equal to or greater
     // than the given key.
     let mut iter = store.iter_from(&reader, "Japan").unwrap();
-    while let Some((country, city)) = iter.next() {
+    while let Some(Ok((country, city))) = iter.next() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
 
     println!("");
     println!("Iterating from the given prefix...");
     let mut iter = store.iter_from(&reader, "Un").unwrap();
-    while let Some((country, city)) = iter.next() {
+    while let Some(Ok((country, city))) = iter.next() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
 }

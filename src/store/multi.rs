@@ -149,13 +149,16 @@ impl<'env> Iterator for MultiIter<'env> {
 */
 
 impl<'env> Iterator for Iter<'env> {
-    type Item = (&'env [u8], Result<Option<Value<'env>>, StoreError>);
+    type Item = Result<(&'env [u8], Option<Value<'env>>), StoreError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             None => None,
-            Some(Ok((key, bytes))) => Some((key, read_transform(Ok(bytes)))),
-            Some(Err(_)) => None,
+            Some(Ok((key, bytes))) => match read_transform(Ok(bytes)) {
+                Ok(val) => Some(Ok((key, val))),
+                Err(err) => Some(Err(err)),
+            },
+            Some(Err(err)) => Some(Err(StoreError::LmdbError(err))),
         }
     }
 }
