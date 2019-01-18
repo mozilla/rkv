@@ -191,6 +191,7 @@ pub use lmdb::{
     Database,
     Iter as LmdbIter,
     RoCursor,
+    Stat,
 };
 
 pub use self::store::integer::{

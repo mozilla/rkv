@@ -166,4 +166,5 @@ fn main() {
         println!("Get from store value: {:?}", store.get(&reader, "foo").unwrap());
         println!("Get from another store value: {:?}", another_store.get(&reader, "foo").unwrap());
     }
+    println!("Environment statistics: btree depth = {}", k.stat().unwrap().depth());
 }
