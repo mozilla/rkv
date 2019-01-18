@@ -24,6 +24,7 @@ use lmdb::{
     EnvironmentBuilder,
     RoTransaction,
     RwTransaction,
+    Stat,
 };
 
 use crate::error::StoreError;
@@ -167,6 +168,30 @@ impl Rkv {
 
     pub fn write(&self) -> Result<RwTransaction, StoreError> {
         self.env.begin_rw_txn().map_err(|e| e.into())
+    }
+}
+
+/// Other environment methods.
+impl Rkv {
+    /// Flush the data buffers to disk. This call is only useful, when the environment
+    /// was open with either `NO_SYNC`, `NO_META_SYNC` or `MAP_ASYNC` (see below).
+    /// The call is not valid if the environment was opened with `READ_ONLY`.
+    ///
+    /// Data is always written to disk when `transaction.commit()` is called,
+    /// but the operating system may keep it buffered.
+    /// LMDB always flushes the OS buffers upon commit as well,
+    /// unless the environment was opened with `NO_SYNC` or in part `NO_META_SYNC`.
+    ///
+    /// `force`: if true, force a synchronous flush.
+    /// Otherwise if the environment has the `NO_SYNC` flag set the flushes will be omitted,
+    /// and with `MAP_ASYNC` they will be asynchronous.
+    pub fn sync(&self, force: bool) -> Result<(), StoreError> {
+        self.env.sync(force).map_err(|e| e.into())
+    }
+
+    /// Retrieves statistics about this environment.
+    pub fn stat(&self) -> Result<Stat, StoreError> {
+        self.env.stat().map_err(|e| e.into())
     }
 }
 
@@ -643,6 +668,50 @@ mod tests {
             _ => &[],
         };
         assert_eq!(u8_to_u16(u8_array), u16_array);
+    }
+
+    #[test]
+    fn test_sync() {
+        let root = Builder::new().prefix("test_sync").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let mut builder = Rkv::environment_builder();
+        builder.set_max_dbs(1);
+        builder.set_flags(EnvironmentFlags::NO_SYNC);
+        {
+            let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
+            let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+            {
+                let mut writer = k.write().expect("writer");
+                sk.put(&mut writer, "foo", &Value::I64(1234)).expect("wrote");
+                writer.commit().expect("committed");
+                k.sync(true).expect("synced");
+            }
+        }
+        let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::default()).expect("opened");
+        let reader = k.read().expect("reader");
+        assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+    }
+
+    #[test]
+    fn test_stat() {
+        let root = Builder::new().prefix("test_sync").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        for i in 0..5 {
+            let mut sk: IntegerStore<u32> =
+                k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
+            {
+                let mut writer = k.write().expect("writer");
+                sk.put(&mut writer, i, &Value::I64(i as i64)).expect("wrote");
+                writer.commit().expect("committed");
+            }
+        }
+        assert_eq!(k.stat().expect("stat").depth(), 1);
+        assert_eq!(k.stat().expect("stat").entries(), 5);
+        assert_eq!(k.stat().expect("stat").branch_pages(), 0);
+        assert_eq!(k.stat().expect("stat").leaf_pages(), 1);
     }
 
     #[test]
