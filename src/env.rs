@@ -173,13 +173,14 @@ impl Rkv {
 
 /// Other environment methods.
 impl Rkv {
-    /// Flush the data buffers to disk.
+    /// Flush the data buffers to disk. This call is only useful, when the environment
+    /// was open with either `NO_SYNC`, `NO_META_SYNC` or `MAP_ASYNC` (see below).
+    /// The call is not valid if the environment was opened with `READ_ONLY`.
     ///
     /// Data is always written to disk when `transaction.commit()` is called,
     /// but the operating system may keep it buffered.
     /// LMDB always flushes the OS buffers upon commit as well,
     /// unless the environment was opened with `NO_SYNC` or in part `NO_META_SYNC`.
-    /// This call is not valid if the environment was opened with `READ_ONLY`.
     ///
     /// `force`: if true, force a synchronous flush.
     /// Otherwise if the environment has the `NO_SYNC` flag set the flushes will be omitted,
