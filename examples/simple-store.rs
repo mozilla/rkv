@@ -20,7 +20,7 @@ use tempfile::Builder;
 
 use std::fs;
 
-fn getput<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction, ids: &'s mut Vec<String>) {
+fn getput<'env, 's>(store: MultiStore, writer: &'env mut RwTransaction, ids: &'s mut Vec<String>) {
     let keys = vec!["str1", "str2", "str3"];
     // we convert the writer into a cursor so that we can safely read
     for k in keys.iter() {
@@ -39,7 +39,7 @@ fn getput<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction, ids:
     }
 }
 
-fn delete<'env, 's>(mut store: MultiStore, writer: &'env mut RwTransaction) {
+fn delete<'env, 's>(store: MultiStore, writer: &'env mut RwTransaction) {
     let keys = vec!["str1", "str2", "str3"];
     let vals = vec!["string uno", "string quatro", "string siete"];
     // we convert the writer into a cursor so that we can safely read
@@ -58,9 +58,9 @@ fn main() {
     let k = created_arc.read().unwrap();
 
     // Creates a store called "store"
-    let mut store = k.open_single("store", StoreOptions::create()).unwrap();
+    let store = k.open_single("store", StoreOptions::create()).unwrap();
 
-    let mut multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
+    let multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
 
     println!("Inserting data...");
     {
@@ -156,7 +156,7 @@ fn main() {
 
     println!("Write and read on multiple stores...");
     {
-        let mut another_store = k.open_single("another_store", StoreOptions::create()).unwrap();
+        let another_store = k.open_single("another_store", StoreOptions::create()).unwrap();
         let mut writer = k.write().unwrap();
         store.put(&mut writer, "foo", &Value::Str("bar")).unwrap();
         another_store.put(&mut writer, "foo", &Value::Str("baz")).unwrap();

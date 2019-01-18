@@ -84,13 +84,13 @@ impl MultiStore {
     /// Insert a value at the specified key.
     /// This put will allow duplicate entries.  If you wish to have duplicate entries
     /// rejected, use the `put_with_flags` function and specify NO_DUP_DATA
-    pub fn put<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<K: AsRef<[u8]>>(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         let bytes = v.to_bytes()?;
         txn.put(self.db, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
     pub fn put_with_flags<K: AsRef<[u8]>>(
-        &mut self,
+        &self,
         txn: &mut RwTransaction,
         k: K,
         v: &Value,
@@ -100,11 +100,11 @@ impl MultiStore {
         txn.put(self.db, &k, &bytes, flags).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete_all<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
+    pub fn delete_all<K: AsRef<[u8]>>(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         txn.del(self.db, &k, None).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn delete<K: AsRef<[u8]>>(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         txn.del(self.db, &k, Some(&v.to_bytes()?)).map_err(StoreError::LmdbError)
     }
 

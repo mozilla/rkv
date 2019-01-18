@@ -59,7 +59,7 @@ fn main() {
     }
 }
 
-fn populate_store(k: &Rkv, mut store: SingleStore) -> Result<(), StoreError> {
+fn populate_store(k: &Rkv, store: SingleStore) -> Result<(), StoreError> {
     let mut writer = k.write()?;
     for (country, city) in vec![
         ("Canada", Value::Str("Ottawa")),

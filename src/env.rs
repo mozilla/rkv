@@ -311,7 +311,7 @@ mod tests {
         assert!(root.path().is_dir());
 
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
 
         // Writing a large enough value should cause LMDB to fail on MapFull.
         // We write a string that is larger than the default map size.
@@ -333,7 +333,7 @@ mod tests {
         builder.set_map_size(get_larger_than_default_map_size_value() + 100 * 1024 /* 100KiB */);
         builder.set_max_dbs(2);
         let k = Rkv::from_env(root.path(), builder).unwrap();
-        let mut sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
+        let  sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
         let val = "x".repeat(get_larger_than_default_map_size_value());
 
         let mut writer = k.write().expect("writer");
@@ -350,7 +350,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
-        let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         {
             let mut writer = k.write().expect("writer");
@@ -450,7 +450,7 @@ mod tests {
         let root = Builder::new().prefix("test_multi_put_get_del").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
+        let multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
         let mut writer = k.write().unwrap();
         multistore.put(&mut writer, "str1", &Value::Str("str1 foo")).unwrap();
         multistore.put(&mut writer, "str1", &Value::Str("str1 bar")).unwrap();
@@ -481,7 +481,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         // First create the store, and start a write transaction on it.
-        let mut sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         let mut writer = k.write().expect("writer");
         sk.put(&mut writer, "foo", &Value::Str("bar")).expect("write");
 
@@ -525,7 +525,7 @@ mod tests {
         let root = Builder::new().prefix("test_read_before_write_num").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         // Test reading a number, modifying it, and then writing it back.
         // We have to be done with the Value::I64 before calling Writer::put,
@@ -554,7 +554,7 @@ mod tests {
         let root = Builder::new().prefix("test_read_before_write_str").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         // Test reading a string, modifying it, and then writing it back.
         // We have to be done with the Value::Str before calling Writer::put,
@@ -596,7 +596,7 @@ mod tests {
         let root = Builder::new().prefix("test_isolation").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut s: SingleStore = k.open_single("s", StoreOptions::create()).expect("opened");
+        let s: SingleStore = k.open_single("s", StoreOptions::create()).expect("opened");
 
         // Add one field.
         {
@@ -638,7 +638,7 @@ mod tests {
         let root = Builder::new().prefix("test_round_trip_blob").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
         let mut writer = k.write().expect("writer");
 
         assert_eq!(sk.get(&writer, "foo").expect("read"), None);
@@ -679,7 +679,7 @@ mod tests {
         builder.set_flags(EnvironmentFlags::NO_SYNC);
         {
             let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
-            let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+            let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
 
             {
                 let mut writer = k.write().expect("writer");
@@ -700,7 +700,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         for i in 0..5 {
-            let mut sk: IntegerStore<u32> =
+            let sk: IntegerStore<u32> =
                 k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
             {
                 let mut writer = k.write().expect("writer");
@@ -719,7 +719,7 @@ mod tests {
         let root = Builder::new().prefix("test_iter").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         // An iterator over an empty store returns no values.
         {
@@ -793,7 +793,7 @@ mod tests {
         let root = Builder::new().prefix("test_iter_from_key_greater_than_existing").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
         sk.put(&mut writer, "foo", &Value::I64(1234)).expect("wrote");
@@ -813,9 +813,9 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
 
-        let mut s1: SingleStore = k.open_single("store_1", StoreOptions::create()).expect("opened");
-        let mut s2: SingleStore = k.open_single("store_2", StoreOptions::create()).expect("opened");
-        let mut s3: SingleStore = k.open_single("store_3", StoreOptions::create()).expect("opened");
+        let s1: SingleStore = k.open_single("store_1", StoreOptions::create()).expect("opened");
+        let s2: SingleStore = k.open_single("store_2", StoreOptions::create()).expect("opened");
+        let s3: SingleStore = k.open_single("store_3", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
         s1.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
@@ -852,8 +852,8 @@ mod tests {
         let root = Builder::new().prefix("test_multiple_store_iter").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
-        let mut s1: SingleStore = k.open_single("store_1", StoreOptions::create()).expect("opened");
-        let mut s2: SingleStore = k.open_single("store_2", StoreOptions::create()).expect("opened");
+        let s1: SingleStore = k.open_single("store_1", StoreOptions::create()).expect("opened");
+        let s2: SingleStore = k.open_single("store_2", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
         // Write to "s1"
@@ -964,7 +964,7 @@ mod tests {
         let root = Builder::new().prefix("test_multiple_thread").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let rkv_arc = Arc::new(RwLock::new(Rkv::new(root.path()).expect("new succeeded")));
-        let mut store = rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened");
+        let store = rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened");
 
         let num_threads = 10;
         let mut write_handles = Vec::with_capacity(num_threads as usize);
