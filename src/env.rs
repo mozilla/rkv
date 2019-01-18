@@ -671,6 +671,49 @@ mod tests {
     }
 
     #[test]
+    fn test_sync() {
+        let root = Builder::new().prefix("test_sync").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let mut builder = Rkv::environment_builder();
+        builder.set_max_dbs(1);
+        builder.set_flags(EnvironmentFlags::NO_SYNC);
+        {
+            let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
+            let mut sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+            {
+                let mut writer = k.write().expect("writer");
+                sk.put(&mut writer, "foo", &Value::I64(1234)).expect("wrote");
+                writer.commit().expect("committed");
+                k.sync(true).expect("synced");
+            }
+        }
+        let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::default()).expect("opened");
+        let reader = k.read().expect("reader");
+        assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+    }
+
+    #[test]
+    fn test_stat() {
+        let root = Builder::new().prefix("test_sync").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        for i in 0..5 {
+            let mut sk: IntegerStore<u32> = k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
+            {
+                let mut writer = k.write().expect("writer");
+                sk.put(&mut writer, i, &Value::I64(i as i64)).expect("wrote");
+                writer.commit().expect("committed");
+            }
+        }
+        assert_eq!(k.stat().expect("stat").depth(), 1);
+        assert_eq!(k.stat().expect("stat").entries(), 5);
+        assert_eq!(k.stat().expect("stat").branch_pages(), 0);
+        assert_eq!(k.stat().expect("stat").leaf_pages(), 1);
+    }
+
+    #[test]
     fn test_iter() {
         let root = Builder::new().prefix("test_iter").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
