@@ -700,7 +700,8 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         for i in 0..5 {
-            let mut sk: IntegerStore<u32> = k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
+            let mut sk: IntegerStore<u32> =
+                k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
             {
                 let mut writer = k.write().expect("writer");
                 sk.put(&mut writer, i, &Value::I64(i as i64)).expect("wrote");
