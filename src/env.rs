@@ -333,7 +333,7 @@ mod tests {
         builder.set_map_size(get_larger_than_default_map_size_value() + 100 * 1024 /* 100KiB */);
         builder.set_max_dbs(2);
         let k = Rkv::from_env(root.path(), builder).unwrap();
-        let  sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
+        let sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
         let val = "x".repeat(get_larger_than_default_map_size_value());
 
         let mut writer = k.write().expect("writer");
