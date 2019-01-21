@@ -58,12 +58,12 @@ where
         self.inner.get_first(txn, Key::new(k)?)
     }
 
-    pub fn put(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         self.inner.put(txn, Key::new(k)?, v)
     }
 
     pub fn put_with_flags(
-        &mut self,
+        &self,
         txn: &mut RwTransaction,
         k: K,
         v: &Value,
@@ -72,11 +72,11 @@ where
         self.inner.put_with_flags(txn, Key::new(k)?, v, flags)
     }
 
-    pub fn delete_all(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
+    pub fn delete_all(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         self.inner.delete_all(txn, Key::new(k)?)
     }
 
-    pub fn delete(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn delete(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         self.inner.delete(txn, Key::new(k)?, v)
     }
 }

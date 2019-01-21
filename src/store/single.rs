@@ -60,13 +60,13 @@ impl SingleStore {
     }
 
     // TODO: flags
-    pub fn put<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<K: AsRef<[u8]>>(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         // TODO: don't allocate twice.
         let bytes = v.to_bytes()?;
         txn.put(self.db, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete<K: AsRef<[u8]>>(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
+    pub fn delete<K: AsRef<[u8]>>(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         txn.del(self.db, &k, None).map_err(StoreError::LmdbError)
     }
 

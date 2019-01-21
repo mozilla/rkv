@@ -96,11 +96,11 @@ where
         self.inner.get(txn, Key::new(k)?)
     }
 
-    pub fn put(&mut self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         self.inner.put(txn, Key::new(k)?, v)
     }
 
-    pub fn delete(&mut self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
+    pub fn delete(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         self.inner.delete(txn, Key::new(k)?)
     }
 }
