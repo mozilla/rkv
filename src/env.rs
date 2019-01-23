@@ -195,6 +195,7 @@ impl Rkv {
     }
 }
 
+#[allow(clippy::cyclomatic_complexity)]
 #[cfg(test)]
 mod tests {
     use byteorder::{
@@ -459,9 +460,9 @@ mod tests {
         multistore.put(&mut writer, "str3", &Value::Str("str3 foo")).unwrap();
         multistore.put(&mut writer, "str3", &Value::Str("str3 bar")).unwrap();
         writer.commit().unwrap();
-        let mut writer = k.write().unwrap();
+        let writer = k.write().unwrap();
         {
-            let mut iter = multistore.get(&mut writer, "str1").unwrap();
+            let mut iter = multistore.get(&writer, "str1").unwrap();
             let (id, val) = iter.next().unwrap().unwrap();
             assert_eq!((id, val), (&b"str1"[..], Some(Value::Str("str1 bar"))));
             let (id, val) = iter.next().unwrap().unwrap();
@@ -532,7 +533,7 @@ mod tests {
         // as the Value::I64 borrows an immutable reference to the Writer.
         // So we extract and copy its primitive value.
 
-        fn get_existing_foo(txn: &RwTransaction, store: &SingleStore) -> Option<i64> {
+        fn get_existing_foo(txn: &RwTransaction, store: SingleStore) -> Option<i64> {
             match store.get(txn, "foo").expect("read") {
                 Some(Value::I64(val)) => Some(val),
                 _ => None,
@@ -540,11 +541,11 @@ mod tests {
         }
 
         let mut writer = k.write().expect("writer");
-        let mut existing = get_existing_foo(&writer, &sk).unwrap_or(99);
+        let mut existing = get_existing_foo(&writer, sk).unwrap_or(99);
         existing += 1;
         sk.put(&mut writer, "foo", &Value::I64(existing)).expect("success");
 
-        let updated = get_existing_foo(&writer, &sk).unwrap_or(99);
+        let updated = get_existing_foo(&writer, sk).unwrap_or(99);
         assert_eq!(updated, 100);
         writer.commit().expect("commit");
     }
@@ -704,7 +705,7 @@ mod tests {
                 k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
             {
                 let mut writer = k.write().expect("writer");
-                sk.put(&mut writer, i, &Value::I64(i as i64)).expect("wrote");
+                sk.put(&mut writer, i, &Value::I64(i64::from(i))).expect("wrote");
                 writer.commit().expect("committed");
             }
         }
@@ -822,9 +823,9 @@ mod tests {
         s2.put(&mut writer, "foo", &Value::I64(123)).expect("wrote");
         s3.put(&mut writer, "foo", &Value::Bool(true)).expect("wrote");
 
-        assert_eq!(s1.get(&mut writer, "foo").expect("read"), Some(Value::Str("bar")));
-        assert_eq!(s2.get(&mut writer, "foo").expect("read"), Some(Value::I64(123)));
-        assert_eq!(s3.get(&mut writer, "foo").expect("read"), Some(Value::Bool(true)));
+        assert_eq!(s1.get(&writer, "foo").expect("read"), Some(Value::Str("bar")));
+        assert_eq!(s2.get(&writer, "foo").expect("read"), Some(Value::I64(123)));
+        assert_eq!(s3.get(&writer, "foo").expect("read"), Some(Value::Bool(true)));
 
         writer.commit().expect("committed");
 
