@@ -46,6 +46,7 @@ impl Type {
         Type::from_primitive(tag).ok_or_else(|| DataError::UnknownType(tag))
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_tag(self) -> u8 {
         self as u8
     }
