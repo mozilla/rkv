@@ -50,11 +50,7 @@ impl SingleStore {
         }
     }
 
-    pub fn get<T: Transaction, K: AsRef<[u8]>>(
-        self,
-        txn: &T,
-        k: K,
-    ) -> Result<Option<Value>, StoreError> {
+    pub fn get<T: Transaction, K: AsRef<[u8]>>(self, txn: &T, k: K) -> Result<Option<Value>, StoreError> {
         let bytes = txn.get(self.db, &k);
         read_transform(bytes)
     }
@@ -89,11 +85,7 @@ impl SingleStore {
         })
     }
 
-    pub fn iter_from<T: Transaction, K: AsRef<[u8]>>(
-        self,
-        txn: &T,
-        k: K,
-    ) -> Result<Iter, StoreError> {
+    pub fn iter_from<T: Transaction, K: AsRef<[u8]>>(self, txn: &T, k: K) -> Result<Iter, StoreError> {
         let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {
