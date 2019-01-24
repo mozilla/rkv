@@ -8,8 +8,6 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#![allow(clippy::trivially_copy_pass_by_ref)]
-
 use lmdb;
 
 use lmdb::{
@@ -52,27 +50,27 @@ impl SingleStore {
         }
     }
 
-    pub fn get<'env, T: Transaction, K: AsRef<[u8]>>(
-        &self,
-        txn: &'env T,
+    pub fn get<T: Transaction, K: AsRef<[u8]>>(
+        self,
+        txn: &T,
         k: K,
-    ) -> Result<Option<Value<'env>>, StoreError> {
+    ) -> Result<Option<Value>, StoreError> {
         let bytes = txn.get(self.db, &k);
         read_transform(bytes)
     }
 
     // TODO: flags
-    pub fn put<K: AsRef<[u8]>>(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<K: AsRef<[u8]>>(self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
         // TODO: don't allocate twice.
         let bytes = v.to_bytes()?;
         txn.put(self.db, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
     }
 
-    pub fn delete<K: AsRef<[u8]>>(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
+    pub fn delete<K: AsRef<[u8]>>(self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
         txn.del(self.db, &k, None).map_err(StoreError::LmdbError)
     }
 
-    pub fn iter_start<'env, T: Transaction>(&self, txn: &'env T) -> Result<Iter<'env>, StoreError> {
+    pub fn iter_start<T: Transaction>(self, txn: &T) -> Result<Iter, StoreError> {
         let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
@@ -91,11 +89,11 @@ impl SingleStore {
         })
     }
 
-    pub fn iter_from<'env, T: Transaction, K: AsRef<[u8]>>(
-        &self,
-        txn: &'env T,
+    pub fn iter_from<T: Transaction, K: AsRef<[u8]>>(
+        self,
+        txn: &T,
         k: K,
-    ) -> Result<Iter<'env>, StoreError> {
+    ) -> Result<Iter, StoreError> {
         let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {

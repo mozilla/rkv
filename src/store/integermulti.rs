@@ -51,15 +51,15 @@ where
     }
 
     pub fn get<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
-        self.inner.get(txn, Key::new(k)?)
+        self.inner.get(txn, Key::new(&k)?)
     }
 
     pub fn get_first<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
-        self.inner.get_first(txn, Key::new(k)?)
+        self.inner.get_first(txn, Key::new(&k)?)
     }
 
     pub fn put(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        self.inner.put(txn, Key::new(k)?, v)
+        self.inner.put(txn, Key::new(&k)?, v)
     }
 
     pub fn put_with_flags(
@@ -69,15 +69,15 @@ where
         v: &Value,
         flags: WriteFlags,
     ) -> Result<(), StoreError> {
-        self.inner.put_with_flags(txn, Key::new(k)?, v, flags)
+        self.inner.put_with_flags(txn, Key::new(&k)?, v, flags)
     }
 
     pub fn delete_all(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
-        self.inner.delete_all(txn, Key::new(k)?)
+        self.inner.delete_all(txn, Key::new(&k)?)
     }
 
     pub fn delete(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        self.inner.delete(txn, Key::new(k)?, v)
+        self.inner.delete(txn, Key::new(&k)?, v)
     }
 }
 

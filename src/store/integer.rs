@@ -65,7 +65,8 @@ impl<K> Key<K>
 where
     K: EncodableKey,
 {
-    pub(crate) fn new(k: K) -> Result<Key<K>, DataError> {
+    #[allow(clippy::new_ret_no_self)]
+    pub(crate) fn new(k: &K) -> Result<Key<K>, DataError> {
         Ok(Key {
             bytes: k.to_bytes()?,
             phantom: PhantomData,
@@ -93,15 +94,15 @@ where
     }
 
     pub fn get<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
-        self.inner.get(txn, Key::new(k)?)
+        self.inner.get(txn, Key::new(&k)?)
     }
 
     pub fn put(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        self.inner.put(txn, Key::new(k)?, v)
+        self.inner.put(txn, Key::new(&k)?, v)
     }
 
     pub fn delete(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
-        self.inner.delete(txn, Key::new(k)?)
+        self.inner.delete(txn, Key::new(&k)?)
     }
 }
 

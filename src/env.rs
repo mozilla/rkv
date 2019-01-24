@@ -55,6 +55,7 @@ impl Rkv {
     }
 
     /// Return a new Rkv environment that supports up to `DEFAULT_MAX_DBS` open databases.
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(path: &Path) -> Result<Rkv, StoreError> {
         Rkv::with_capacity(path, DEFAULT_MAX_DBS)
     }
