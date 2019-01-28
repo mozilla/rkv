@@ -23,11 +23,11 @@
 //! It exposes these primary abstractions:
 //!
 //! - [Manager](struct.Manager.html): a singleton that controls access to LMDB environments
-//! - [Rkv](struct.Rkv.html): an LMDB environment, which contains a set of key/value databases
-//! - [Store](struct.Store.html): an LMDB database, which contains a set of key/value pairs
+//! - [Rkv](struct.Rkv.html): an LMDB environment that contains a set of key/value databases
+//! - [SingleStore](store/single/struct.SingleStore.html): an LMDB database that contains a set of key/value pairs
 //!
 //! Keys can be anything that implements `AsRef<[u8]>` or integers
-//!  (when accessing an [IntegerStore](struct.IntegerStore.html)).
+//! (when accessing an [IntegerStore](store/integer/struct.IntegerStore.html)).
 //! Values can be any of the types defined by the [Value](value/enum.Value.html) enum, including:
 //!
 //! - booleans (`Value::Bool`)
