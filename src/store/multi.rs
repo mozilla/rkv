@@ -51,7 +51,7 @@ impl MultiStore {
         })
     }
 
-    /// Provides a cursor to all of the values for the duplicate entries that match this key
+    /// Provides the first value that matches this key
     pub fn get_first<T: Transaction, K: AsRef<[u8]>>(self, txn: &T, k: K) -> Result<Option<Value>, StoreError> {
         let result = txn.get(self.db, &k);
         read_transform(result)
