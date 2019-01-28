@@ -15,8 +15,12 @@ before_script:
   - rustup toolchain install nightly
   - rustup component add rustfmt-preview --toolchain nightly
   - command -v rustfmt || cargo install --force rustfmt-nightly
+  # install clippy via rustup, use the github source as a fallback
+  - rustup component add clippy || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
 script:
   - cargo +nightly fmt --all -- --check
+  # check all the targets (source code, tests, non-default crate features), and stop the build upon any warning
+  - cargo clippy --all-targets --all-features -- -D warnings
   - cargo build --verbose
   - cargo test --verbose
   - ./run-all-examples.sh

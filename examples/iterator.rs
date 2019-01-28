@@ -42,7 +42,7 @@ fn main() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
 
-    println!("");
+    println!();
     println!("Iterating from the given key...");
     // Reader::iter_from() iterates from the first key equal to or greater
     // than the given key.
@@ -51,7 +51,7 @@ fn main() {
         println!("{}, {:?}", str::from_utf8(country).unwrap(), city);
     }
 
-    println!("");
+    println!();
     println!("Iterating from the given prefix...");
     let mut iter = store.iter_from(&reader, "Un").unwrap();
     while let Some(Ok((country, city))) = iter.next() {
