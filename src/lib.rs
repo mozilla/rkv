@@ -68,8 +68,8 @@
 //!
 //! {
 //!     // Use a write transaction to mutate the store via a `Writer`.
-//!     // There can be only one writer for a given store; opening a second one
-//!     // will block until the first completes.
+//!     // There can be only one writer for a given environment, so opening
+//!     // a second one will block until the first completes.
 //!     let mut writer = env.write().unwrap();
 //!
 //!     // Keys are `AsRef<[u8]>`, while values are `Value` enum instances.
@@ -92,7 +92,7 @@
 //!
 //! {
 //!     // Use a read transaction to query the store via a `Reader`.
-//!     // There can be unlimited concurrent readers for a store, and readers
+//!     // There can be multiple concurrent readers for a store, and readers
 //!     // never block on a writer nor other readers.
 //!     let reader = env.read().expect("reader");
 //!
