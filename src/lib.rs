@@ -64,7 +64,7 @@
 //! let env = created_arc.read().unwrap();
 //!
 //! // Then you can use the environment handle to get a handle to a datastore:
-//! let mut store: SingleStore = env.open_single("mydb", StoreOptions::create()).unwrap();
+//! let store: SingleStore = env.open_single("mydb", StoreOptions::create()).unwrap();
 //!
 //! {
 //!     // Use a write transaction to mutate the store via a `Writer`.
