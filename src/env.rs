@@ -163,10 +163,16 @@ impl Rkv {
 
 /// Read and write accessors.
 impl Rkv {
+    /// Create a read transaction.  There can be multiple concurrent readers
+    /// for an environment, up to the maximum specified by LMDB (default 126),
+    /// and you can open readers while a write transaction is active.
     pub fn read(&self) -> Result<RoTransaction, StoreError> {
         self.env.begin_ro_txn().map_err(|e| e.into())
     }
 
+    /// Create a write transaction.  There can be only one write transaction
+    /// active at any given time, so trying to create a second one will block
+    /// until the first is committed or aborted.
     pub fn write(&self) -> Result<RwTransaction, StoreError> {
         self.env.begin_rw_txn().map_err(|e| e.into())
     }
