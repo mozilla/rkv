@@ -22,13 +22,14 @@ use lmdb::{
     DatabaseFlags,
     Environment,
     EnvironmentBuilder,
-    RoTransaction,
-    RwTransaction,
     Stat,
 };
 
 use crate::error::StoreError;
-
+use crate::readwrite::{
+    Reader,
+    Writer,
+};
 use crate::store::integer::{
     IntegerStore,
     PrimitiveInt,
@@ -166,15 +167,15 @@ impl Rkv {
     /// Create a read transaction.  There can be multiple concurrent readers
     /// for an environment, up to the maximum specified by LMDB (default 126),
     /// and you can open readers while a write transaction is active.
-    pub fn read(&self) -> Result<RoTransaction, StoreError> {
-        self.env.begin_ro_txn().map_err(|e| e.into())
+    pub fn read(&self) -> Result<Reader, StoreError> {
+        Ok(Reader::new(self.env.begin_ro_txn().map_err(StoreError::from)?))
     }
 
     /// Create a write transaction.  There can be only one write transaction
     /// active at any given time, so trying to create a second one will block
     /// until the first is committed or aborted.
-    pub fn write(&self) -> Result<RwTransaction, StoreError> {
-        self.env.begin_rw_txn().map_err(|e| e.into())
+    pub fn write(&self) -> Result<Writer, StoreError> {
+        Ok(Writer::new(self.env.begin_rw_txn().map_err(StoreError::from)?))
     }
 }
 
@@ -477,9 +478,15 @@ mod tests {
         }
         writer.commit().unwrap();
         let mut writer = k.write().unwrap();
+
         multistore.delete(&mut writer, "str1", &Value::Str("str1 foo")).unwrap();
+        assert_eq!(multistore.get_first(&writer, "str1").unwrap(), Some(Value::Str("str1 bar")));
+
         multistore.delete(&mut writer, "str2", &Value::Str("str2 bar")).unwrap();
-        multistore.delete(&mut writer, "str3", &Value::Str("str3 bar")).unwrap();
+        assert_eq!(multistore.get_first(&writer, "str2").unwrap(), Some(Value::Str("str2 foo")));
+
+        multistore.delete_all(&mut writer, "str3").unwrap();
+        assert_eq!(multistore.get_first(&writer, "str3").unwrap(), None);
         writer.commit().unwrap();
     }
 
@@ -540,8 +547,8 @@ mod tests {
         // as the Value::I64 borrows an immutable reference to the Writer.
         // So we extract and copy its primitive value.
 
-        fn get_existing_foo(txn: &RwTransaction, store: SingleStore) -> Option<i64> {
-            match store.get(txn, "foo").expect("read") {
+        fn get_existing_foo(writer: &Writer, store: SingleStore) -> Option<i64> {
+            match store.get(writer, "foo").expect("read") {
                 Some(Value::I64(val)) => Some(val),
                 _ => None,
             }

@@ -10,7 +10,11 @@
 
 use crate::{
     error::StoreError,
-    store::read_transform,
+    read_transform,
+    readwrite::{
+        Read,
+        Writer,
+    },
     value::Value,
 };
 use lmdb::{
@@ -18,8 +22,6 @@ use lmdb::{
     Database,
     Iter as LmdbIter,
     RoCursor,
-    RwTransaction,
-    Transaction,
     WriteFlags,
 };
 
@@ -40,24 +42,21 @@ impl SingleStore {
         }
     }
 
-    pub fn get<T: Transaction, K: AsRef<[u8]>>(self, txn: &T, k: K) -> Result<Option<Value>, StoreError> {
-        let bytes = txn.get(self.db, &k);
-        read_transform(bytes)
+    pub fn get<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Option<Value>, StoreError> {
+        reader.get(self.db, &k)
     }
 
     // TODO: flags
-    pub fn put<K: AsRef<[u8]>>(self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        // TODO: don't allocate twice.
-        let bytes = v.to_bytes()?;
-        txn.put(self.db, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
+    pub fn put<K: AsRef<[u8]>>(self, writer: &mut Writer, k: K, v: &Value) -> Result<(), StoreError> {
+        writer.put(self.db, &k, v, WriteFlags::empty())
     }
 
-    pub fn delete<K: AsRef<[u8]>>(self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
-        txn.del(self.db, &k, None).map_err(StoreError::LmdbError)
+    pub fn delete<K: AsRef<[u8]>>(self, writer: &mut Writer, k: K) -> Result<(), StoreError> {
+        writer.delete(self.db, &k, None)
     }
 
-    pub fn iter_start<T: Transaction>(self, txn: &T) -> Result<Iter, StoreError> {
-        let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+    pub fn iter_start<T: Read>(self, reader: &T) -> Result<Iter, StoreError> {
+        let mut cursor = reader.open_ro_cursor(self.db)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
         // the latter panics at "called `Result::unwrap()` on an `Err` value:
@@ -75,8 +74,8 @@ impl SingleStore {
         })
     }
 
-    pub fn iter_from<T: Transaction, K: AsRef<[u8]>>(self, txn: &T, k: K) -> Result<Iter, StoreError> {
-        let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+    pub fn iter_from<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Iter, StoreError> {
+        let mut cursor = reader.open_ro_cursor(self.db)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {
             iter,

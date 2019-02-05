@@ -13,7 +13,6 @@ use rkv::{
     SingleStore,
     StoreError,
     StoreOptions,
-    Transaction,
     Value,
 };
 use tempfile::Builder;

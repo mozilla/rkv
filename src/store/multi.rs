@@ -10,7 +10,11 @@
 
 use crate::{
     error::StoreError,
-    store::read_transform,
+    read_transform,
+    readwrite::{
+        Read,
+        Writer,
+    },
     value::Value,
 };
 use lmdb::{
@@ -19,8 +23,6 @@ use lmdb::{
     Iter as LmdbIter,
     //    IterDup as LmdbIterDup,
     RoCursor,
-    RwTransaction,
-    Transaction,
     WriteFlags,
 };
 
@@ -42,8 +44,8 @@ impl MultiStore {
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
-    pub fn get<T: Transaction, K: AsRef<[u8]>>(self, txn: &T, k: K) -> Result<Iter, StoreError> {
-        let mut cursor = txn.open_ro_cursor(self.db).map_err(StoreError::LmdbError)?;
+    pub fn get<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Iter, StoreError> {
+        let mut cursor = reader.open_ro_cursor(self.db)?;
         let iter = cursor.iter_dup_of(k);
         Ok(Iter {
             iter,
@@ -52,36 +54,33 @@ impl MultiStore {
     }
 
     /// Provides the first value that matches this key
-    pub fn get_first<T: Transaction, K: AsRef<[u8]>>(self, txn: &T, k: K) -> Result<Option<Value>, StoreError> {
-        let result = txn.get(self.db, &k);
-        read_transform(result)
+    pub fn get_first<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Option<Value>, StoreError> {
+        reader.get(self.db, &k)
     }
 
     /// Insert a value at the specified key.
     /// This put will allow duplicate entries.  If you wish to have duplicate entries
     /// rejected, use the `put_with_flags` function and specify NO_DUP_DATA
-    pub fn put<K: AsRef<[u8]>>(self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        let bytes = v.to_bytes()?;
-        txn.put(self.db, &k, &bytes, WriteFlags::empty()).map_err(StoreError::LmdbError)
+    pub fn put<K: AsRef<[u8]>>(self, writer: &mut Writer, k: K, v: &Value) -> Result<(), StoreError> {
+        writer.put(self.db, &k, v, WriteFlags::empty())
     }
 
     pub fn put_with_flags<K: AsRef<[u8]>>(
         self,
-        txn: &mut RwTransaction,
+        writer: &mut Writer,
         k: K,
         v: &Value,
         flags: WriteFlags,
     ) -> Result<(), StoreError> {
-        let bytes = v.to_bytes()?;
-        txn.put(self.db, &k, &bytes, flags).map_err(StoreError::LmdbError)
+        writer.put(self.db, &k, v, flags)
     }
 
-    pub fn delete_all<K: AsRef<[u8]>>(self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
-        txn.del(self.db, &k, None).map_err(StoreError::LmdbError)
+    pub fn delete_all<K: AsRef<[u8]>>(self, writer: &mut Writer, k: K) -> Result<(), StoreError> {
+        writer.delete(self.db, &k, None)
     }
 
-    pub fn delete<K: AsRef<[u8]>>(self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        txn.del(self.db, &k, Some(&v.to_bytes()?)).map_err(StoreError::LmdbError)
+    pub fn delete<K: AsRef<[u8]>>(self, writer: &mut Writer, k: K, v: &Value) -> Result<(), StoreError> {
+        writer.delete(self.db, &k, Some(&v.to_bytes()?))
     }
 
     /* TODO - Figure out how to solve the need to have the cursor stick around when
