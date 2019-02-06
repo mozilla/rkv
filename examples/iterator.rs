@@ -13,7 +13,6 @@ use rkv::{
     SingleStore,
     StoreError,
     StoreOptions,
-    Transaction,
     Value,
 };
 use tempfile::Builder;
@@ -72,5 +71,5 @@ fn populate_store(k: &Rkv, store: SingleStore) -> Result<(), StoreError> {
     ] {
         store.put(&mut writer, country, &city)?;
     }
-    writer.commit().map_err(|e| e.into())
+    writer.commit()
 }

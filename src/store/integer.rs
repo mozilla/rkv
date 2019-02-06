@@ -14,15 +14,16 @@ use bincode::serialize;
 
 use serde::Serialize;
 
-use lmdb::{
-    Database,
-    RwTransaction,
-    Transaction,
-};
+use lmdb::Database;
 
 use crate::error::{
     DataError,
     StoreError,
+};
+
+use crate::readwrite::{
+    Readable,
+    Writer,
 };
 
 use crate::value::Value;
@@ -93,16 +94,16 @@ where
         }
     }
 
-    pub fn get<'env, T: Transaction>(&self, txn: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
-        self.inner.get(txn, Key::new(&k)?)
+    pub fn get<'env, T: Readable>(&self, reader: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
+        self.inner.get(reader, Key::new(&k)?)
     }
 
-    pub fn put(&self, txn: &mut RwTransaction, k: K, v: &Value) -> Result<(), StoreError> {
-        self.inner.put(txn, Key::new(&k)?, v)
+    pub fn put(&self, writer: &mut Writer, k: K, v: &Value) -> Result<(), StoreError> {
+        self.inner.put(writer, Key::new(&k)?, v)
     }
 
-    pub fn delete(&self, txn: &mut RwTransaction, k: K) -> Result<(), StoreError> {
-        self.inner.delete(txn, Key::new(&k)?)
+    pub fn delete(&self, writer: &mut Writer, k: K) -> Result<(), StoreError> {
+        self.inner.delete(writer, Key::new(&k)?)
     }
 }
 

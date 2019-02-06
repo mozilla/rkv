@@ -12,7 +12,6 @@ use rkv::{
     PrimitiveInt,
     Rkv,
     StoreOptions,
-    Transaction,
     Value,
 };
 use serde_derive::Serialize;

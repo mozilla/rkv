@@ -40,7 +40,7 @@
 //!
 //! ## Basic Usage
 //! ```
-//! use rkv::{Manager, Rkv, SingleStore, Value, Transaction, StoreOptions};
+//! use rkv::{Manager, Rkv, SingleStore, Value, StoreOptions};
 //! use std::fs;
 //! use tempfile::Builder;
 //!
@@ -175,22 +175,17 @@
 
 #![allow(dead_code)]
 
-use lmdb;
-
 pub use lmdb::{
     DatabaseFlags,
     EnvironmentBuilder,
     EnvironmentFlags,
-    Error as LmdbError,
-    RoTransaction,
-    RwTransaction,
-    Transaction,
     WriteFlags,
 };
 
 mod env;
 pub mod error;
 mod manager;
+mod readwrite;
 pub mod store;
 pub mod value;
 
@@ -202,6 +197,10 @@ pub use lmdb::{
     Stat,
 };
 
+pub use self::readwrite::{
+    Reader,
+    Writer,
+};
 pub use self::store::integer::{
     IntegerStore,
     PrimitiveInt,
@@ -224,3 +223,11 @@ pub use self::value::{
     OwnedValue,
     Value,
 };
+
+fn read_transform(val: Result<&[u8], lmdb::Error>) -> Result<Option<Value>, StoreError> {
+    match val {
+        Ok(bytes) => Value::from_tagged_slice(bytes).map(Some).map_err(StoreError::DataError),
+        Err(lmdb::Error::NotFound) => Ok(None),
+        Err(e) => Err(StoreError::LmdbError(e)),
+    }
+}
