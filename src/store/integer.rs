@@ -22,7 +22,7 @@ use crate::error::{
 };
 
 use crate::readwrite::{
-    Read,
+    Readable,
     Writer,
 };
 
@@ -94,7 +94,7 @@ where
         }
     }
 
-    pub fn get<'env, T: Read>(&self, reader: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
+    pub fn get<'env, T: Readable>(&self, reader: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
         self.inner.get(reader, Key::new(&k)?)
     }
 

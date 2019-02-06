@@ -12,7 +12,7 @@ use crate::{
     error::StoreError,
     read_transform,
     readwrite::{
-        Read,
+        Readable,
         Writer,
     },
     value::Value,
@@ -44,7 +44,7 @@ impl MultiStore {
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
-    pub fn get<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Iter, StoreError> {
+    pub fn get<T: Readable, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Iter, StoreError> {
         let mut cursor = reader.open_ro_cursor(self.db)?;
         let iter = cursor.iter_dup_of(k);
         Ok(Iter {
@@ -54,7 +54,7 @@ impl MultiStore {
     }
 
     /// Provides the first value that matches this key
-    pub fn get_first<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Option<Value>, StoreError> {
+    pub fn get_first<T: Readable, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Option<Value>, StoreError> {
         reader.get(self.db, &k)
     }
 

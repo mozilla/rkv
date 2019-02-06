@@ -12,7 +12,7 @@ use crate::{
     error::StoreError,
     read_transform,
     readwrite::{
-        Read,
+        Readable,
         Writer,
     },
     value::Value,
@@ -42,7 +42,7 @@ impl SingleStore {
         }
     }
 
-    pub fn get<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Option<Value>, StoreError> {
+    pub fn get<T: Readable, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Option<Value>, StoreError> {
         reader.get(self.db, &k)
     }
 
@@ -55,7 +55,7 @@ impl SingleStore {
         writer.delete(self.db, &k, None)
     }
 
-    pub fn iter_start<T: Read>(self, reader: &T) -> Result<Iter, StoreError> {
+    pub fn iter_start<T: Readable>(self, reader: &T) -> Result<Iter, StoreError> {
         let mut cursor = reader.open_ro_cursor(self.db)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
@@ -74,7 +74,7 @@ impl SingleStore {
         })
     }
 
-    pub fn iter_from<T: Read, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Iter, StoreError> {
+    pub fn iter_from<T: Readable, K: AsRef<[u8]>>(self, reader: &T, k: K) -> Result<Iter, StoreError> {
         let mut cursor = reader.open_ro_cursor(self.db)?;
         let iter = cursor.iter_from(k);
         Ok(Iter {

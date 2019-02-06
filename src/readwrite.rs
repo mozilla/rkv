@@ -24,12 +24,12 @@ use crate::value::Value;
 pub struct Reader<'env>(pub RoTransaction<'env>);
 pub struct Writer<'env>(pub RwTransaction<'env>);
 
-pub trait Read {
+pub trait Readable {
     fn get<K: AsRef<[u8]>>(&self, db: Database, k: &K) -> Result<Option<Value>, StoreError>;
     fn open_ro_cursor(&self, db: Database) -> Result<RoCursor, StoreError>;
 }
 
-impl<'env> Read for Reader<'env> {
+impl<'env> Readable for Reader<'env> {
     fn get<K: AsRef<[u8]>>(&self, db: Database, k: &K) -> Result<Option<Value>, StoreError> {
         let bytes = self.0.get(db, &k);
         read_transform(bytes)
@@ -50,7 +50,7 @@ impl<'env> Reader<'env> {
     }
 }
 
-impl<'env> Read for Writer<'env> {
+impl<'env> Readable for Writer<'env> {
     fn get<K: AsRef<[u8]>>(&self, db: Database, k: &K) -> Result<Option<Value>, StoreError> {
         let bytes = self.0.get(db, &k);
         read_transform(bytes)

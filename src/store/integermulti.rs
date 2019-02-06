@@ -18,7 +18,7 @@ use std::marker::PhantomData;
 use crate::error::StoreError;
 
 use crate::readwrite::{
-    Read,
+    Readable,
     Writer,
 };
 
@@ -53,11 +53,11 @@ where
         }
     }
 
-    pub fn get<'env, T: Read>(&self, reader: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
+    pub fn get<'env, T: Readable>(&self, reader: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
         self.inner.get(reader, Key::new(&k)?)
     }
 
-    pub fn get_first<'env, T: Read>(&self, reader: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
+    pub fn get_first<'env, T: Readable>(&self, reader: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
         self.inner.get_first(reader, Key::new(&k)?)
     }
 
