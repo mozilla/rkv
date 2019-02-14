@@ -12,13 +12,16 @@ matrix:
     - rust: nightly
   fast_finish: true
 before_script:
-  - rustup toolchain install nightly
-  - rustup component add rustfmt-preview --toolchain nightly
+  # We install a known-to-have-rustfmt version of the nightly toolchain
+  # in order to run the nightly version of rustfmt, which supports rules
+  # that we depend upon.
+  - rustup toolchain install nightly-2019-02-07
+  - rustup component add rustfmt --toolchain nightly-2019-02-07
   - command -v rustfmt || cargo install --force rustfmt-nightly
   # install clippy via rustup, use the github source as a fallback
   - rustup component add clippy || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
 script:
-  - cargo +nightly fmt --all -- --check
+  - cargo +nightly-2019-02-07 fmt --all -- --check
   # check all the targets (source code, tests, non-default crate features), and stop the build upon any warning
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo build --verbose
