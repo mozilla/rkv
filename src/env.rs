@@ -194,12 +194,12 @@ impl Rkv {
     /// Otherwise if the environment has the `NO_SYNC` flag set the flushes will be omitted,
     /// and with `MAP_ASYNC` they will be asynchronous.
     pub fn sync(&self, force: bool) -> Result<(), StoreError> {
-        self.env.sync(force).map_err(|e| e.into())
+        self.env.sync(force).map_err(Into::into)
     }
 
     /// Retrieves statistics about this environment.
     pub fn stat(&self) -> Result<Stat, StoreError> {
-        self.env.stat().map_err(|e| e.into())
+        self.env.stat().map_err(Into::into)
     }
 }
 
@@ -592,7 +592,7 @@ mod tests {
         // Open the same store for read while the reader is in progress will panic
         let store: Result<SingleStore, StoreError> = k.open_single("sk", StoreOptions::default());
         match store {
-            Err(StoreError::OpenAttemptedDuringTransaction(_thread_id)) => assert!(true),
+            Err(StoreError::OpenAttemptedDuringTransaction(_thread_id)) => (),
             _ => panic!("should panic"),
         }
     }
