@@ -58,7 +58,7 @@ where
 }
 
 pub struct Manager {
-    environments: BTreeMap<PathBuf, Arc<RwLock<Rkv>>>,
+    environments: BTreeMap<PathBuf, Arc<Rkv>>,
 }
 
 impl Manager {
@@ -73,7 +73,7 @@ impl Manager {
     }
 
     /// Return the open env at `path`, returning `None` if it has not already been opened.
-    pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<RwLock<Rkv>>>, ::std::io::Error>
+    pub fn get<'p, P>(&self, path: P) -> Result<Option<Arc<Rkv>>, ::std::io::Error>
     where
         P: Into<&'p Path>,
     {
@@ -82,7 +82,7 @@ impl Manager {
     }
 
     /// Return the open env at `path`, or create it by calling `f`.
-    pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<Arc<RwLock<Rkv>>, StoreError>
+    pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<Arc<Rkv>, StoreError>
     where
         F: FnOnce(&Path) -> Result<Rkv, StoreError>,
         P: Into<&'p Path>,
@@ -91,7 +91,7 @@ impl Manager {
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
-                let k = Arc::new(RwLock::new(f(e.key().as_path())?));
+                let k = Arc::new(f(e.key().as_path())?);
                 e.insert(k).clone()
             },
         })
@@ -104,7 +104,7 @@ impl Manager {
         path: P,
         capacity: c_uint,
         f: F,
-    ) -> Result<Arc<RwLock<Rkv>>, StoreError>
+    ) -> Result<Arc<Rkv>, StoreError>
     where
         F: FnOnce(&Path, c_uint) -> Result<Rkv, StoreError>,
         P: Into<&'p Path>,
@@ -113,7 +113,7 @@ impl Manager {
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
-                let k = Arc::new(RwLock::new(f(e.key().as_path(), capacity)?));
+                let k = Arc::new(f(e.key().as_path(), capacity)?);
                 e.insert(k).clone()
             },
         })
