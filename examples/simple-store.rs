@@ -53,8 +53,7 @@ fn main() {
     let p = root.path();
 
     // The manager enforces that each process opens the same lmdb environment at most once
-    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).unwrap();
-    let k = created_arc.read().unwrap();
+    let k = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).unwrap();
 
     // Creates a store called "store"
     let store = k.open_single("store", StoreOptions::create()).unwrap();

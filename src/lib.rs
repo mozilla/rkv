@@ -60,8 +60,7 @@
 //! // at most once by caching a handle to each environment that it opens.
 //! // Use it to retrieve the handle to an opened environment—or create one
 //! // if it hasn't already been opened:
-//! let created_arc = Manager::singleton().write().unwrap().get_or_create(path, Rkv::new).unwrap();
-//! let env = created_arc.read().unwrap();
+//! let env = Manager::singleton().write().unwrap().get_or_create(path, Rkv::new).unwrap();
 //!
 //! // Then you can use the environment handle to get a handle to a datastore:
 //! let store: SingleStore = env.open_single("mydb", StoreOptions::create()).unwrap();
