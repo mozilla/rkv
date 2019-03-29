@@ -15,6 +15,8 @@ use std::path::{
     PathBuf,
 };
 
+use std::sync::RwLock;
+
 use lmdb;
 
 use lmdb::{
@@ -22,6 +24,7 @@ use lmdb::{
     DatabaseFlags,
     Environment,
     EnvironmentBuilder,
+    Info,
     Stat,
 };
 
@@ -47,6 +50,7 @@ pub static DEFAULT_MAX_DBS: c_uint = 5;
 pub struct Rkv {
     path: PathBuf,
     env: Environment,
+    resize_lock: RwLock<()>,
 }
 
 /// Static methods.
@@ -73,6 +77,7 @@ impl Rkv {
                 lmdb::Error::Other(2) => StoreError::DirectoryDoesNotExistError(path.into()),
                 e => StoreError::LmdbError(e),
             })?,
+            resize_lock: RwLock::new(()),
         })
     }
 
@@ -168,14 +173,16 @@ impl Rkv {
     /// for an environment, up to the maximum specified by LMDB (default 126),
     /// and you can open readers while a write transaction is active.
     pub fn read(&self) -> Result<Reader, StoreError> {
-        Ok(Reader::new(self.env.begin_ro_txn().map_err(StoreError::from)?))
+        let guard = self.resize_lock.read()?;
+        Ok(Reader::new(self.env.begin_ro_txn().map_err(StoreError::from)?, guard))
     }
 
     /// Create a write transaction.  There can be only one write transaction
     /// active at any given time, so trying to create a second one will block
     /// until the first is committed or aborted.
     pub fn write(&self) -> Result<Writer, StoreError> {
-        Ok(Writer::new(self.env.begin_rw_txn().map_err(StoreError::from)?))
+        let guard = self.resize_lock.read()?;
+        Ok(Writer::new(self.env.begin_rw_txn().map_err(StoreError::from)?, guard))
     }
 }
 
@@ -197,9 +204,20 @@ impl Rkv {
         self.env.sync(force).map_err(Into::into)
     }
 
-    /// Retrieves statistics about this environment.
+    /// Retrieve statistics about this environment.
     pub fn stat(&self) -> Result<Stat, StoreError> {
         self.env.stat().map_err(Into::into)
+    }
+
+    /// Retrieve information about this environment.
+    pub fn info(&self) -> Result<Info, StoreError> {
+        self.env.info().map_err(Into::into)
+    }
+
+    /// Set the map size for this environment.
+    pub fn set_map_size(&self, size: usize) -> Result<(), StoreError> {
+        let _guard = self.resize_lock.write()?;
+        self.env.set_map_size(size).map_err(Into::into)
     }
 }
 
@@ -218,6 +236,7 @@ mod tests {
             RwLock,
         },
         thread,
+        time::Duration,
     };
     use tempfile::Builder;
 
@@ -773,7 +792,7 @@ mod tests {
 
     #[test]
     fn test_stat() {
-        let root = Builder::new().prefix("test_sync").tempdir().expect("tempdir");
+        let root = Builder::new().prefix("test_stat").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let k = Rkv::new(root.path()).expect("new succeeded");
         for i in 0..5 {
@@ -789,6 +808,82 @@ mod tests {
         assert_eq!(k.stat().expect("stat").entries(), 5);
         assert_eq!(k.stat().expect("stat").branch_pages(), 0);
         assert_eq!(k.stat().expect("stat").leaf_pages(), 1);
+    }
+
+    #[test]
+    fn test_info() {
+        let root = Builder::new().prefix("test_info").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let mut writer = k.write().expect("writer");
+
+        sk.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
+        writer.commit().expect("commited");
+
+        let info = k.info().expect("info");
+
+        // The default size is 1MB.
+        assert_eq!(info.map_size(), 1024 * 1024);
+        // Should greater than 0 after the write txn.
+        assert!(info.last_pgno() > 0);
+        // A txn to open_single + a txn to write.
+        assert_eq!(info.last_txnid(), 2);
+        // The default max readers is 126.
+        assert_eq!(info.max_readers(), 126);
+        assert_eq!(info.num_readers(), 0);
+    }
+
+    #[test]
+    fn test_set_map_size() {
+        let root = Builder::new().prefix("test_size_map_size").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let k = Rkv::new(root.path()).expect("new succeeded");
+        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+        // The default size is 1MB.
+        const DEFAULT_SIZE: usize = 1024 * 1024;
+        assert_eq!(k.info().expect("info").map_size(), DEFAULT_SIZE);
+
+        k.set_map_size(2 * DEFAULT_SIZE).expect("resized");
+
+        // Should be able to write.
+        let mut writer = k.write().expect("writer");
+        sk.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
+        writer.commit().expect("commited");
+
+        assert_eq!(k.info().expect("info").map_size(), 2 * DEFAULT_SIZE);
+    }
+
+    #[test]
+    fn test_set_map_size_multithreaded() {
+        let root = Builder::new().prefix("test_size_map_size_multithreaded").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+        let rkv_arc = Arc::new(RwLock::new(Rkv::new(root.path()).expect("new succeeded")));
+        let rkv_clone = rkv_arc.clone();
+
+        // The default size is 1MB.
+        const DEFAULT_SIZE: usize = 1024 * 1024;
+        assert_eq!(rkv_arc.read().unwrap().info().expect("info").map_size(), DEFAULT_SIZE);
+
+        // Open a transaction in the main thread, which will block the thread
+        // that performs the resize until this transaction ends.
+        let rkv = rkv_arc.read().expect("rkv");
+        let sk = rkv.open_single("sk", StoreOptions::create()).expect("opened");
+        let mut writer = rkv.write().expect("writer");
+
+        let thrd = thread::spawn(move || {
+            rkv_clone.read().unwrap().set_map_size(2 * DEFAULT_SIZE).unwrap();
+        });
+
+        // Sleep for 1 second while holding the resize lock.
+        thread::sleep(Duration::from_millis(1000));
+        sk.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
+        writer.commit().expect("commited");
+
+        thrd.join().expect("joined");
+
+        assert_eq!(rkv.info().expect("info").map_size(), 2 * DEFAULT_SIZE);
     }
 
     #[test]

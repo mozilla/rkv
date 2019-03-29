@@ -68,6 +68,9 @@ pub enum StoreError {
 
     #[fail(display = "attempted to open DB during transaction in thread {:?}", _0)]
     OpenAttemptedDuringTransaction(::std::thread::ThreadId),
+
+    #[fail(display = "remap lock poison error")]
+    ResizeLockError,
 }
 
 impl StoreError {
@@ -94,5 +97,17 @@ impl From<DataError> for StoreError {
 impl From<::std::io::Error> for StoreError {
     fn from(e: ::std::io::Error) -> StoreError {
         StoreError::IoError(e)
+    }
+}
+
+impl From<::std::sync::PoisonError<::std::sync::RwLockReadGuard<'_, ()>>> for StoreError {
+    fn from(_e: ::std::sync::PoisonError<::std::sync::RwLockReadGuard<'_, ()>>) -> StoreError {
+        StoreError::ResizeLockError
+    }
+}
+
+impl From<::std::sync::PoisonError<::std::sync::RwLockWriteGuard<'_, ()>>> for StoreError {
+    fn from(_e: ::std::sync::PoisonError<::std::sync::RwLockWriteGuard<'_, ()>>) -> StoreError {
+        StoreError::ResizeLockError
     }
 }
