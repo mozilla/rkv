@@ -71,6 +71,9 @@ pub enum StoreError {
 
     #[fail(display = "remap lock poison error")]
     ResizeLockError,
+
+    #[fail(display = "remap size error")]
+    ResizeError,
 }
 
 impl StoreError {

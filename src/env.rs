@@ -25,6 +25,7 @@ use lmdb::{
     Environment,
     EnvironmentBuilder,
     Info,
+    RwTransaction,
     Stat,
 };
 
@@ -183,6 +184,12 @@ impl Rkv {
     pub fn write(&self) -> Result<Writer, StoreError> {
         let guard = self.resize_lock.read()?;
         Ok(Writer::new(self.env.begin_rw_txn().map_err(StoreError::from)?, guard))
+    }
+
+    /// Create a `lmdb:RwTransaction`, used internally by `readwrite::WriterEx`
+    /// to create the raw write transaction without acquiring the resize lock.
+    pub(crate) fn raw_write(&self) -> Result<RwTransaction, StoreError> {
+        Ok(self.env.begin_rw_txn().map_err(StoreError::from)?)
     }
 }
 
