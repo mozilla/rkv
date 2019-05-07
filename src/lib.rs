@@ -199,6 +199,9 @@
 
 #![allow(dead_code)]
 
+#[macro_use]
+extern crate bitflags;
+
 pub use lmdb::{
     DatabaseFlags,
     EnvironmentBuilder,
@@ -209,6 +212,7 @@ pub use lmdb::{
 mod env;
 pub mod error;
 mod manager;
+pub mod migrate;
 mod readwrite;
 pub mod store;
 pub mod value;
