@@ -265,7 +265,9 @@ impl Rkv {
     }
 }
 
-#[allow(clippy::cognitive_complexity)]
+// TODO: change this back to `clippy::cognitive_complexity` when Clippy stable
+// deprecates `clippy::cyclomatic_complexity`.
+#[allow(clippy::complexity)]
 #[cfg(test)]
 mod tests {
     use byteorder::{
