@@ -22,6 +22,7 @@ use lmdb::{
     DatabaseFlags,
     Environment,
     EnvironmentBuilder,
+    Error,
     Info,
     Stat,
 };
@@ -225,14 +226,19 @@ impl Rkv {
 
     /// Retrieve the load ratio (# of used pages / total pages) about this environment.
     ///
-    /// Note that this does not count the pages in the freelist.
+    /// With the formular: (last_page_no - freelist_pages) / total_pages
     pub fn load_ratio(&self) -> Result<f32, StoreError> {
         let stat = self.stat()?;
         let info = self.info()?;
+        let freelist = self.env.freelist()?;
 
         let last_pgno = info.last_pgno() + 1; // pgno is 0 based.
         let total_pgs = info.map_size() / stat.page_size() as usize;
-        Ok(last_pgno as f32 / total_pgs as f32)
+        if freelist > last_pgno {
+            return Err(StoreError::LmdbError(Error::Corrupted));
+        }
+        let used_pgs = last_pgno - freelist;
+        Ok(used_pgs as f32 / total_pgs as f32)
     }
 
     /// Sets the size of the memory map to use for the environment.
@@ -259,7 +265,9 @@ impl Rkv {
     }
 }
 
-#[allow(clippy::cyclomatic_complexity)]
+// TODO: change this back to `clippy::cognitive_complexity` when Clippy stable
+// deprecates `clippy::cyclomatic_complexity`.
+#[allow(clippy::complexity)]
 #[cfg(test)]
 mod tests {
     use byteorder::{
@@ -893,12 +901,20 @@ mod tests {
         let ratio = k.load_ratio().expect("ratio");
         assert!(ratio > 0.0_f32 && ratio < 1.0_f32);
 
+        // Put data to database should increase the load ratio.
         let mut writer = k.write().expect("writer");
         sk.put(&mut writer, "bar", &Value::Str(&"more-than-4KB".repeat(1000))).expect("wrote");
         writer.commit().expect("commited");
         let new_ratio = k.load_ratio().expect("ratio");
-
         assert!(new_ratio > ratio);
+
+        // Clear the database so that all the used pages should go to freelist, hence the ratio
+        // should decrease.
+        let mut writer = k.write().expect("writer");
+        sk.clear(&mut writer).expect("clear");
+        writer.commit().expect("commited");
+        let after_clear_ratio = k.load_ratio().expect("ratio");
+        assert!(after_clear_ratio < new_ratio);
     }
 
     #[test]
