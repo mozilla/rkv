@@ -177,10 +177,7 @@ impl<'s> Value<'s> {
             Value::Str(v) => serialize(&(Type::Str.to_tag(), v)),
             Value::Json(v) => serialize(&(Type::Json.to_tag(), v)),
             Value::Blob(v) => serialize(&(Type::Blob.to_tag(), v)),
-            Value::Uuid(v) => {
-                // Processed above to avoid verbose duplication of error transforms.
-                serialize(&(Type::Uuid.to_tag(), v))
-            },
+            Value::Uuid(v) => serialize(&(Type::Uuid.to_tag(), v)),
         }
         .map_err(DataError::EncodingError)
     }
@@ -195,10 +192,7 @@ impl<'s> Value<'s> {
             Value::Str(v) => serialized_size(&(Type::Str.to_tag(), v)),
             Value::Json(v) => serialized_size(&(Type::Json.to_tag(), v)),
             Value::Blob(v) => serialized_size(&(Type::Blob.to_tag(), v)),
-            Value::Uuid(v) => {
-                // Processed above to avoid verbose duplication of error transforms.
-                serialized_size(&(Type::Uuid.to_tag(), v))
-            },
+            Value::Uuid(v) => serialized_size(&(Type::Uuid.to_tag(), v)),
         }
         .map_err(DataError::EncodingError)
     }
