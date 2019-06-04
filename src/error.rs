@@ -99,7 +99,7 @@ impl From<::std::io::Error> for StoreError {
 
 #[derive(Debug, Fail)]
 pub enum MigrateError {
-    #[fail(display = "Database not found: {:?}", _0)]
+    #[fail(display = "database not found: {:?}", _0)]
     DatabaseNotFound(String),
 
     #[fail(display = "{}", _0)]
