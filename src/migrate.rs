@@ -161,7 +161,7 @@ fn validate_page_num(page_num: u64, bits: Bits) -> MigrateResult<()> {
     };
 
     if page_num == invalid_page_num {
-        return Err(MigrateError::InvalidPageNum)
+        return Err(MigrateError::InvalidPageNum);
     }
 
     Ok(())
