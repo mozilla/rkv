@@ -8,7 +8,57 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use crate::error::MigrateError;
+//! A utility for migrating data from one LMDB environment to another.
+//! Notably, this tool can migrate data from an enviroment created with
+//! a different bit-depth than the current rkv consumer, which enables
+//! the consumer to retrieve data from an environment that it can't read
+//! directly using the rkv APIs.
+//!
+//! The utility supports both 32-bit and 64-bit LMDB source environments,
+//! and it automatically migrates data in both the default database
+//! and any named (sub) databases.  It also migrates the source environment's
+//! "map size" and "max DBs" configuration options to the destination
+//! environment.
+//!
+//! The destination environment must be at the rkv consumer's bit depth
+//! and should be empty of data.  It can be an empty directory, in which case
+//! the utility will create a new LMDB environment within the directory.
+//!
+//! The tool currently has these limitations:
+//!
+//! 1. It doesn't support migration from environments created with
+//!    `EnvironmentFlags::NO_SUB_DIR`.  To migrate such an environment,
+//!    create a temporary directory, copy the environment's data file
+//!    to a file called data.mdb in the temporary directory, then migrate
+//!    the temporary directory as the source environment.
+//! 2. It doesn't support migration from databases created with
+//!    `DatabaseFlags::DUP_SORT` (with or without `DatabaseFlags::DUP_FIXED`).
+//! 3. It doesn't account for existing data in the destination environment,
+//!    which means that it can overwrite data (causing dataloss) or fail
+//!    to migrate data if the destination environment contains existing data.
+//!
+//! ## Basic Usage
+//!
+//! Call `Migrator::new()` with the path to the source environment to create
+//! a `Migrator` instance; then call the instance's `migrate()` method
+//! with the path to the destination environment to migrate data from the source
+//! to the destination environment.  For example, this snippet migrates data
+//! from the tests/ref_env_32 environment to a new environment in a temporary
+//! directory:
+//!
+//! ```
+//! use rkv::migrate::Migrator;
+//! use std::path::Path;
+//! use tempfile::tempdir;
+//! let mut migrator = Migrator::new(Path::new("tests/ref_env_32")).unwrap();
+//! migrator.migrate(&tempdir().unwrap().path()).unwrap();
+//! ```
+//!
+//! Both `Migrator::new()` and `migrate()` return a `MigrateResult` that is
+//! either an `Ok()` result or an `Err<MigrateError>`, where `MigrateError`
+//! is an enum whose variants identify specific kinds of migration failures.
+
+pub use crate::error::MigrateError;
 use bitflags::bitflags;
 use byteorder::{
     LittleEndian,
@@ -49,7 +99,7 @@ const PAGESIZE: u16 = 4096;
 // by detecting the order of the bytes.
 const MAGIC: [u8; 4] = [0xDE, 0xC0, 0xEF, 0xBE];
 
-type MigrateResult<T> = Result<T, MigrateError>;
+pub type MigrateResult<T> = Result<T, MigrateError>;
 
 bitflags! {
     #[derive(Default)]
