@@ -103,11 +103,17 @@ fn page_header_size(bits: Bits) -> u64 {
 }
 
 // The equivalent of P_INVALID in LMDB, except that this one varies by bits.
-fn invalid_page_num(bits: Bits) -> u64 {
-    match bits {
+fn validate_page_num(page_num: u64, bits: Bits) -> MigrateResult<()> {
+    let invalid_page_num = match bits {
         Bits::U32 => u64::from(!0u32),
         Bits::U64 => !0u64,
+    };
+
+    if page_num == invalid_page_num {
+        return Err(MigrateError::InvalidPageNum)
     }
+
+    Ok(())
 }
 
 #[derive(Clone, Debug, Default)]
@@ -344,7 +350,7 @@ impl Page {
             let value = cursor.get_ref()[start..end].to_vec();
             let mut cursor = std::io::Cursor::new(&value[..]);
             let db = Database::new(&mut cursor, bits)?;
-            assert!(db.md_root != invalid_page_num(bits));
+            validate_page_num(db.md_root, bits)?;
 
             Ok(LeafNode::SubData {
                 mn_lo,
@@ -555,7 +561,7 @@ impl Migrator {
     pub fn migrate(&mut self, dest: &Path) -> MigrateResult<()> {
         let meta_data = self.get_meta_data()?;
         let root_page_num = meta_data.mm_dbs.main.md_root;
-        assert!(root_page_num != invalid_page_num(self.bits));
+        validate_page_num(root_page_num, self.bits)?;
         let root_page = self.get_page(root_page_num)?;
 
         let mut subdbs: HashMap<Vec<u8>, Database> = HashMap::new();
@@ -713,8 +719,12 @@ impl Migrator {
                 } else {
                     meta0
                 };
-                assert_eq!(meta.mm_magic, 0xBE_EF_C0_DE);
-                assert!(meta.mm_version == 1 || meta.mm_version == 999);
+                if meta.mm_magic != 0xBE_EF_C0_DE {
+                    return Err(MigrateError::InvalidMagicNum);
+                }
+                if meta.mm_version != 1 && meta.mm_version != 999 {
+                    return Err(MigrateError::InvalidDataVersion);
+                }
                 Ok(meta)
             },
             _ => Err(MigrateError::UnexpectedPageVariant),

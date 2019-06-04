@@ -114,11 +114,20 @@ pub enum MigrateError {
     #[fail(display = "invalid DatabaseFlags bits")]
     InvalidDatabaseBits,
 
+    #[fail(display = "invalid data version")]
+    InvalidDataVersion,
+
+    #[fail(display = "invalid magic number")]
+    InvalidMagicNum,
+
     #[fail(display = "invalid NodeFlags bits")]
     InvalidNodeBits,
 
     #[fail(display = "invalid PageFlags bits")]
     InvalidPageBits,
+
+    #[fail(display = "invalid page number")]
+    InvalidPageNum,
 
     #[fail(display = "lmdb error: {}", _0)]
     LmdbError(lmdb::Error),
