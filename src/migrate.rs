@@ -88,6 +88,7 @@ use std::{
         Path,
         PathBuf,
     },
+    rc::Rc,
     str,
 };
 
@@ -549,20 +550,18 @@ impl Migrator {
     pub fn dump<T: Write>(&mut self, database: Option<&str>, mut out: T) -> MigrateResult<()> {
         let meta_data = self.get_meta_data()?;
         let root_page_num = meta_data.mm_dbs.main.md_root;
-        let root_page = self.get_page(root_page_num)?;
+        let root_page = Rc::new(self.get_page(root_page_num)?);
 
-        let mut pairs = BTreeMap::new();
-
+        let pairs;
         if let Some(database) = database {
-            let mut subdbs: HashMap<Vec<u8>, Database> = HashMap::new();
-            self.get_subdbs(&root_page, &mut subdbs)?;
+            let subdbs = self.get_subdbs(root_page)?;
             let database =
                 subdbs.get(database.as_bytes()).ok_or_else(|| MigrateError::DatabaseNotFound(database.to_string()))?;
             let root_page_num = database.md_root;
-            let root_page = self.get_page(root_page_num)?;
-            self.get_pairs(&root_page, &mut pairs)?;
+            let root_page = Rc::new(self.get_page(root_page_num)?);
+            pairs = self.get_pairs(root_page)?;
         } else {
-            self.get_pairs(&root_page, &mut pairs)?;
+            pairs = self.get_pairs(root_page)?;
         }
 
         out.write_all(b"VERSION=3\n")?;
@@ -612,10 +611,8 @@ impl Migrator {
         let meta_data = self.get_meta_data()?;
         let root_page_num = meta_data.mm_dbs.main.md_root;
         validate_page_num(root_page_num, self.bits)?;
-        let root_page = self.get_page(root_page_num)?;
-
-        let mut subdbs: HashMap<Vec<u8>, Database> = HashMap::new();
-        self.get_subdbs(&root_page, &mut subdbs)?;
+        let root_page = Rc::new(self.get_page(root_page_num)?);
+        let subdbs = self.get_subdbs(Rc::clone(&root_page))?;
 
         let env = Environment::new()
             .set_map_size(meta_data.mm_mapsize as usize)
@@ -635,8 +632,7 @@ impl Migrator {
         let mut txn = env.begin_rw_txn()?;
 
         // Migrate the main database.
-        let mut pairs = BTreeMap::new();
-        self.get_pairs(&root_page, &mut pairs)?;
+        let pairs = self.get_pairs(root_page)?;
         let db = env.open_db(None)?;
         for (key, value) in pairs {
             // If we knew that the target database was empty, we could
@@ -646,10 +642,9 @@ impl Migrator {
 
         // Migrate subdatabases.
         for (subdb_name, subdb_info) in &subdbs {
-            let root_page = self.get_page(subdb_info.md_root)?;
+            let root_page = Rc::new(self.get_page(subdb_info.md_root)?);
+            let pairs = self.get_pairs(root_page)?;
             let db = env.open_db(Some(str::from_utf8(&subdb_name)?))?;
-            let mut pairs = BTreeMap::new();
-            self.get_pairs(&root_page, &mut pairs)?;
             for (key, value) in pairs {
                 // If we knew that the target database was empty, we could
                 // specify WriteFlags::APPEND to speed up the migration.
@@ -662,90 +657,98 @@ impl Migrator {
         Ok(())
     }
 
-    fn get_subdbs(&mut self, page: &Page, subdbs: &mut HashMap<Vec<u8>, Database>) -> MigrateResult<()> {
-        match page {
-            Page::BRANCH(nodes) => {
-                for branch in nodes {
-                    let branch_page = self.get_page(branch.mp_pgno)?;
-                    self.get_subdbs(&branch_page, subdbs)?;
-                }
-            },
-            Page::LEAF(nodes) => {
-                for leaf in nodes {
-                    if let LeafNode::SubData {
-                        key,
-                        db,
-                        ..
-                    } = leaf
-                    {
-                        subdbs.insert(key.to_vec(), db.clone());
-                    };
-                }
-            },
-            _ => {
-                return Err(MigrateError::UnexpectedPageVariant);
-            },
+    fn get_subdbs(&mut self, root_page: Rc<Page>) -> MigrateResult<HashMap<Vec<u8>, Database>> {
+        let mut subdbs = HashMap::new();
+        let mut pages = vec![root_page];
+
+        while let Some(page) = pages.pop() {
+            match &*page {
+                Page::BRANCH(nodes) => {
+                    for branch in nodes {
+                        pages.push(Rc::new(self.get_page(branch.mp_pgno)?));
+                    }
+                },
+                Page::LEAF(nodes) => {
+                    for leaf in nodes {
+                        if let LeafNode::SubData {
+                            key,
+                            db,
+                            ..
+                        } = leaf
+                        {
+                            subdbs.insert(key.to_vec(), db.clone());
+                        };
+                    }
+                },
+                _ => {
+                    return Err(MigrateError::UnexpectedPageVariant);
+                },
+            }
         }
 
-        Ok(())
+        Ok(subdbs)
     }
 
-    fn get_pairs(&mut self, page: &Page, pairs: &mut BTreeMap<Vec<u8>, Vec<u8>>) -> MigrateResult<()> {
-        match page {
-            Page::BRANCH(nodes) => {
-                for branch in nodes {
-                    let branch_page = self.get_page(branch.mp_pgno)?;
-                    self.get_pairs(&branch_page, pairs)?;
-                }
-            },
-            Page::LEAF(nodes) => {
-                for leaf in nodes {
-                    match leaf {
-                        LeafNode::Regular {
-                            key,
-                            value,
-                            ..
-                        } => {
-                            pairs.insert(key.to_vec(), value.to_vec());
-                        },
-                        LeafNode::BigData {
-                            mv_size,
-                            key,
-                            overflow_pgno,
-                            ..
-                        } => {
-                            // XXX perhaps we could reduce memory consumption
-                            // during a migration by waiting to read big data
-                            // until it's time to write it to the new database.
-                            let value = self.read_data(
-                                *overflow_pgno * u64::from(PAGESIZE) + page_header_size(self.bits),
-                                *mv_size as usize,
-                            )?;
-                            pairs.insert(key.to_vec(), value);
-                        },
-                        LeafNode::SubData {
-                            ..
-                        } => {
-                            // We don't include subdatabase leaves in pairs,
-                            // since there's no architecture-neutral
-                            // representation of them, and in any case they're
-                            // meta-data that should get recreated when we
-                            // migrate the subdatabases themselves.
-                            //
-                            // If we wanted to create identical dumps to those
-                            // produced by mdb_dump, however, we could allow
-                            // consumers to specify that they'd like to include
-                            // these records.
-                        },
-                    };
-                }
-            },
-            _ => {
-                return Err(MigrateError::UnexpectedPageVariant);
-            },
+    fn get_pairs(&mut self, root_page: Rc<Page>) -> MigrateResult<BTreeMap<Vec<u8>, Vec<u8>>> {
+        let mut pairs = BTreeMap::new();
+        let mut pages = vec![root_page];
+
+        while let Some(page) = pages.pop() {
+            match &*page {
+                Page::BRANCH(nodes) => {
+                    for branch in nodes {
+                        pages.push(Rc::new(self.get_page(branch.mp_pgno)?));
+                    }
+                },
+                Page::LEAF(nodes) => {
+                    for leaf in nodes {
+                        match leaf {
+                            LeafNode::Regular {
+                                key,
+                                value,
+                                ..
+                            } => {
+                                pairs.insert(key.to_vec(), value.to_vec());
+                            },
+                            LeafNode::BigData {
+                                mv_size,
+                                key,
+                                overflow_pgno,
+                                ..
+                            } => {
+                                // XXX perhaps we could reduce memory consumption
+                                // during a migration by waiting to read big data
+                                // until it's time to write it to the new database.
+                                let value = self.read_data(
+                                    *overflow_pgno * u64::from(PAGESIZE) + page_header_size(self.bits),
+                                    *mv_size as usize,
+                                )?;
+                                pairs.insert(key.to_vec(), value);
+                            },
+                            LeafNode::SubData {
+                                ..
+                            } => {
+                                // We don't include subdatabase leaves in pairs,
+                                // since there's no architecture-neutral
+                                // representation of them, and in any case they're
+                                // meta-data that should get recreated when we
+                                // migrate the subdatabases themselves.
+                                //
+                                // If we wanted to create identical dumps to those
+                                // produced by mdb_dump, however, we could allow
+                                // consumers to specify that they'd like to include
+                                // these records.
+                            },
+                        };
+                    }
+                },
+                _ => {
+                    return Err(MigrateError::UnexpectedPageVariant);
+                },
+            }
         }
 
-        Ok(())
+        Ok(pairs)
     }
 
     fn read_data(&mut self, offset: u64, size: usize) -> MigrateResult<Vec<u8>> {
