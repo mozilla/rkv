@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["lmdb", "database", "storage"]
 categories = ["database"]
 edition = "2018"
+exclude = ["src/bin/*", "tests/*"]
 
 [features]
 default = []
