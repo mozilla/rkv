@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["lmdb", "database", "storage"]
 categories = ["database"]
 edition = "2018"
+exclude = ["/tests/envs/*"]
 
 [features]
 default = []
@@ -18,6 +19,8 @@ backtrace = ["failure/backtrace", "failure/std"]
 [dependencies]
 arrayref = "0.3"
 bincode = "1.0"
+bitflags = "1"
+byteorder = "1"
 lazy_static = "1.0.2"
 lmdb-rkv = "0.11.4"
 ordered-float = "1.0"
