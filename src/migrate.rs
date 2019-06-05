@@ -43,14 +43,14 @@
 //! a `Migrator` instance; then call the instance's `migrate()` method
 //! with the path to the destination environment to migrate data from the source
 //! to the destination environment.  For example, this snippet migrates data
-//! from the tests/ref_env_32 environment to a new environment in a temporary
-//! directory:
+//! from the tests/envs/ref_env_32 environment to a new environment
+//! in a temporary directory:
 //!
 //! ```
 //! use rkv::migrate::Migrator;
 //! use std::path::Path;
 //! use tempfile::tempdir;
-//! let mut migrator = Migrator::new(Path::new("tests/ref_env_32")).unwrap();
+//! let mut migrator = Migrator::new(Path::new("tests/envs/ref_env_32")).unwrap();
 //! migrator.migrate(&tempdir().unwrap().path()).unwrap();
 //! ```
 //!
@@ -843,7 +843,7 @@ mod tests {
     fn test_dump_32() -> MigrateResult<()> {
         let cwd = env::current_dir()?;
         let cwd = cwd.to_str().ok_or(MigrateError::StringConversionError)?;
-        let test_env_path: PathBuf = [cwd, "tests", "ref_env_32"].iter().collect();
+        let test_env_path: PathBuf = [cwd, "tests", "envs", "ref_env_32"].iter().collect();
 
         // Dump data from the test env to a new dump file.
         let mut migrator = Migrator::new(&test_env_path)?;
@@ -851,7 +851,7 @@ mod tests {
         migrator.dump(None, &new_dump_file)?;
 
         // Open the reference dump file.
-        let ref_dump_file_path: PathBuf = [cwd, "tests", "ref_dump.txt"].iter().collect();
+        let ref_dump_file_path: PathBuf = [cwd, "tests", "envs", "ref_dump.txt"].iter().collect();
         let mut ref_dump_file = File::open(ref_dump_file_path)?;
 
         // Compare the new dump file to the reference dump file.
@@ -864,7 +864,7 @@ mod tests {
     fn test_dump_32_subdb() -> MigrateResult<()> {
         let cwd = env::current_dir()?;
         let cwd = cwd.to_str().ok_or(MigrateError::StringConversionError)?;
-        let test_env_path: PathBuf = [cwd, "tests", "ref_env_32"].iter().collect();
+        let test_env_path: PathBuf = [cwd, "tests", "envs", "ref_env_32"].iter().collect();
 
         // Dump data from the test env to a new dump file.
         let mut migrator = Migrator::new(&test_env_path)?;
@@ -872,7 +872,7 @@ mod tests {
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
         // Open the reference dump file.
-        let ref_dump_file_path: PathBuf = [cwd, "tests", "ref_dump_subdb.txt"].iter().collect();
+        let ref_dump_file_path: PathBuf = [cwd, "tests", "envs", "ref_dump_subdb.txt"].iter().collect();
         let mut ref_dump_file = File::open(ref_dump_file_path)?;
 
         // Compare the new dump file to the reference dump file.
@@ -885,7 +885,7 @@ mod tests {
     fn test_dump_64() -> MigrateResult<()> {
         let cwd = env::current_dir()?;
         let cwd = cwd.to_str().ok_or(MigrateError::StringConversionError)?;
-        let test_env_path: PathBuf = [cwd, "tests", "ref_env_64"].iter().collect();
+        let test_env_path: PathBuf = [cwd, "tests", "envs", "ref_env_64"].iter().collect();
 
         // Dump data from the test env to a new dump file.
         let mut migrator = Migrator::new(&test_env_path)?;
@@ -893,7 +893,7 @@ mod tests {
         migrator.dump(None, &new_dump_file)?;
 
         // Open the reference dump file.
-        let ref_dump_file_path: PathBuf = [cwd, "tests", "ref_dump.txt"].iter().collect();
+        let ref_dump_file_path: PathBuf = [cwd, "tests", "envs", "ref_dump.txt"].iter().collect();
         let mut ref_dump_file = File::open(ref_dump_file_path)?;
 
         // Compare the new dump file to the reference dump file.
@@ -906,7 +906,7 @@ mod tests {
     fn test_dump_64_subdb() -> MigrateResult<()> {
         let cwd = env::current_dir()?;
         let cwd = cwd.to_str().ok_or(MigrateError::StringConversionError)?;
-        let test_env_path: PathBuf = [cwd, "tests", "ref_env_64"].iter().collect();
+        let test_env_path: PathBuf = [cwd, "tests", "envs", "ref_env_64"].iter().collect();
 
         // Dump data from the test env to a new dump file.
         let mut migrator = Migrator::new(&test_env_path)?;
@@ -914,7 +914,7 @@ mod tests {
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
         // Open the reference dump file.
-        let ref_dump_file_path: PathBuf = [cwd, "tests", "ref_dump_subdb.txt"].iter().collect();
+        let ref_dump_file_path: PathBuf = [cwd, "tests", "envs", "ref_dump_subdb.txt"].iter().collect();
         let mut ref_dump_file = File::open(ref_dump_file_path)?;
 
         // Compare the new dump file to the reference dump file.
@@ -927,7 +927,7 @@ mod tests {
     fn test_migrate_64() -> MigrateResult<()> {
         let cwd = env::current_dir()?;
         let cwd = cwd.to_str().ok_or(MigrateError::StringConversionError)?;
-        let test_env_path: PathBuf = [cwd, "tests", "ref_env_64"].iter().collect();
+        let test_env_path: PathBuf = [cwd, "tests", "envs", "ref_env_64"].iter().collect();
 
         // Migrate data from the old env to a new one.
         let new_env = tempdir()?;
@@ -940,7 +940,7 @@ mod tests {
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
         // Open the reference dump file.
-        let ref_dump_file_path: PathBuf = [cwd, "tests", "ref_dump_subdb.txt"].iter().collect();
+        let ref_dump_file_path: PathBuf = [cwd, "tests", "envs", "ref_dump_subdb.txt"].iter().collect();
         let mut ref_dump_file = File::open(ref_dump_file_path)?;
 
         // Compare the new dump file to the reference dump file.
@@ -953,7 +953,7 @@ mod tests {
     fn test_migrate_32() -> MigrateResult<()> {
         let cwd = env::current_dir()?;
         let cwd = cwd.to_str().ok_or(MigrateError::StringConversionError)?;
-        let test_env_path: PathBuf = [cwd, "tests", "ref_env_32"].iter().collect();
+        let test_env_path: PathBuf = [cwd, "tests", "envs", "ref_env_32"].iter().collect();
 
         // Migrate data from the old env to a new one.
         let new_env = tempdir()?;
@@ -966,7 +966,7 @@ mod tests {
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
         // Open the reference dump file.
-        let ref_dump_file_path: PathBuf = [cwd, "tests", "ref_dump_subdb.txt"].iter().collect();
+        let ref_dump_file_path: PathBuf = [cwd, "tests", "envs", "ref_dump_subdb.txt"].iter().collect();
         let mut ref_dump_file = File::open(ref_dump_file_path)?;
 
         // Compare the new dump file to the reference dump file.
@@ -985,7 +985,7 @@ mod tests {
 
         let cwd = env::current_dir()?;
         let cwd = cwd.to_str().ok_or(MigrateError::StringConversionError)?;
-        let test_env_path: PathBuf = [cwd, "tests", test_env_name].iter().collect();
+        let test_env_path: PathBuf = [cwd, "tests", "envs", test_env_name].iter().collect();
 
         let old_env = tempdir()?;
         fs::copy(test_env_path.join("data.mdb"), old_env.path().join("data.mdb"))?;
@@ -1011,7 +1011,7 @@ mod tests {
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
         // Open the reference dump file.
-        let ref_dump_file_path: PathBuf = [cwd, "tests", "ref_dump_subdb.txt"].iter().collect();
+        let ref_dump_file_path: PathBuf = [cwd, "tests", "envs", "ref_dump_subdb.txt"].iter().collect();
         let mut ref_dump_file = File::open(ref_dump_file_path)?;
 
         // Compare the new dump file to the reference dump file.

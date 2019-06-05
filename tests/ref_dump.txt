@@ -1,8 +1,0 @@
-VERSION=3
-format=bytevalue
-type=btree
-mapsize=16777216
-maxreaders=126
-db_pagesize=4096
-HEADER=END
-DATA=END
