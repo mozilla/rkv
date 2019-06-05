@@ -11,7 +11,7 @@
 //! A utility for migrating data from one LMDB environment to another.
 //! Notably, this tool can migrate data from an enviroment created with
 //! a different bit-depth than the current rkv consumer, which enables
-//! the consumer to retrieve data from an environment that it can't read
+//! the consumer to retrieve data from an environment that can't be read
 //! directly using the rkv APIs.
 //!
 //! The utility supports both 32-bit and 64-bit LMDB source environments,
@@ -34,7 +34,7 @@
 //! 2. It doesn't support migration from databases created with
 //!    `DatabaseFlags::DUP_SORT` (with or without `DatabaseFlags::DUP_FIXED`).
 //! 3. It doesn't account for existing data in the destination environment,
-//!    which means that it can overwrite data (causing dataloss) or fail
+//!    which means that it can overwrite data (causing data loss) or fail
 //!    to migrate data if the destination environment contains existing data.
 //!
 //! ## Basic Usage
