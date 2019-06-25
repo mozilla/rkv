@@ -224,9 +224,9 @@ pub use lmdb::{
 };
 
 pub use self::readwrite::{
+    Readable,
     Reader,
     Writer,
-    Readable,
 };
 pub use self::store::integer::{
     IntegerStore,
