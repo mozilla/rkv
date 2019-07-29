@@ -1,6 +1,6 @@
 [package]
 name = "rkv"
-version = "0.9.6"
+version = "0.9.7"
 authors = ["Richard Newman <rnewman@twinql.com>", "Nan Jiang <najiang@mozilla.com>", "Myk Melez <myk@mykzilla.org>"]
 description = "a simple, humane, typed Rust interface to LMDB"
 license = "Apache-2.0"
@@ -27,7 +27,7 @@ ordered-float = "1.0"
 uuid = "0.7"
 serde = "1.0"
 serde_derive = "1.0"
-url = "1.7.0"
+url = "2.0"
 
 # Get rid of failure's dependency on backtrace. Eventually
 # backtrace will move into Rust core, but we don't need it here.
