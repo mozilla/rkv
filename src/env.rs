@@ -397,6 +397,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "wrote: LmdbError(BadValSize)")]
     fn test_exceed_key_size_limit() {
         let root = Builder::new().prefix("test_exceed_key_size_limit").tempdir().expect("tempdir");
         println!("Root path: {:?}", root.path());
