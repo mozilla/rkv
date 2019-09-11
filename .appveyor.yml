@@ -9,8 +9,8 @@ install:
   - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
   - rustup-init.exe -y --default-host %TARGET%
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
-  - rustc -V
-  - cargo -V
+  - rustc -Vv
+  - cargo -Vv
 
 # Disable AppVeyor's build phase, let 'cargo test' take care of the build
 build: false
