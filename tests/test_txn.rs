@@ -8,25 +8,22 @@
 /// but also by value and date.  When we index the fields individually in their own tables, it
 /// is important that we run all operations within a single transaction to ensure coherence of
 /// the indices
-/// This test features helper functions for reading and writing the parts of the struct. 
+/// This test features helper functions for reading and writing the parts of the struct.
 /// Note that the reader functions take `Readable` because they might run within a Read
-/// Transaction or a Write Transaction.  The test demonstrates fetching values via both. 
-
+/// Transaction or a Write Transaction.  The test demonstrates fetching values via both.
 use rkv::{
     MultiStore,
-    SingleStore,
+    Readable,
     Rkv,
+    SingleStore,
     StoreOptions,
     Value,
     Writer,
-    Readable,
 };
 
 use tempfile::Builder;
 
 use std::fs;
-
-
 
 #[test]
 fn read_many() {
@@ -36,10 +33,10 @@ fn read_many() {
     let mut samplestore = k.open_single("s", StoreOptions::create()).expect("open");
     let mut datestore = k.open_multi("m", StoreOptions::create()).expect("open");
     let mut valuestore = k.open_multi("m", StoreOptions::create()).expect("open");
-   
+
     {
         let mut writer = k.write().expect("env write lock");
-   
+
         for id in 0..30_u64 {
             let value = format!("value{}", id);
             let date = format!("2019-06-{}", id);
@@ -48,7 +45,7 @@ fn read_many() {
             put_sample(&mut writer, &mut samplestore, id, &value);
         }
 
-        // now we read in the same transaction 
+        // now we read in the same transaction
         for id in 0..30_u64 {
             let value = format!("value{}", id);
             let date = format!("2019-06-{}", id);
@@ -59,7 +56,7 @@ fn read_many() {
             println!("{:?}, {:?}", samples, samples2);
         }
     }
-   
+
     {
         let reader = k.read().expect("env read lock");
         for id in 0..30_u64 {
@@ -76,22 +73,26 @@ fn read_many() {
 
 fn get_ids_by_field<Txn: Readable>(txn: &Txn, store: &MultiStore, field: &str) -> Vec<u64> {
     store
-        .get(txn, field).expect("get iterator")
+        .get(txn, field)
+        .expect("get iterator")
         .map(|id| match id.expect("field") {
             (_, Some(Value::U64(id))) => id,
             _ => panic!("getting value in iter"),
-        }).collect::<Vec<u64>>()
+        })
+        .collect::<Vec<u64>>()
 }
 
 fn get_samples<Txn: Readable>(txn: &Txn, samplestore: &SingleStore, ids: &Vec<u64>) -> Vec<String> {
-    ids.iter().map(|id| {
-        let bytes = id.to_be_bytes();;
-        match samplestore.get(txn, &bytes).expect("fetch sample") {
-            Some(Value::Str(sample)) => String::from(sample),
-            Some(_) => panic!("wrong type"),
-            None => panic!("no sample for this id!"),
-        }
-    }).collect::<Vec<String>>()
+    ids.iter()
+        .map(|id| {
+            let bytes = id.to_be_bytes();
+            match samplestore.get(txn, &bytes).expect("fetch sample") {
+                Some(Value::Str(sample)) => String::from(sample),
+                Some(_) => panic!("wrong type"),
+                None => panic!("no sample for this id!"),
+            }
+        })
+        .collect::<Vec<String>>()
 }
 
 fn put_sample(txn: &mut Writer, samplestore: &mut SingleStore, id: u64, value: &str) {
@@ -102,4 +103,3 @@ fn put_sample(txn: &mut Writer, samplestore: &mut SingleStore, id: u64, value: &
 fn put_id_field(txn: &mut Writer, store: &mut MultiStore, field: &str, id: u64) {
     store.put(txn, field, &Value::U64(id)).expect("put id");
 }
-
