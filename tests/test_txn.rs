@@ -30,9 +30,9 @@ fn read_many() {
     let root = Builder::new().prefix("test_txns").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
     let k = Rkv::new(root.path()).expect("new succeeded");
-    let mut samplestore = k.open_single("s", StoreOptions::create()).expect("open");
-    let mut datestore = k.open_multi("m", StoreOptions::create()).expect("open");
-    let mut valuestore = k.open_multi("m", StoreOptions::create()).expect("open");
+    let samplestore = k.open_single("s", StoreOptions::create()).expect("open");
+    let datestore = k.open_multi("m", StoreOptions::create()).expect("open");
+    let valuestore = k.open_multi("m", StoreOptions::create()).expect("open");
 
     {
         let mut writer = k.write().expect("env write lock");
@@ -40,19 +40,19 @@ fn read_many() {
         for id in 0..30_u64 {
             let value = format!("value{}", id);
             let date = format!("2019-06-{}", id);
-            put_id_field(&mut writer, &mut datestore, &date, id);
-            put_id_field(&mut writer, &mut valuestore, &value, id);
-            put_sample(&mut writer, &mut samplestore, id, &value);
+            put_id_field(&mut writer, datestore, &date, id);
+            put_id_field(&mut writer, valuestore, &value, id);
+            put_sample(&mut writer, samplestore, id, &value);
         }
 
         // now we read in the same transaction
         for id in 0..30_u64 {
             let value = format!("value{}", id);
             let date = format!("2019-06-{}", id);
-            let ids = get_ids_by_field(&writer, &datestore, &date);
-            let ids2 = get_ids_by_field(&writer, &valuestore, &value);
-            let samples = get_samples(&writer, &samplestore, &ids);
-            let samples2 = get_samples(&writer, &samplestore, &ids2);
+            let ids = get_ids_by_field(&writer, datestore, &date);
+            let ids2 = get_ids_by_field(&writer, valuestore, &value);
+            let samples = get_samples(&writer, samplestore, &ids);
+            let samples2 = get_samples(&writer, samplestore, &ids2);
             println!("{:?}, {:?}", samples, samples2);
         }
     }
@@ -62,16 +62,16 @@ fn read_many() {
         for id in 0..30_u64 {
             let value = format!("value{}", id);
             let date = format!("2019-06-{}", id);
-            let ids = get_ids_by_field(&reader, &datestore, &date);
-            let ids2 = get_ids_by_field(&reader, &valuestore, &value);
-            let samples = get_samples(&reader, &samplestore, &ids);
-            let samples2 = get_samples(&reader, &samplestore, &ids2);
+            let ids = get_ids_by_field(&reader, datestore, &date);
+            let ids2 = get_ids_by_field(&reader, valuestore, &value);
+            let samples = get_samples(&reader, samplestore, &ids);
+            let samples2 = get_samples(&reader, samplestore, &ids2);
             println!("{:?}, {:?}", samples, samples2);
         }
     }
 }
 
-fn get_ids_by_field<Txn: Readable>(txn: &Txn, store: &MultiStore, field: &str) -> Vec<u64> {
+fn get_ids_by_field<Txn: Readable>(txn: &Txn, store: MultiStore, field: &str) -> Vec<u64> {
     store
         .get(txn, field)
         .expect("get iterator")
@@ -82,7 +82,7 @@ fn get_ids_by_field<Txn: Readable>(txn: &Txn, store: &MultiStore, field: &str) -
         .collect::<Vec<u64>>()
 }
 
-fn get_samples<Txn: Readable>(txn: &Txn, samplestore: &SingleStore, ids: &Vec<u64>) -> Vec<String> {
+fn get_samples<Txn: Readable>(txn: &Txn, samplestore: SingleStore, ids: &[u64]) -> Vec<String> {
     ids.iter()
         .map(|id| {
             let bytes = id.to_be_bytes();
@@ -95,11 +95,11 @@ fn get_samples<Txn: Readable>(txn: &Txn, samplestore: &SingleStore, ids: &Vec<u6
         .collect::<Vec<String>>()
 }
 
-fn put_sample(txn: &mut Writer, samplestore: &mut SingleStore, id: u64, value: &str) {
+fn put_sample(txn: &mut Writer, samplestore: SingleStore, id: u64, value: &str) {
     let idbytes = id.to_be_bytes();
     samplestore.put(txn, &idbytes, &Value::Str(value)).expect("put id");
 }
 
-fn put_id_field(txn: &mut Writer, store: &mut MultiStore, field: &str, id: u64) {
+fn put_id_field(txn: &mut Writer, store: MultiStore, field: &str, id: u64) {
     store.put(txn, field, &Value::U64(id)).expect("put id");
 }
