@@ -31,5 +31,7 @@ script:
   # check all the targets (source code, tests, non-default crate features), and stop the build upon any warning
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo build --verbose
-  - cargo test --verbose
+  - export RUST_BACKTRACE=1
+  - cargo test --all --verbose
+  - cargo test --release --all --verbose
   - ./run-all-examples.sh
