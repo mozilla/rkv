@@ -17,22 +17,22 @@ default = []
 backtrace = ["failure/backtrace", "failure/std"]
 
 [dependencies]
-arrayref = "0.3"
-bincode = "1.0"
-bitflags = "1"
-byteorder = "1"
-lazy_static = "1.0.2"
+arrayref = "0.3.5"
+bincode = "1.1.4"
+bitflags = "1.1.0"
+byteorder = "1.3.2"
+lazy_static = "1.4.0"
 lmdb-rkv = "0.11.4"
-ordered-float = "1.0"
-uuid = "0.7"
-serde = "1.0"
-serde_derive = "1.0"
-url = "2.0"
+ordered-float = "1.0.2"
+uuid = "0.7.4"
+serde = "1.0.100"
+serde_derive = "1.0.100"
+url = "2.1.0"
 
 # Get rid of failure's dependency on backtrace. Eventually
 # backtrace will move into Rust core, but we don't need it here.
 [dependencies.failure]
-version = "0.1.2"
+version = "0.1.5"
 default_features = false
 features = ["derive"]
 
