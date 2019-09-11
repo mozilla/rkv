@@ -1,9 +1,9 @@
 environment:
   matrix:
-  - TARGET: x86_64-pc-windows-msvc
-    platform: x64
-  - TARGET: i686-pc-windows-msvc
-    platform: x86
+    - TARGET: x86_64-pc-windows-msvc
+      platform: x64
+    - TARGET: i686-pc-windows-msvc
+      platform: x86
 
 install:
   - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
@@ -16,4 +16,4 @@ install:
 build: false
 
 test_script:
-- cargo test --all --target %TARGET%
+  - cargo test --all --target %TARGET%
