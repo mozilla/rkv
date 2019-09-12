@@ -2,14 +2,15 @@
 name = "rkv"
 version = "0.9.7"
 authors = ["Richard Newman <rnewman@twinql.com>", "Nan Jiang <najiang@mozilla.com>", "Myk Melez <myk@mykzilla.org>"]
-description = "a simple, humane, typed Rust interface to LMDB"
+edition = "2018"
 license = "Apache-2.0"
+description = "a simple, humane, typed Rust interface to LMDB"
+documentation = "https://docs.rs/rkv"
 homepage = "https://github.com/mozilla/rkv"
 repository = "https://github.com/mozilla/rkv"
 readme = "README.md"
 keywords = ["lmdb", "database", "storage"]
 categories = ["database"]
-edition = "2018"
 exclude = ["/tests/envs/*"]
 
 [features]
