@@ -32,3 +32,7 @@ test_script:
   - SET RUST_BACKTRACE=1
   - cargo test --all --target %TARGET% --verbose
   - cargo test --all --release --target %TARGET% --verbose
+
+cache:
+  - C:\Users\appveyor\.cargo\registry
+  - target
