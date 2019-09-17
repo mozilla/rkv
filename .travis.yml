@@ -25,6 +25,14 @@ before_script:
   - rustup toolchain install nightly-2019-09-11
   - rustup component add rustfmt --toolchain nightly-2019-09-11
   - rustup component add clippy --toolchain nightly-2019-09-11
+  # Use official clang in order to test out building on osx.
+  - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then
+      brew update;
+      brew install llvm;
+      export PATH="/usr/local/opt/llvm/bin:$PATH";
+      export LDFLAGS="-L/usr/local/opt/llvm/lib";
+      export CPPFLAGS="-I/usr/local/opt/llvm/include";
+    fi
 
 script:
   - cargo +nightly-2019-09-11 fmt --all -- --check
