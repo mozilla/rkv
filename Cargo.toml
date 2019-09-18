@@ -13,6 +13,10 @@ keywords = ["lmdb", "database", "storage"]
 categories = ["database"]
 exclude = ["/tests/envs/*"]
 
+[badges]
+travis-ci = { repository = "mozilla/rkv" }
+appveyor = { repository = "mozilla/rkv" }
+
 [features]
 default = []
 backtrace = ["failure/backtrace", "failure/std"]
