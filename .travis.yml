@@ -1,4 +1,5 @@
 language: rust
+sudo: false
 
 cache: cargo
 
@@ -11,11 +12,6 @@ rust:
 os:
   - linux
   - osx
-
-matrix:
-  allow_failures:
-    - rust: nightly
-  fast_finish: true
 
 before_script:
   # We install a known-to-have-rustfmt version of the nightly toolchain
