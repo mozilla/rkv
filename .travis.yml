@@ -13,6 +13,11 @@ os:
   - linux
   - osx
 
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
 before_script:
   # We install a known-to-have-rustfmt version of the nightly toolchain
   # in order to run the nightly version of rustfmt, which supports rules
@@ -32,8 +37,7 @@ before_script:
 
 script:
   - cargo +nightly-2019-09-11 fmt --all -- --check
-  - cargo +nightly-2019-09-11 clippy --all-features -- -D warnings
-  - cargo build --features with-clang --verbose
+  - CC="clang" cargo +nightly-2019-09-11 clippy --all-features -- -D warnings
   - cargo build --verbose
   - export RUST_BACKTRACE=1
   - cargo test --all --verbose

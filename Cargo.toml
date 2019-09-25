@@ -16,7 +16,6 @@ exclude = ["/tests/envs/*"]
 [features]
 default = []
 backtrace = ["failure/backtrace", "failure/std"]
-with-clang = ["lmdb-rkv/with-clang"]
 with-asan = ["lmdb-rkv/with-asan"]
 with-fuzzer = ["lmdb-rkv/with-fuzzer"]
 with-fuzzer-no-link = ["lmdb-rkv/with-fuzzer-no-link"]
@@ -27,7 +26,7 @@ bincode = "1.0"
 bitflags = "1"
 byteorder = "1"
 lazy_static = "1.0"
-lmdb-rkv = "0.12.2"
+lmdb-rkv = "0.12.3"
 ordered-float = "1.0"
 uuid = "0.7"
 serde = "1.0"
