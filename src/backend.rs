@@ -8,28 +8,17 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod integer;
-pub mod integermulti;
-pub mod keys;
-pub mod multi;
-pub mod single;
+mod common;
+mod impl_lmdb;
+mod traits;
 
-use crate::backend::BackendDatabaseFlags;
+pub use common::*;
+pub use traits::*;
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
-
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
-    }
-}
+pub use impl_lmdb::DatabaseImpl as LmdbDatabase;
+pub use impl_lmdb::EnvironmentBuilderImpl as Lmdb;
+pub use impl_lmdb::EnvironmentImpl as LmdbEnvironment;
+pub use impl_lmdb::ErrorImpl as LmdbError;
+pub use impl_lmdb::RoCursorImpl as LmdbRoCursor;
+pub use impl_lmdb::RoTransactionImpl as LmdbRoTransaction;
+pub use impl_lmdb::RwTransactionImpl as LmdbRwTransaction;

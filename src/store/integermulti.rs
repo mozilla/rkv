@@ -8,86 +8,104 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use lmdb::{
-    Database,
-    WriteFlags,
-};
-
 use std::marker::PhantomData;
 
+use crate::backend::{
+    BackendDatabase,
+    BackendIter,
+    BackendRoCursor,
+    BackendRwTransaction,
+};
 use crate::error::StoreError;
-
 use crate::readwrite::{
     Readable,
     Writer,
 };
-
-use crate::value::Value;
-
-use crate::store::multi::{
-    Iter,
-    MultiStore,
-};
-
 use crate::store::keys::{
     Key,
     PrimitiveInt,
 };
+use crate::store::multi::{
+    Iter,
+    MultiStore,
+};
+use crate::value::Value;
 
-pub struct MultiIntegerStore<K>
-where
-    K: PrimitiveInt,
-{
-    inner: MultiStore,
+type EmptyResult = Result<(), StoreError>;
+
+pub struct MultiIntegerStore<D, K> {
+    inner: MultiStore<D>,
     phantom: PhantomData<K>,
 }
 
-impl<K> MultiIntegerStore<K>
+impl<D, K> MultiIntegerStore<D, K>
 where
+    D: BackendDatabase,
     K: PrimitiveInt,
 {
-    pub(crate) fn new(db: Database) -> MultiIntegerStore<K> {
+    pub(crate) fn new(db: D) -> MultiIntegerStore<D, K> {
         MultiIntegerStore {
             inner: MultiStore::new(db),
             phantom: PhantomData,
         }
     }
 
-    pub fn get<'env, T: Readable>(&self, reader: &'env T, k: K) -> Result<Iter<'env>, StoreError> {
+    pub fn get<'env, R, I, C>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
+    where
+        R: Readable<'env, Database = D, RoCursor = C>,
+        I: BackendIter<'env>,
+        C: BackendRoCursor<'env, Iter = I>,
+    {
         self.inner.get(reader, Key::new(&k)?)
     }
 
-    pub fn get_first<'env, T: Readable>(&self, reader: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
+    pub fn get_first<'env, R>(&self, reader: &'env R, k: K) -> Result<Option<Value<'env>>, StoreError>
+    where
+        R: Readable<'env, Database = D>,
+    {
         self.inner.get_first(reader, Key::new(&k)?)
     }
 
-    pub fn put(&self, writer: &mut Writer, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<T>(&self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.put(writer, Key::new(&k)?, v)
     }
 
-    pub fn put_with_flags(&self, writer: &mut Writer, k: K, v: &Value, flags: WriteFlags) -> Result<(), StoreError> {
+    pub fn put_with_flags<T>(&self, writer: &mut Writer<T>, k: K, v: &Value, flags: T::Flags) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.put_with_flags(writer, Key::new(&k)?, v, flags)
     }
 
-    pub fn delete_all(&self, writer: &mut Writer, k: K) -> Result<(), StoreError> {
+    pub fn delete_all<T>(&self, writer: &mut Writer<T>, k: K) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.delete_all(writer, Key::new(&k)?)
     }
 
-    pub fn delete(&self, writer: &mut Writer, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn delete<T>(&self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.delete(writer, Key::new(&k)?, v)
     }
 
-    pub fn clear(&self, writer: &mut Writer) -> Result<(), StoreError> {
+    pub fn clear<T>(&self, writer: &mut Writer<T>) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.clear(writer)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    extern crate tempfile;
-
-    use self::tempfile::Builder;
     use std::fs;
+    use tempfile::Builder;
 
     use super::*;
     use crate::*;
@@ -96,7 +114,8 @@ mod tests {
     fn test_integer_keys() {
         let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         let s = k.open_multi_integer("s", StoreOptions::create()).expect("open");
 
         macro_rules! test_integer_keys {
@@ -120,7 +139,8 @@ mod tests {
     fn test_clear() {
         let root = Builder::new().prefix("test_multi_integer_clear").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         let s = k.open_multi_integer("s", StoreOptions::create()).expect("open");
 
         {

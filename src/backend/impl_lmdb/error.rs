@@ -8,28 +8,27 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod integer;
-pub mod integermulti;
-pub mod keys;
-pub mod multi;
-pub mod single;
+use std::fmt;
 
-use crate::backend::BackendDatabaseFlags;
+use crate::backend::traits::BackendError;
+use crate::error::StoreError;
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
+#[derive(Debug)]
+pub struct ErrorImpl(pub(crate) lmdb::Error);
+
+impl BackendError for ErrorImpl {}
+
+impl fmt::Display for ErrorImpl {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
+    }
 }
 
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
+impl Into<StoreError> for ErrorImpl {
+    fn into(self) -> StoreError {
+        match self.0 {
+            lmdb::Error::NotFound => StoreError::KeyValuePairNotFound,
+            _ => StoreError::LmdbError(self.0),
         }
     }
 }

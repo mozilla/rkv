@@ -10,56 +10,66 @@
 
 use std::marker::PhantomData;
 
-use lmdb::Database;
-
+use crate::backend::{
+    BackendDatabase,
+    BackendRwTransaction,
+};
 use crate::error::StoreError;
-
 use crate::readwrite::{
     Readable,
     Writer,
 };
-
-use crate::value::Value;
-
-use crate::store::single::SingleStore;
-
 use crate::store::keys::{
     Key,
     PrimitiveInt,
 };
+use crate::store::single::SingleStore;
+use crate::value::Value;
 
-pub struct IntegerStore<K>
-where
-    K: PrimitiveInt,
-{
-    inner: SingleStore,
+type EmptyResult = Result<(), StoreError>;
+
+pub struct IntegerStore<D, K> {
+    inner: SingleStore<D>,
     phantom: PhantomData<K>,
 }
 
-impl<K> IntegerStore<K>
+impl<D, K> IntegerStore<D, K>
 where
+    D: BackendDatabase,
     K: PrimitiveInt,
 {
-    pub(crate) fn new(db: Database) -> IntegerStore<K> {
+    pub(crate) fn new(db: D) -> IntegerStore<D, K> {
         IntegerStore {
             inner: SingleStore::new(db),
             phantom: PhantomData,
         }
     }
 
-    pub fn get<'env, T: Readable>(&self, reader: &'env T, k: K) -> Result<Option<Value<'env>>, StoreError> {
+    pub fn get<'env, R>(&self, reader: &'env R, k: K) -> Result<Option<Value<'env>>, StoreError>
+    where
+        R: Readable<'env, Database = D>,
+    {
         self.inner.get(reader, Key::new(&k)?)
     }
 
-    pub fn put(&self, writer: &mut Writer, k: K, v: &Value) -> Result<(), StoreError> {
+    pub fn put<T>(&self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.put(writer, Key::new(&k)?, v)
     }
 
-    pub fn delete(&self, writer: &mut Writer, k: K) -> Result<(), StoreError> {
+    pub fn delete<T>(&self, writer: &mut Writer<T>, k: K) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.delete(writer, Key::new(&k)?)
     }
 
-    pub fn clear(&self, writer: &mut Writer) -> Result<(), StoreError> {
+    pub fn clear<T>(&self, writer: &mut Writer<T>) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+    {
         self.inner.clear(writer)
     }
 }
@@ -76,7 +86,8 @@ mod tests {
     fn test_integer_keys() {
         let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
         macro_rules! test_integer_keys {
@@ -100,7 +111,8 @@ mod tests {
     fn test_clear() {
         let root = Builder::new().prefix("test_integer_clear").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
         {
