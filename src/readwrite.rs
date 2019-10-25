@@ -27,11 +27,11 @@ pub trait Readable<'env> {
     type Database: BackendDatabase;
     type RoCursor: BackendRoCursor<'env>;
 
-    fn get<K>(&'env self, db: Self::Database, k: &K) -> Result<Option<Value<'env>>, StoreError>
+    fn get<K>(&'env self, db: &Self::Database, k: &K) -> Result<Option<Value<'env>>, StoreError>
     where
         K: AsRef<[u8]>;
 
-    fn open_ro_cursor(&'env self, db: Self::Database) -> Result<Self::RoCursor, StoreError>;
+    fn open_ro_cursor(&'env self, db: &Self::Database) -> Result<Self::RoCursor, StoreError>;
 }
 
 impl<'env, T> Readable<'env> for Reader<T>
@@ -41,7 +41,7 @@ where
     type Database = T::Database;
     type RoCursor = T::RoCursor;
 
-    fn get<K>(&'env self, db: T::Database, k: &K) -> Result<Option<Value<'env>>, StoreError>
+    fn get<K>(&'env self, db: &T::Database, k: &K) -> Result<Option<Value<'env>>, StoreError>
     where
         K: AsRef<[u8]>,
     {
@@ -49,7 +49,7 @@ where
         read_transform(bytes)
     }
 
-    fn open_ro_cursor(&'env self, db: T::Database) -> Result<T::RoCursor, StoreError> {
+    fn open_ro_cursor(&'env self, db: &T::Database) -> Result<T::RoCursor, StoreError> {
         self.0.open_ro_cursor(db).map_err(|e| e.into())
     }
 }
@@ -76,7 +76,7 @@ where
     type Database = T::Database;
     type RoCursor = T::RoCursor;
 
-    fn get<K>(&'env self, db: T::Database, k: &K) -> Result<Option<Value<'env>>, StoreError>
+    fn get<K>(&'env self, db: &T::Database, k: &K) -> Result<Option<Value<'env>>, StoreError>
     where
         K: AsRef<[u8]>,
     {
@@ -84,7 +84,7 @@ where
         read_transform(bytes)
     }
 
-    fn open_ro_cursor(&'env self, db: T::Database) -> Result<T::RoCursor, StoreError> {
+    fn open_ro_cursor(&'env self, db: &T::Database) -> Result<T::RoCursor, StoreError> {
         self.0.open_ro_cursor(db).map_err(|e| e.into())
     }
 }
@@ -107,7 +107,7 @@ where
         self.0.abort();
     }
 
-    pub(crate) fn put<K>(&mut self, db: T::Database, k: &K, v: &Value, flags: T::Flags) -> Result<(), StoreError>
+    pub(crate) fn put<K>(&mut self, db: &T::Database, k: &K, v: &Value, flags: T::Flags) -> Result<(), StoreError>
     where
         K: AsRef<[u8]>,
     {
@@ -115,14 +115,14 @@ where
         self.0.put(db, k.as_ref(), &v.to_bytes()?, flags).map_err(|e| e.into())
     }
 
-    pub(crate) fn delete<K>(&mut self, db: T::Database, k: &K, v: Option<&[u8]>) -> Result<(), StoreError>
+    pub(crate) fn delete<K>(&mut self, db: &T::Database, k: &K, v: Option<&[u8]>) -> Result<(), StoreError>
     where
         K: AsRef<[u8]>,
     {
         self.0.del(db, k.as_ref(), v).map_err(|e| e.into())
     }
 
-    pub(crate) fn clear(&mut self, db: T::Database) -> Result<(), StoreError> {
+    pub(crate) fn clear(&mut self, db: &T::Database) -> Result<(), StoreError> {
         self.0.clear_db(db).map_err(|e| e.into())
     }
 }

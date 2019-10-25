@@ -27,7 +27,6 @@ use crate::value::Value;
 
 type EmptyResult = Result<(), StoreError>;
 
-#[derive(Copy, Clone)]
 pub struct MultiStore<D> {
     db: D,
 }
@@ -49,14 +48,14 @@ where
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
-    pub fn get<'env, R, I, C, K>(self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
+    pub fn get<'env, R, I, C, K>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
     where
         R: Readable<'env, Database = D, RoCursor = C>,
         I: BackendIter<'env>,
         C: BackendRoCursor<'env, Iter = I>,
         K: AsRef<[u8]>,
     {
-        let mut cursor = reader.open_ro_cursor(self.db)?;
+        let mut cursor = reader.open_ro_cursor(&self.db)?;
         let iter = cursor.iter_dup_of(k);
 
         Ok(Iter {
@@ -67,54 +66,54 @@ where
     }
 
     /// Provides the first value that matches this key
-    pub fn get_first<'env, R, K>(self, reader: &'env R, k: K) -> Result<Option<Value<'env>>, StoreError>
+    pub fn get_first<'env, R, K>(&self, reader: &'env R, k: K) -> Result<Option<Value<'env>>, StoreError>
     where
         R: Readable<'env, Database = D>,
         K: AsRef<[u8]>,
     {
-        reader.get(self.db, &k)
+        reader.get(&self.db, &k)
     }
 
     /// Insert a value at the specified key.
     /// This put will allow duplicate entries.  If you wish to have duplicate entries
     /// rejected, use the `put_with_flags` function and specify NO_DUP_DATA
-    pub fn put<T, K>(self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
+    pub fn put<T, K>(&self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,
         K: AsRef<[u8]>,
     {
-        writer.put(self.db, &k, v, T::Flags::empty())
+        writer.put(&self.db, &k, v, T::Flags::empty())
     }
 
-    pub fn put_with_flags<T, K>(self, writer: &mut Writer<T>, k: K, v: &Value, flags: T::Flags) -> EmptyResult
+    pub fn put_with_flags<T, K>(&self, writer: &mut Writer<T>, k: K, v: &Value, flags: T::Flags) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,
         K: AsRef<[u8]>,
     {
-        writer.put(self.db, &k, v, flags)
+        writer.put(&self.db, &k, v, flags)
     }
 
-    pub fn delete_all<T, K>(self, writer: &mut Writer<T>, k: K) -> EmptyResult
+    pub fn delete_all<T, K>(&self, writer: &mut Writer<T>, k: K) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,
         K: AsRef<[u8]>,
     {
-        writer.delete(self.db, &k, None)
+        writer.delete(&self.db, &k, None)
     }
 
-    pub fn delete<T, K>(self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
+    pub fn delete<T, K>(&self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,
         K: AsRef<[u8]>,
     {
-        writer.delete(self.db, &k, Some(&v.to_bytes()?))
+        writer.delete(&self.db, &k, Some(&v.to_bytes()?))
     }
 
-    pub fn clear<T>(self, writer: &mut Writer<T>) -> EmptyResult
+    pub fn clear<T>(&self, writer: &mut Writer<T>) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,
     {
-        writer.clear(self.db)
+        writer.clear(&self.db)
     }
 }
 

@@ -27,7 +27,6 @@ use crate::value::Value;
 
 type EmptyResult = Result<(), StoreError>;
 
-#[derive(Copy, Clone)]
 pub struct SingleStore<D> {
     db: D,
 }
@@ -48,38 +47,38 @@ where
         }
     }
 
-    pub fn get<'env, R, K>(self, reader: &'env R, k: K) -> Result<Option<Value<'env>>, StoreError>
+    pub fn get<'env, R, K>(&self, reader: &'env R, k: K) -> Result<Option<Value<'env>>, StoreError>
     where
         R: Readable<'env, Database = D>,
         K: AsRef<[u8]>,
     {
-        reader.get(self.db, &k)
+        reader.get(&self.db, &k)
     }
 
     // TODO: flags
-    pub fn put<T, K>(self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
+    pub fn put<T, K>(&self, writer: &mut Writer<T>, k: K, v: &Value) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,
         K: AsRef<[u8]>,
     {
-        writer.put(self.db, &k, v, T::Flags::empty())
+        writer.put(&self.db, &k, v, T::Flags::empty())
     }
 
-    pub fn delete<T, K>(self, writer: &mut Writer<T>, k: K) -> EmptyResult
+    pub fn delete<T, K>(&self, writer: &mut Writer<T>, k: K) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,
         K: AsRef<[u8]>,
     {
-        writer.delete(self.db, &k, None)
+        writer.delete(&self.db, &k, None)
     }
 
-    pub fn iter_start<'env, R, I, C>(self, reader: &'env R) -> Result<Iter<'env, I, C>, StoreError>
+    pub fn iter_start<'env, R, I, C>(&self, reader: &'env R) -> Result<Iter<'env, I, C>, StoreError>
     where
         R: Readable<'env, Database = D, RoCursor = C>,
         I: BackendIter<'env>,
         C: BackendRoCursor<'env, Iter = I>,
     {
-        let mut cursor = reader.open_ro_cursor(self.db)?;
+        let mut cursor = reader.open_ro_cursor(&self.db)?;
 
         // We call Cursor.iter() instead of Cursor.iter_start() because
         // the latter panics at "called `Result::unwrap()` on an `Err` value:
@@ -98,14 +97,14 @@ where
         })
     }
 
-    pub fn iter_from<'env, R, I, C, K>(self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
+    pub fn iter_from<'env, R, I, C, K>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
     where
         R: Readable<'env, Database = D, RoCursor = C>,
         I: BackendIter<'env>,
         C: BackendRoCursor<'env, Iter = I>,
         K: AsRef<[u8]>,
     {
-        let mut cursor = reader.open_ro_cursor(self.db)?;
+        let mut cursor = reader.open_ro_cursor(&self.db)?;
         let iter = cursor.iter_from(k);
 
         Ok(Iter {
@@ -115,12 +114,12 @@ where
         })
     }
 
-    pub fn clear<T>(self, writer: &mut Writer<T>) -> EmptyResult
+    pub fn clear<T>(&self, writer: &mut Writer<T>) -> EmptyResult
     where
         D: BackendDatabase,
         T: BackendRwTransaction<Database = D>,
     {
-        writer.clear(self.db)
+        writer.clear(&self.db)
     }
 }
 

@@ -23,7 +23,7 @@ use crate::error::StoreError;
 
 pub trait BackendError: Debug + Display + Into<StoreError> {}
 
-pub trait BackendDatabase: Debug + Eq + PartialEq + Copy + Clone {}
+pub trait BackendDatabase: Debug + Eq + PartialEq {}
 
 pub trait BackendFlags: Debug + Eq + PartialEq + Copy + Clone + Default {
     fn empty() -> Self;
@@ -120,7 +120,7 @@ pub trait BackendRoTransaction: Debug {
     type Database: BackendDatabase;
     type Flags: BackendWriteFlags;
 
-    fn get(&self, db: Self::Database, key: &[u8]) -> Result<&[u8], Self::Error>;
+    fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error>;
 
     fn abort(self);
 }
@@ -130,13 +130,13 @@ pub trait BackendRwTransaction: Debug {
     type Database: BackendDatabase;
     type Flags: BackendWriteFlags;
 
-    fn get(&self, db: Self::Database, key: &[u8]) -> Result<&[u8], Self::Error>;
+    fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error>;
 
-    fn put(&mut self, db: Self::Database, key: &[u8], value: &[u8], flags: Self::Flags) -> Result<(), Self::Error>;
+    fn put(&mut self, db: &Self::Database, key: &[u8], value: &[u8], flags: Self::Flags) -> Result<(), Self::Error>;
 
-    fn del(&mut self, db: Self::Database, key: &[u8], value: Option<&[u8]>) -> Result<(), Self::Error>;
+    fn del(&mut self, db: &Self::Database, key: &[u8], value: Option<&[u8]>) -> Result<(), Self::Error>;
 
-    fn clear_db(&mut self, db: Self::Database) -> Result<(), Self::Error>;
+    fn clear_db(&mut self, db: &Self::Database) -> Result<(), Self::Error>;
 
     fn commit(self) -> Result<(), Self::Error>;
 
@@ -146,13 +146,13 @@ pub trait BackendRwTransaction: Debug {
 pub trait BackendRoCursorTransaction<'env>: BackendRoTransaction {
     type RoCursor: BackendRoCursor<'env>;
 
-    fn open_ro_cursor(&'env self, db: Self::Database) -> Result<Self::RoCursor, Self::Error>;
+    fn open_ro_cursor(&'env self, db: &Self::Database) -> Result<Self::RoCursor, Self::Error>;
 }
 
 pub trait BackendRwCursorTransaction<'env>: BackendRwTransaction {
     type RoCursor: BackendRoCursor<'env>;
 
-    fn open_ro_cursor(&'env self, db: Self::Database) -> Result<Self::RoCursor, Self::Error>;
+    fn open_ro_cursor(&'env self, db: &Self::Database) -> Result<Self::RoCursor, Self::Error>;
 }
 
 pub trait BackendRoCursor<'env>: Debug {
