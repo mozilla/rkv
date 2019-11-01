@@ -32,10 +32,8 @@ use crate::readwrite::{
     Reader,
     Writer,
 };
-use crate::store::integer::{
-    IntegerStore,
-    PrimitiveInt,
-};
+use crate::store::integer::IntegerStore;
+use crate::store::keys::PrimitiveInt;
 
 use crate::store::integermulti::MultiIntegerStore;
 use crate::store::multi::MultiStore;

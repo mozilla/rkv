@@ -29,7 +29,7 @@ use crate::store::multi::{
     MultiStore,
 };
 
-use crate::store::integer::{
+use crate::store::keys::{
     Key,
     PrimitiveInt,
 };

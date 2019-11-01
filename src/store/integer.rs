@@ -10,16 +10,9 @@
 
 use std::marker::PhantomData;
 
-use bincode::serialize;
-
-use serde::Serialize;
-
 use lmdb::Database;
 
-use crate::error::{
-    DataError,
-    StoreError,
-};
+use crate::error::StoreError;
 
 use crate::readwrite::{
     Readable,
@@ -30,50 +23,10 @@ use crate::value::Value;
 
 use crate::store::single::SingleStore;
 
-pub trait EncodableKey {
-    fn to_bytes(&self) -> Result<Vec<u8>, DataError>;
-}
-
-pub trait PrimitiveInt: EncodableKey {}
-
-impl PrimitiveInt for u32 {}
-
-impl<T> EncodableKey for T
-where
-    T: Serialize,
-{
-    fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
-        serialize(self) // TODO: limited key length.
-            .map_err(Into::into)
-    }
-}
-
-pub(crate) struct Key<K> {
-    bytes: Vec<u8>,
-    phantom: PhantomData<K>,
-}
-
-impl<K> AsRef<[u8]> for Key<K>
-where
-    K: EncodableKey,
-{
-    fn as_ref(&self) -> &[u8] {
-        self.bytes.as_ref()
-    }
-}
-
-impl<K> Key<K>
-where
-    K: EncodableKey,
-{
-    #[allow(clippy::new_ret_no_self)]
-    pub(crate) fn new(k: &K) -> Result<Key<K>, DataError> {
-        Ok(Key {
-            bytes: k.to_bytes()?,
-            phantom: PhantomData,
-        })
-    }
-}
+use crate::store::keys::{
+    Key,
+    PrimitiveInt,
+};
 
 pub struct IntegerStore<K>
 where

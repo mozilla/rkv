@@ -228,11 +228,9 @@ pub use self::readwrite::{
     Reader,
     Writer,
 };
-pub use self::store::integer::{
-    IntegerStore,
-    PrimitiveInt,
-};
+pub use self::store::integer::IntegerStore;
 pub use self::store::integermulti::MultiIntegerStore;
+pub use self::store::keys::PrimitiveInt;
 pub use self::store::multi::MultiStore;
 pub use self::store::single::SingleStore;
 pub use self::store::Options as StoreOptions;
