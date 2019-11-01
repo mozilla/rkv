@@ -8,15 +8,16 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+use std::fs;
+use std::sync::Arc;
+
+use tempfile::Builder;
+
+use rkv::backend::Lmdb;
 use rkv::{
     Manager,
     Rkv,
 };
-use std::{
-    fs,
-    sync::Arc,
-};
-use tempfile::Builder;
 
 #[test]
 // Identical to the same-named unit test, but this one confirms that it works
@@ -28,7 +29,7 @@ fn test_same() {
     let p = root.path();
     assert!(Manager::singleton().read().unwrap().get(p).expect("success").is_none());
 
-    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new).expect("created");
+    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new::<Lmdb>).expect("created");
     let fetched_arc = Manager::singleton().read().unwrap().get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }

@@ -8,28 +8,17 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod integer;
-pub mod integermulti;
-pub mod keys;
-pub mod multi;
-pub mod single;
+use super::ErrorImpl;
+use crate::backend::traits::BackendIter;
 
-use crate::backend::BackendDatabaseFlags;
+// FIXME: Use generics instead.
+pub struct IterImpl<'env>(pub(crate) Box<dyn Iterator<Item = (&'env [u8], &'env [u8])> + 'env>);
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
+impl<'env> BackendIter<'env> for IterImpl<'env> {
+    type Error = ErrorImpl;
 
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
+    #[allow(clippy::type_complexity)]
+    fn next(&mut self) -> Option<Result<(&'env [u8], &'env [u8]), Self::Error>> {
+        self.0.next().map(Ok)
     }
 }

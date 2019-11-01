@@ -8,28 +8,32 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod integer;
-pub mod integermulti;
-pub mod keys;
-pub mod multi;
-pub mod single;
+use crate::backend::traits::BackendStat;
 
-use crate::backend::BackendDatabaseFlags;
+pub struct StatImpl;
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
+impl BackendStat for StatImpl {
+    fn page_size(&self) -> usize {
+        unimplemented!()
+    }
 
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
+    fn depth(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn branch_pages(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn leaf_pages(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn overflow_pages(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn entries(&self) -> usize {
+        unimplemented!()
     }
 }

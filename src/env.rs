@@ -9,82 +9,91 @@
 // specific language governing permissions and limitations under the License.
 
 use std::os::raw::c_uint;
-
 use std::path::{
     Path,
     PathBuf,
 };
 
-use lmdb;
-
-use lmdb::{
-    Database,
+use crate::backend::{
+    BackendDatabaseFlags,
+    BackendEnvironment,
+    BackendEnvironmentBuilder,
+    BackendInfo,
+    BackendRoCursorTransaction,
+    BackendRwCursorTransaction,
+    BackendStat,
     DatabaseFlags,
-    Environment,
-    EnvironmentBuilder,
-    Error,
-    Info,
-    Stat,
 };
-
 use crate::error::StoreError;
 use crate::readwrite::{
     Reader,
     Writer,
 };
-use crate::store::integer::{
-    IntegerStore,
-    PrimitiveInt,
-};
-
+use crate::store::integer::IntegerStore;
 use crate::store::integermulti::MultiIntegerStore;
+use crate::store::keys::PrimitiveInt;
 use crate::store::multi::MultiStore;
 use crate::store::single::SingleStore;
 use crate::store::Options as StoreOptions;
 
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
-/// Wrapper around an `lmdb::Environment`.
+/// Wrapper around an `Environment` (e.g. an LMDB environment).
 #[derive(Debug)]
-pub struct Rkv {
+pub struct Rkv<E> {
     path: PathBuf,
-    env: Environment,
+    env: E,
 }
 
 /// Static methods.
-impl Rkv {
-    pub fn environment_builder() -> EnvironmentBuilder {
-        Environment::new()
+impl<'env, E> Rkv<E>
+where
+    E: BackendEnvironment<'env>,
+{
+    pub fn environment_builder<B>() -> B
+    where
+        B: BackendEnvironmentBuilder<'env, Environment = E>,
+    {
+        B::new()
     }
 
     /// Return a new Rkv environment that supports up to `DEFAULT_MAX_DBS` open databases.
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(path: &Path) -> Result<Rkv, StoreError> {
-        Rkv::with_capacity(path, DEFAULT_MAX_DBS)
+    pub fn new<B>(path: &Path) -> Result<Rkv<E>, StoreError>
+    where
+        B: BackendEnvironmentBuilder<'env, Environment = E>,
+    {
+        Rkv::with_capacity::<B>(path, DEFAULT_MAX_DBS)
     }
 
     /// Return a new Rkv environment from the provided builder.
-    pub fn from_env(path: &Path, env: EnvironmentBuilder) -> Result<Rkv, StoreError> {
+    pub fn from_env<B>(path: &Path, builder: B) -> Result<Rkv<E>, StoreError>
+    where
+        B: BackendEnvironmentBuilder<'env, Environment = E>,
+    {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
         }
 
         Ok(Rkv {
             path: path.into(),
-            env: env.open(path).map_err(|e| match e {
-                lmdb::Error::Other(2) => StoreError::DirectoryDoesNotExistError(path.into()),
-                e => StoreError::LmdbError(e),
+            env: builder.open(path).map_err(|e| match e.into() {
+                StoreError::OtherError(2) => StoreError::DirectoryDoesNotExistError(path.into()),
+                e => e,
             })?,
         })
     }
 
     /// Return a new Rkv environment that supports the specified number of open databases.
-    pub fn with_capacity(path: &Path, max_dbs: c_uint) -> Result<Rkv, StoreError> {
+    pub fn with_capacity<B>(path: &Path, max_dbs: c_uint) -> Result<Rkv<E>, StoreError>
+    where
+        B: BackendEnvironmentBuilder<'env, Environment = E>,
+    {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
         }
 
-        let mut builder = Rkv::environment_builder();
+        let mut builder = B::new();
         builder.set_max_dbs(max_dbs);
 
         // Future: set flags, maximum size, etc. here if necessary.
@@ -93,11 +102,18 @@ impl Rkv {
 }
 
 /// Store creation methods.
-impl Rkv {
+impl<'env, E> Rkv<E>
+where
+    E: BackendEnvironment<'env>,
+{
     /// Create or Open an existing database in (&[u8] -> Single Value) mode.
     /// Note: that create=true cannot be called concurrently with other operations
     /// so if you are sure that the database exists, call this with create=false.
-    pub fn open_single<'s, T>(&self, name: T, opts: StoreOptions) -> Result<SingleStore, StoreError>
+    pub fn open_single<'s, T>(
+        &self,
+        name: T,
+        opts: StoreOptions<E::Flags>,
+    ) -> Result<SingleStore<E::Database>, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
@@ -107,12 +123,13 @@ impl Rkv {
     /// Create or Open an existing database in (Integer -> Single Value) mode.
     /// Note: that create=true cannot be called concurrently with other operations
     /// so if you are sure that the database exists, call this with create=false.
-    pub fn open_integer<'s, T, K: PrimitiveInt>(
+    pub fn open_integer<'s, T, K>(
         &self,
         name: T,
-        mut opts: StoreOptions,
-    ) -> Result<IntegerStore<K>, StoreError>
+        mut opts: StoreOptions<E::Flags>,
+    ) -> Result<IntegerStore<E::Database, K>, StoreError>
     where
+        K: PrimitiveInt,
         T: Into<Option<&'s str>>,
     {
         opts.flags.set(DatabaseFlags::INTEGER_KEY, true);
@@ -122,7 +139,11 @@ impl Rkv {
     /// Create or Open an existing database in (&[u8] -> Multiple Values) mode.
     /// Note: that create=true cannot be called concurrently with other operations
     /// so if you are sure that the database exists, call this with create=false.
-    pub fn open_multi<'s, T>(&self, name: T, mut opts: StoreOptions) -> Result<MultiStore, StoreError>
+    pub fn open_multi<'s, T>(
+        &self,
+        name: T,
+        mut opts: StoreOptions<E::Flags>,
+    ) -> Result<MultiStore<E::Database>, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
@@ -133,12 +154,13 @@ impl Rkv {
     /// Create or Open an existing database in (Integer -> Multiple Values) mode.
     /// Note: that create=true cannot be called concurrently with other operations
     /// so if you are sure that the database exists, call this with create=false.
-    pub fn open_multi_integer<'s, T, K: PrimitiveInt>(
+    pub fn open_multi_integer<'s, T, K>(
         &self,
         name: T,
-        mut opts: StoreOptions,
-    ) -> Result<MultiIntegerStore<K>, StoreError>
+        mut opts: StoreOptions<E::Flags>,
+    ) -> Result<MultiIntegerStore<E::Database, K>, StoreError>
     where
+        K: PrimitiveInt,
         T: Into<Option<&'s str>>,
     {
         opts.flags.set(DatabaseFlags::INTEGER_KEY, true);
@@ -146,43 +168,57 @@ impl Rkv {
         self.open(name, opts).map(MultiIntegerStore::new)
     }
 
-    fn open<'s, T>(&self, name: T, opts: StoreOptions) -> Result<Database, StoreError>
+    fn open<'s, T>(&self, name: T, opts: StoreOptions<E::Flags>) -> Result<E::Database, StoreError>
     where
         T: Into<Option<&'s str>>,
     {
         if opts.create {
-            self.env.create_db(name.into(), opts.flags).map_err(|e| match e {
-                lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-                _ => e.into(),
+            self.env.create_db(name.into(), opts.flags).map_err(|e| match e.into() {
+                StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
+                e => e,
             })
         } else {
-            self.env.open_db(name.into()).map_err(|e| match e {
-                lmdb::Error::BadRslot => StoreError::open_during_transaction(),
-                _ => e.into(),
+            self.env.open_db(name.into()).map_err(|e| match e.into() {
+                StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
+                e => e,
             })
         }
     }
 }
 
 /// Read and write accessors.
-impl Rkv {
+impl<'env, E> Rkv<E>
+where
+    E: BackendEnvironment<'env>,
+{
     /// Create a read transaction.  There can be multiple concurrent readers
     /// for an environment, up to the maximum specified by LMDB (default 126),
     /// and you can open readers while a write transaction is active.
-    pub fn read(&self) -> Result<Reader, StoreError> {
-        Ok(Reader::new(self.env.begin_ro_txn().map_err(StoreError::from)?))
+    pub fn read<T>(&'env self) -> Result<Reader<T>, StoreError>
+    where
+        E: BackendEnvironment<'env, RoTransaction = T>,
+        T: BackendRoCursorTransaction<'env, Database = E::Database>,
+    {
+        Ok(Reader::new(self.env.begin_ro_txn().map_err(|e| e.into())?))
     }
 
     /// Create a write transaction.  There can be only one write transaction
     /// active at any given time, so trying to create a second one will block
     /// until the first is committed or aborted.
-    pub fn write(&self) -> Result<Writer, StoreError> {
-        Ok(Writer::new(self.env.begin_rw_txn().map_err(StoreError::from)?))
+    pub fn write<T>(&'env self) -> Result<Writer<T>, StoreError>
+    where
+        E: BackendEnvironment<'env, RwTransaction = T>,
+        T: BackendRwCursorTransaction<'env, Database = E::Database>,
+    {
+        Ok(Writer::new(self.env.begin_rw_txn().map_err(|e| e.into())?))
     }
 }
 
 /// Other environment methods.
-impl Rkv {
+impl<'env, E> Rkv<E>
+where
+    E: BackendEnvironment<'env>,
+{
     /// Flush the data buffers to disk. This call is only useful, when the environment
     /// was open with either `NO_SYNC`, `NO_META_SYNC` or `MAP_ASYNC` (see below).
     /// The call is not valid if the environment was opened with `READ_ONLY`.
@@ -196,7 +232,7 @@ impl Rkv {
     /// Otherwise if the environment has the `NO_SYNC` flag set the flushes will be omitted,
     /// and with `MAP_ASYNC` they will be asynchronous.
     pub fn sync(&self, force: bool) -> Result<(), StoreError> {
-        self.env.sync(force).map_err(Into::into)
+        self.env.sync(force).map_err(|e| e.into())
     }
 
     /// Retrieve statistics about this environment.
@@ -208,8 +244,8 @@ impl Rkv {
     ///   * Number of leaf pages
     ///   * Number of overflow pages
     ///   * Number of data entries
-    pub fn stat(&self) -> Result<Stat, StoreError> {
-        self.env.stat().map_err(Into::into)
+    pub fn stat(&self) -> Result<E::Stat, StoreError> {
+        self.env.stat().map_err(|e| e.into())
     }
 
     /// Retrieve information about this environment.
@@ -220,8 +256,8 @@ impl Rkv {
     ///   * The last transaction ID
     ///   * Max number of readers allowed
     ///   * Number of readers in use
-    pub fn info(&self) -> Result<Info, StoreError> {
-        self.env.info().map_err(Into::into)
+    pub fn info(&self) -> Result<E::Info, StoreError> {
+        self.env.info().map_err(|e| e.into())
     }
 
     /// Retrieve the load ratio (# of used pages / total pages) about this environment.
@@ -230,12 +266,12 @@ impl Rkv {
     pub fn load_ratio(&self) -> Result<f32, StoreError> {
         let stat = self.stat()?;
         let info = self.info()?;
-        let freelist = self.env.freelist()?;
+        let freelist = self.env.freelist().map_err(|e| e.into())?;
 
         let last_pgno = info.last_pgno() + 1; // pgno is 0 based.
-        let total_pgs = info.map_size() / stat.page_size() as usize;
+        let total_pgs = info.map_size() / stat.page_size();
         if freelist > last_pgno {
-            return Err(StoreError::LmdbError(Error::Corrupted));
+            return Err(StoreError::DatabaseCorrupted);
         }
         let used_pgs = last_pgno - freelist;
         Ok(used_pgs as f32 / total_pgs as f32)
@@ -288,6 +324,12 @@ mod tests {
     use super::*;
     use crate::*;
 
+    use crate::backend::{
+        LmdbDatabase,
+        LmdbEnvironment,
+        LmdbRwTransaction,
+    };
+
     // The default size is 1MB.
     const DEFAULT_SIZE: usize = 1024 * 1024;
 
@@ -301,7 +343,7 @@ mod tests {
         assert!(!nope.exists());
 
         let pb = nope.to_path_buf();
-        match Rkv::new(nope.as_path()).err() {
+        match Rkv::new::<backend::Lmdb>(nope.as_path()).err() {
             Some(StoreError::DirectoryDoesNotExistError(p)) => {
                 assert_eq!(pb, p);
             },
@@ -309,7 +351,7 @@ mod tests {
         };
     }
 
-    fn check_rkv(k: &Rkv) {
+    fn check_rkv(k: &Rkv<LmdbEnvironment>) {
         let _ = k.open_single("default", StoreOptions::create()).expect("created default");
 
         let yyy = k.open_single("yyy", StoreOptions::create()).expect("opened");
@@ -326,7 +368,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
 
         check_rkv(&k);
     }
@@ -338,7 +380,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
-        let mut builder = Rkv::environment_builder();
+        let mut builder = Rkv::environment_builder::<backend::Lmdb>();
         builder.set_max_dbs(2);
         let k = Rkv::from_env(root.path(), builder).expect("rkv");
 
@@ -353,7 +395,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
-        let k = Rkv::with_capacity(root.path(), 1).expect("rkv");
+        let k = Rkv::with_capacity::<backend::Lmdb>(root.path(), 1).expect("rkv");
 
         check_rkv(&k);
 
@@ -386,8 +428,8 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("test", StoreOptions::create()).expect("opened");
 
         // Writing a large enough value should cause LMDB to fail on MapFull.
         // We write a string that is larger than the default map size.
@@ -404,8 +446,8 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("test", StoreOptions::create()).expect("opened");
 
         let key = "k".repeat(512);
         let mut writer = k.write().expect("writer");
@@ -419,13 +461,13 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
-        let mut builder = Rkv::environment_builder();
+        let mut builder = Rkv::environment_builder::<backend::Lmdb>();
         // Set the map size to the size of the value we'll store in it + 100KiB,
         // which ensures that there's enough space for the value and metadata.
         builder.set_map_size(get_larger_than_default_map_size_value() + 100 * 1024 /* 100KiB */);
         builder.set_max_dbs(2);
         let k = Rkv::from_env(root.path(), builder).unwrap();
-        let sk: SingleStore = k.open_single("test", StoreOptions::create()).expect("opened");
+        let sk = k.open_single("test", StoreOptions::create()).expect("opened");
         let val = "x".repeat(get_larger_than_default_map_size_value());
 
         let mut writer = k.write().expect("writer");
@@ -440,9 +482,9 @@ mod tests {
     fn test_round_trip_and_transactions() {
         let root = Builder::new().prefix("test_round_trip_and_transactions").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
 
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         {
             let mut writer = k.write().expect("writer");
@@ -541,9 +583,9 @@ mod tests {
     fn test_single_store_clear() {
         let root = Builder::new().prefix("test_single_store_clear").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
 
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         {
             let mut writer = k.write().expect("writer");
@@ -570,7 +612,7 @@ mod tests {
     fn test_multi_put_get_del() {
         let root = Builder::new().prefix("test_multi_put_get_del").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         let multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
         let mut writer = k.write().unwrap();
         multistore.put(&mut writer, "str1", &Value::Str("str1 foo")).unwrap();
@@ -606,7 +648,7 @@ mod tests {
     fn test_multiple_store_clear() {
         let root = Builder::new().prefix("test_multiple_store_clear").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
 
         let multistore = k.open_multi("multistore", StoreOptions::create()).expect("opened");
 
@@ -639,7 +681,7 @@ mod tests {
     fn test_open_store_for_read() {
         let root = Builder::new().prefix("test_open_store_for_read").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         // First create the store, and start a write transaction on it.
         let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         let mut writer = k.write().expect("writer");
@@ -659,7 +701,7 @@ mod tests {
     fn test_open_a_missing_store() {
         let root = Builder::new().prefix("test_open_a_missing_store").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         let _sk = k.open("sk", StoreOptions::default()).expect("open a missing store");
     }
 
@@ -667,13 +709,13 @@ mod tests {
     fn test_open_fail_with_badrslot() {
         let root = Builder::new().prefix("test_open_fail_with_badrslot").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         // First create the store
         let _sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         // Open a reader on this store
         let _reader = k.read().expect("reader");
         // Open the same store for read while the reader is in progress will panic
-        let store: Result<SingleStore, StoreError> = k.open_single("sk", StoreOptions::default());
+        let store = k.open_single("sk", StoreOptions::default());
         match store {
             Err(StoreError::OpenAttemptedDuringTransaction(_thread_id)) => (),
             _ => panic!("should panic"),
@@ -684,15 +726,15 @@ mod tests {
     fn test_read_before_write_num() {
         let root = Builder::new().prefix("test_read_before_write_num").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         // Test reading a number, modifying it, and then writing it back.
         // We have to be done with the Value::I64 before calling Writer::put,
         // as the Value::I64 borrows an immutable reference to the Writer.
         // So we extract and copy its primitive value.
 
-        fn get_existing_foo(writer: &Writer, store: SingleStore) -> Option<i64> {
+        fn get_existing_foo(store: &SingleStore<LmdbDatabase>, writer: &Writer<LmdbRwTransaction>) -> Option<i64> {
             match store.get(writer, "foo").expect("read") {
                 Some(Value::I64(val)) => Some(val),
                 _ => None,
@@ -700,11 +742,11 @@ mod tests {
         }
 
         let mut writer = k.write().expect("writer");
-        let mut existing = get_existing_foo(&writer, sk).unwrap_or(99);
+        let mut existing = get_existing_foo(&sk, &writer).unwrap_or(99);
         existing += 1;
         sk.put(&mut writer, "foo", &Value::I64(existing)).expect("success");
 
-        let updated = get_existing_foo(&writer, sk).unwrap_or(99);
+        let updated = get_existing_foo(&sk, &writer).unwrap_or(99);
         assert_eq!(updated, 100);
         writer.commit().expect("commit");
     }
@@ -713,8 +755,8 @@ mod tests {
     fn test_read_before_write_str() {
         let root = Builder::new().prefix("test_read_before_write_str").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         // Test reading a string, modifying it, and then writing it back.
         // We have to be done with the Value::Str before calling Writer::put,
@@ -736,7 +778,7 @@ mod tests {
     fn test_concurrent_read_transactions_prohibited() {
         let root = Builder::new().prefix("test_concurrent_reads_prohibited").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
 
         let _first = k.read().expect("reader");
         let second = k.read();
@@ -744,6 +786,9 @@ mod tests {
         match second {
             Err(StoreError::ReadTransactionAlreadyExists(t)) => {
                 println!("Thread was {:?}", t);
+            },
+            Err(e) => {
+                println!("Got error {:?}", e);
             },
             _ => {
                 panic!("Expected error.");
@@ -755,8 +800,8 @@ mod tests {
     fn test_isolation() {
         let root = Builder::new().prefix("test_isolation").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let s: SingleStore = k.open_single("s", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let s = k.open_single("s", StoreOptions::create()).expect("opened");
 
         // Add one field.
         {
@@ -797,8 +842,8 @@ mod tests {
     fn test_blob() {
         let root = Builder::new().prefix("test_round_trip_blob").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         let mut writer = k.write().expect("writer");
 
         assert_eq!(sk.get(&writer, "foo").expect("read"), None);
@@ -834,12 +879,12 @@ mod tests {
     fn test_sync() {
         let root = Builder::new().prefix("test_sync").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let mut builder = Rkv::environment_builder();
+        let mut builder = Rkv::environment_builder::<backend::Lmdb>();
         builder.set_max_dbs(1);
         builder.set_flags(EnvironmentFlags::NO_SYNC);
         {
             let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
-            let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+            let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
             {
                 let mut writer = k.write().expect("writer");
@@ -849,7 +894,7 @@ mod tests {
             }
         }
         let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::default()).expect("opened");
+        let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
         let reader = k.read().expect("reader");
         assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
     }
@@ -858,10 +903,9 @@ mod tests {
     fn test_stat() {
         let root = Builder::new().prefix("test_stat").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         for i in 0..5 {
-            let sk: IntegerStore<u32> =
-                k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
+            let sk = k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
             {
                 let mut writer = k.write().expect("writer");
                 sk.put(&mut writer, i, &Value::I64(i64::from(i))).expect("wrote");
@@ -878,8 +922,8 @@ mod tests {
     fn test_info() {
         let root = Builder::new().prefix("test_info").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         let mut writer = k.write().expect("writer");
 
         sk.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
@@ -908,8 +952,8 @@ mod tests {
     fn test_load_ratio() {
         let root = Builder::new().prefix("test_load_ratio").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         let mut writer = k.write().expect("writer");
         sk.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
         writer.commit().expect("commited");
@@ -937,8 +981,8 @@ mod tests {
     fn test_set_map_size() {
         let root = Builder::new().prefix("test_size_map_size").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         assert_eq!(k.info().expect("info").map_size(), DEFAULT_SIZE);
 
@@ -956,8 +1000,8 @@ mod tests {
     fn test_iter() {
         let root = Builder::new().prefix("test_iter").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         // An iterator over an empty store returns no values.
         {
@@ -1030,8 +1074,8 @@ mod tests {
     fn test_iter_from_key_greater_than_existing() {
         let root = Builder::new().prefix("test_iter_from_key_greater_than_existing").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let sk: SingleStore = k.open_single("sk", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
         sk.put(&mut writer, "foo", &Value::I64(1234)).expect("wrote");
@@ -1049,11 +1093,11 @@ mod tests {
     fn test_multiple_store_read_write() {
         let root = Builder::new().prefix("test_multiple_store_read_write").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
 
-        let s1: SingleStore = k.open_single("store_1", StoreOptions::create()).expect("opened");
-        let s2: SingleStore = k.open_single("store_2", StoreOptions::create()).expect("opened");
-        let s3: SingleStore = k.open_single("store_3", StoreOptions::create()).expect("opened");
+        let s1 = k.open_single("store_1", StoreOptions::create()).expect("opened");
+        let s2 = k.open_single("store_2", StoreOptions::create()).expect("opened");
+        let s3 = k.open_single("store_3", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
         s1.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
@@ -1089,9 +1133,9 @@ mod tests {
     fn test_multiple_store_iter() {
         let root = Builder::new().prefix("test_multiple_store_iter").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let k = Rkv::new(root.path()).expect("new succeeded");
-        let s1: SingleStore = k.open_single("store_1", StoreOptions::create()).expect("opened");
-        let s2: SingleStore = k.open_single("store_2", StoreOptions::create()).expect("opened");
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let s1 = k.open_single("store_1", StoreOptions::create()).expect("opened");
+        let s2 = k.open_single("store_2", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
         // Write to "s1"
@@ -1201,8 +1245,8 @@ mod tests {
     fn test_store_multiple_thread() {
         let root = Builder::new().prefix("test_multiple_thread").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
-        let rkv_arc = Arc::new(RwLock::new(Rkv::new(root.path()).expect("new succeeded")));
-        let store = rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened");
+        let rkv_arc = Arc::new(RwLock::new(Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded")));
+        let store_arc = Arc::new(rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened"));
 
         let num_threads = 10;
         let mut write_handles = Vec::with_capacity(num_threads as usize);
@@ -1216,10 +1260,11 @@ mod tests {
         // For each KV pair, spawn a thread that writes it to the store.
         for i in 0..num_threads {
             let rkv_arc = rkv_arc.clone();
+            let store_arc = store_arc.clone();
             write_handles.push(thread::spawn(move || {
                 let rkv = rkv_arc.write().expect("rkv");
                 let mut writer = rkv.write().expect("writer");
-                store.put(&mut writer, i.to_string(), &Value::U64(i)).expect("written");
+                store_arc.put(&mut writer, i.to_string(), &Value::U64(i)).expect("written");
                 writer.commit().unwrap();
             }));
         }
@@ -1231,10 +1276,11 @@ mod tests {
         // and returns its value.
         for i in 0..num_threads {
             let rkv_arc = rkv_arc.clone();
+            let store_arc = store_arc.clone();
             read_handles.push(thread::spawn(move || {
                 let rkv = rkv_arc.read().expect("rkv");
                 let reader = rkv.read().expect("reader");
-                let value = match store.get(&reader, i.to_string()) {
+                let value = match store_arc.get(&reader, i.to_string()) {
                     Ok(Some(Value::U64(value))) => value,
                     Ok(Some(_)) => panic!("value type unexpected"),
                     Ok(None) => panic!("value not found"),
@@ -1254,7 +1300,7 @@ mod tests {
     #[test]
     fn test_use_value_as_key() {
         let root = Builder::new().prefix("test_use_value_as_key").tempdir().expect("tempdir");
-        let rkv = Rkv::new(root.path()).expect("new succeeded");
+        let rkv = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
         let store = rkv.open_single("store", StoreOptions::create()).expect("opened");
 
         {

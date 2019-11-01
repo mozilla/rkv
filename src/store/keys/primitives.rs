@@ -8,28 +8,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod integer;
-pub mod integermulti;
-pub mod keys;
-pub mod multi;
-pub mod single;
+use crate::store::keys::EncodableKey;
 
-use crate::backend::BackendDatabaseFlags;
+pub trait PrimitiveInt: EncodableKey {}
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
-
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
-    }
-}
+impl PrimitiveInt for u32 {}

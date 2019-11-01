@@ -8,28 +8,28 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod integer;
-pub mod integermulti;
-pub mod keys;
-pub mod multi;
-pub mod single;
+use crate::backend::traits::BackendInfo;
 
-use crate::backend::BackendDatabaseFlags;
+pub struct InfoImpl(pub(crate) lmdb::Info);
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
+impl BackendInfo for InfoImpl {
+    fn map_size(&self) -> usize {
+        self.0.map_size()
+    }
 
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
+    fn last_pgno(&self) -> usize {
+        self.0.last_pgno()
+    }
+
+    fn last_txnid(&self) -> usize {
+        self.0.last_txnid()
+    }
+
+    fn max_readers(&self) -> usize {
+        self.0.max_readers() as usize
+    }
+
+    fn num_readers(&self) -> usize {
+        self.0.num_readers() as usize
     }
 }

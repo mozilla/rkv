@@ -8,6 +8,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+use std::fmt;
+
 use arrayref::array_ref;
 use bincode::{
     deserialize,
@@ -15,7 +17,6 @@ use bincode::{
     serialized_size,
 };
 use ordered_float::OrderedFloat;
-
 use uuid::{
     Bytes,
     Uuid,
@@ -68,8 +69,8 @@ impl Type {
     }
 }
 
-impl ::std::fmt::Display for Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         f.write_str(match *self {
             Type::Bool => "bool",
             Type::U64 => "u64",
@@ -232,8 +233,9 @@ impl<'s> From<&'s OwnedValue> for Value<'s> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ordered_float::OrderedFloat;
+
+    use super::*;
 
     #[test]
     fn test_value_serialized_size() {
