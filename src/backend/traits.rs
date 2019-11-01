@@ -118,7 +118,6 @@ pub trait BackendEnvironment<'env>: Debug {
 pub trait BackendRoTransaction: Debug {
     type Error: BackendError;
     type Database: BackendDatabase;
-    type Flags: BackendWriteFlags;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error>;
 

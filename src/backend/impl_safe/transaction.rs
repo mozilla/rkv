@@ -47,7 +47,6 @@ impl<'env> RoTransactionImpl<'env> {
 impl<'env> BackendRoTransaction for RoTransactionImpl<'env> {
     type Error = ErrorImpl;
     type Database = DatabaseImpl;
-    type Flags = WriteFlagsImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {
         let snapshot = self.snapshots.get(db.id()).ok_or_else(|| ErrorImpl::DbIsForeignError)?;

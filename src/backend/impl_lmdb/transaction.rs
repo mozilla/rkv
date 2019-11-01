@@ -29,7 +29,6 @@ pub struct RoTransactionImpl<'env>(pub(crate) lmdb::RoTransaction<'env>);
 impl<'env> BackendRoTransaction for RoTransactionImpl<'env> {
     type Error = ErrorImpl;
     type Database = DatabaseImpl;
-    type Flags = WriteFlagsImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {
         self.0.get(db.0, &key).map_err(ErrorImpl)
