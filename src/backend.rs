@@ -10,6 +10,7 @@
 
 mod common;
 mod impl_lmdb;
+mod impl_safe;
 mod traits;
 
 pub use common::*;
@@ -22,3 +23,11 @@ pub use impl_lmdb::ErrorImpl as LmdbError;
 pub use impl_lmdb::RoCursorImpl as LmdbRoCursor;
 pub use impl_lmdb::RoTransactionImpl as LmdbRoTransaction;
 pub use impl_lmdb::RwTransactionImpl as LmdbRwTransaction;
+
+pub use impl_safe::DatabaseImpl as SafeModeDatabase;
+pub use impl_safe::EnvironmentBuilderImpl as SafeMode;
+pub use impl_safe::EnvironmentImpl as SafeModeEnvironment;
+pub use impl_safe::ErrorImpl as SafeModeError;
+pub use impl_safe::RoCursorImpl as SafeModeRoCursor;
+pub use impl_safe::RoTransactionImpl as SafeModeRoTransaction;
+pub use impl_safe::RwTransactionImpl as SafeModeRwTransaction;

@@ -17,6 +17,7 @@ use std::thread::ThreadId;
 
 use failure::Fail;
 
+pub use crate::backend::SafeModeError;
 use crate::value::Type;
 
 #[derive(Debug, Fail)]
@@ -69,8 +70,11 @@ pub enum StoreError {
     #[fail(display = "data error: {:?}", _0)]
     DataError(DataError),
 
-    #[fail(display = "lmdb error: {}", _0)]
+    #[fail(display = "lmdb backend error: {}", _0)]
     LmdbError(lmdb::Error),
+
+    #[fail(display = "safe mode backend error: {}", _0)]
+    SafeModeError(SafeModeError),
 
     #[fail(display = "read transaction already exists in thread {:?}", _0)]
     ReadTransactionAlreadyExists(ThreadId),
@@ -136,8 +140,11 @@ pub enum MigrateError {
     #[fail(display = "invalid page number")]
     InvalidPageNum,
 
-    #[fail(display = "lmdb error: {}", _0)]
+    #[fail(display = "lmdb backend error: {}", _0)]
     LmdbError(lmdb::Error),
+
+    #[fail(display = "safe mode backend error: {}", _0)]
+    SafeModeError(SafeModeError),
 
     #[fail(display = "string conversion error")]
     StringConversionError,
@@ -191,5 +198,11 @@ impl From<String> for MigrateError {
 impl From<lmdb::Error> for MigrateError {
     fn from(e: lmdb::Error) -> MigrateError {
         MigrateError::LmdbError(e)
+    }
+}
+
+impl From<SafeModeError> for MigrateError {
+    fn from(e: SafeModeError) -> MigrateError {
+        MigrateError::SafeModeError(e)
     }
 }

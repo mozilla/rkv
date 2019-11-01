@@ -14,8 +14,9 @@ categories = ["database"]
 exclude = ["/tests/envs/*"]
 
 [features]
-default = []
+default = ["with-safe-mode"]
 backtrace = ["failure/backtrace", "failure/std"]
+with-safe-mode = ["log", "uuid/v4", "uuid/serde", "serde/derive", "serde/rc"]
 with-asan = ["lmdb-rkv/with-asan"]
 with-fuzzer = ["lmdb-rkv/with-fuzzer"]
 with-fuzzer-no-link = ["lmdb-rkv/with-fuzzer-no-link"]
@@ -27,6 +28,7 @@ bitflags = "1"
 byteorder = "1"
 lazy_static = "1.0"
 lmdb-rkv = "0.12.3"
+log = { version = "0.4", optional = true }
 ordered-float = "1.0"
 uuid = "0.7"
 serde = "1.0"
