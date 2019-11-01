@@ -120,6 +120,9 @@ mod tests {
             s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
             s.put(&mut writer, 2, &Value::Str("hello!")).expect("write");
             s.put(&mut writer, 3, &Value::Str("hello!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 3).expect("read"), Some(Value::Str("hello!")));
             writer.commit().expect("committed");
         }
 
@@ -131,6 +134,84 @@ mod tests {
             let reader = k.read().expect("reader");
             assert_eq!(s.get(&reader, 1).expect("read"), None);
             assert_eq!(s.get(&reader, 2).expect("read"), None);
+            assert_eq!(s.get(&reader, 3).expect("read"), None);
+        }
+    }
+
+    #[test]
+    fn test_dup() {
+        let root = Builder::new().prefix("test_integer_dup").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 1, &Value::Str("foo!")).expect("write");
+            s.put(&mut writer, 1, &Value::Str("bar!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("bar!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), None);
+            assert_eq!(s.get(&writer, 3).expect("read"), None);
+            writer.commit().expect("committed");
+        }
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.clear(&mut writer).expect("cleared");
+            writer.commit().expect("committed");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(s.get(&reader, 1).expect("read"), None);
+            assert_eq!(s.get(&reader, 2).expect("read"), None);
+            assert_eq!(s.get(&reader, 3).expect("read"), None);
+        }
+    }
+
+    #[test]
+    fn test_del() {
+        let root = Builder::new().prefix("test_integer_del").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 1, &Value::Str("foo!")).expect("write");
+            s.put(&mut writer, 1, &Value::Str("bar!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("bar!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), None);
+            assert_eq!(s.get(&writer, 3).expect("read"), None);
+            writer.commit().expect("committed");
+        }
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.delete(&mut writer, 1).expect("deleted");
+            writer.commit().expect("committed");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(s.get(&reader, 1).expect("read"), None);
+        }
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.delete(&mut writer, 2).expect_err("not deleted");
+            writer.commit().expect("committed");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(s.get(&reader, 2).expect("read"), None);
+        }
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.delete(&mut writer, 3).expect_err("not deleted");
+            writer.commit().expect("committed");
+
+            let reader = k.read().expect("reader");
             assert_eq!(s.get(&reader, 3).expect("read"), None);
         }
     }
