@@ -23,7 +23,7 @@ use crate::error::StoreError;
 
 pub trait BackendError: Debug + Display + Into<StoreError> {}
 
-pub trait BackendDatabase: Debug {}
+pub trait BackendDatabase: Debug + Eq + PartialEq + Copy + Clone {}
 
 pub trait BackendFlags: Debug + Eq + PartialEq + Copy + Clone + Default {
     fn empty() -> Self;
