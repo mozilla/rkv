@@ -33,6 +33,7 @@ use crate::value::Value;
 
 type EmptyResult = Result<(), StoreError>;
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct MultiIntegerStore<D, K> {
     inner: MultiStore<D>,
     phantom: PhantomData<K>,
