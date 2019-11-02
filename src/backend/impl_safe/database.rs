@@ -12,70 +12,57 @@ use std::collections::{
     BTreeSet,
     HashMap,
 };
-use std::sync::{
-    Arc,
-    RwLock,
-};
 
+use id_arena::Id;
 use serde_derive::{
     Deserialize,
     Serialize,
 };
-use uuid::Uuid;
 
-use super::{
-    DatabaseFlagsImpl,
-    ErrorImpl,
-};
+use super::DatabaseFlagsImpl;
 use crate::backend::traits::BackendDatabase;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+pub type DatabaseId = Id<DatabaseImpl>;
+
+impl BackendDatabase for DatabaseId {}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DatabaseImpl {
-    id: Uuid,
-    flags: DatabaseFlagsImpl,
-    snapshot: Arc<RwLock<Snapshot>>,
+    snapshot: Snapshot,
 }
 
 impl DatabaseImpl {
     pub(crate) fn new(flags: Option<DatabaseFlagsImpl>, snapshot: Option<Snapshot>) -> DatabaseImpl {
         DatabaseImpl {
-            id: Uuid::new_v4(),
-            flags: flags.unwrap_or_else(DatabaseFlagsImpl::default),
-            snapshot: Arc::new(RwLock::new(snapshot.unwrap_or_else(Snapshot::new))),
+            snapshot: snapshot.unwrap_or_else(|| Snapshot::new(flags)),
         }
     }
 
-    pub(crate) fn id(&self) -> &Uuid {
-        &self.id
+    pub(crate) fn snapshot(&self) -> Snapshot {
+        self.snapshot.clone()
     }
 
-    pub(crate) fn flags(&self) -> &DatabaseFlagsImpl {
-        &self.flags
-    }
-
-    pub(crate) fn snapshot(&self) -> Result<Snapshot, ErrorImpl> {
-        let snapshot = self.snapshot.read().map_err(|_| ErrorImpl::TxnPoisonError)?;
-        Ok(snapshot.clone())
-    }
-
-    pub(crate) fn replace(&mut self, value: Snapshot) -> Result<Snapshot, ErrorImpl> {
-        let mut snapshot = self.snapshot.write().map_err(|_| ErrorImpl::TxnPoisonError)?;
-        Ok(std::mem::replace(&mut snapshot, value))
+    pub(crate) fn replace(&mut self, snapshot: Snapshot) -> Snapshot {
+        std::mem::replace(&mut self.snapshot, snapshot)
     }
 }
 
-impl BackendDatabase for DatabaseImpl {}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
+    flags: DatabaseFlagsImpl,
     map: HashMap<Box<[u8]>, BTreeSet<Box<[u8]>>>,
 }
 
 impl Snapshot {
-    pub(crate) fn new() -> Snapshot {
+    pub(crate) fn new(flags: Option<DatabaseFlagsImpl>) -> Snapshot {
         Snapshot {
+            flags: flags.unwrap_or_else(DatabaseFlagsImpl::default),
             map: HashMap::new(),
         }
+    }
+
+    pub(crate) fn flags(&self) -> &DatabaseFlagsImpl {
+        &self.flags
     }
 
     pub(crate) fn get(&self, key: &[u8]) -> Option<&[u8]> {

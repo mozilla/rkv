@@ -24,7 +24,7 @@ pub use impl_lmdb::RoCursorImpl as LmdbRoCursor;
 pub use impl_lmdb::RoTransactionImpl as LmdbRoTransaction;
 pub use impl_lmdb::RwTransactionImpl as LmdbRwTransaction;
 
-pub use impl_safe::DatabaseImpl as SafeModeDatabase;
+pub use impl_safe::DatabaseId as SafeModeDatabase;
 pub use impl_safe::EnvironmentBuilderImpl as SafeMode;
 pub use impl_safe::EnvironmentImpl as SafeModeEnvironment;
 pub use impl_safe::ErrorImpl as SafeModeError;
