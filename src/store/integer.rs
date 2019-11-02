@@ -216,6 +216,36 @@ mod tests {
             assert_eq!(s.get(&reader, 3).expect("read"), None);
         }
     }
+
+    #[test]
+    fn test_persist() {
+        let root = Builder::new().prefix("test_integer_persist").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        {
+            let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+            let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 2, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 3, &Value::Str("hello!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 3).expect("read"), Some(Value::Str("hello!")));
+            writer.commit().expect("committed");
+        }
+
+        {
+            let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+            let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 3).expect("read"), Some(Value::Str("hello!")));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -357,6 +387,36 @@ mod tests_safe {
 
             let reader = k.read().expect("reader");
             assert_eq!(s.get(&reader, 3).expect("read"), None);
+        }
+    }
+
+    #[test]
+    fn test_persist() {
+        let root = Builder::new().prefix("test_integer_persist").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        {
+            let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
+            let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 2, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 3, &Value::Str("hello!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 3).expect("read"), Some(Value::Str("hello!")));
+            writer.commit().expect("committed");
+        }
+
+        {
+            let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
+            let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 3).expect("read"), Some(Value::Str("hello!")));
         }
     }
 }
