@@ -246,6 +246,66 @@ mod tests {
             assert_eq!(s.get(&reader, 3).expect("read"), Some(Value::Str("hello!")));
         }
     }
+
+    #[test]
+    fn test_intertwine_read_write() {
+        let root = Builder::new().prefix("test_integer_intertwine_read_write").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), None);
+            assert_eq!(s.get(&writer, 3).expect("read"), None);
+            writer.commit().expect("committed");
+        }
+
+        let reader = k.read().expect("reader");
+        let mut writer = k.write().expect("writer");
+
+        {
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), None);
+            assert_eq!(s.get(&reader, 3).expect("read"), None);
+        }
+
+        {
+            s.put(&mut writer, 1, &Value::Str("goodbye!")).expect("write");
+            s.put(&mut writer, 2, &Value::Str("goodbye!")).expect("write");
+            s.put(&mut writer, 3, &Value::Str("goodbye!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&writer, 3).expect("read"), Some(Value::Str("goodbye!")));
+            writer.commit().expect("committed");
+        }
+
+        {
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), None);
+            assert_eq!(s.get(&reader, 3).expect("read"), None);
+        }
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&writer, 3).expect("read"), Some(Value::Str("goodbye!")));
+            writer.commit().expect("committed");
+        }
+
+        {
+            let reader = k.write().expect("reader");
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&reader, 3).expect("read"), Some(Value::Str("goodbye!")));
+            reader.commit().expect("committed");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -417,6 +477,66 @@ mod tests_safe {
             assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
             assert_eq!(s.get(&reader, 2).expect("read"), Some(Value::Str("hello!")));
             assert_eq!(s.get(&reader, 3).expect("read"), Some(Value::Str("hello!")));
+        }
+    }
+
+    #[test]
+    fn test_intertwine_read_write() {
+        let root = Builder::new().prefix("test_integer_intertwine_read_write").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
+        let s = k.open_integer("s", StoreOptions::create()).expect("open");
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), None);
+            assert_eq!(s.get(&writer, 3).expect("read"), None);
+            writer.commit().expect("committed");
+        }
+
+        let reader = k.read().expect("reader");
+        let mut writer = k.write().expect("writer");
+
+        {
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), None);
+            assert_eq!(s.get(&reader, 3).expect("read"), None);
+        }
+
+        {
+            s.put(&mut writer, 1, &Value::Str("goodbye!")).expect("write");
+            s.put(&mut writer, 2, &Value::Str("goodbye!")).expect("write");
+            s.put(&mut writer, 3, &Value::Str("goodbye!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&writer, 3).expect("read"), Some(Value::Str("goodbye!")));
+            writer.commit().expect("committed");
+        }
+
+        {
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), None);
+            assert_eq!(s.get(&reader, 3).expect("read"), None);
+        }
+
+        {
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            assert_eq!(s.get(&writer, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&writer, 2).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&writer, 3).expect("read"), Some(Value::Str("goodbye!")));
+            writer.commit().expect("committed");
+        }
+
+        {
+            let reader = k.write().expect("reader");
+            assert_eq!(s.get(&reader, 1).expect("read"), Some(Value::Str("hello!")));
+            assert_eq!(s.get(&reader, 2).expect("read"), Some(Value::Str("goodbye!")));
+            assert_eq!(s.get(&reader, 3).expect("read"), Some(Value::Str("goodbye!")));
+            reader.commit().expect("committed");
         }
     }
 }
