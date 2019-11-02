@@ -28,6 +28,7 @@ use crate::value::Value;
 
 type EmptyResult = Result<(), StoreError>;
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct IntegerStore<D, K> {
     inner: SingleStore<D>,
     phantom: PhantomData<K>,

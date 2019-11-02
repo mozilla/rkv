@@ -35,7 +35,7 @@ fn main() {
     let k = created_arc.read().unwrap();
     let store = k.open_single("store", StoreOptions::create()).unwrap();
 
-    populate_store(&k, &store).unwrap();
+    populate_store(&k, store).unwrap();
 
     let reader = k.read().unwrap();
 
@@ -64,7 +64,7 @@ fn main() {
     }
 }
 
-fn populate_store(k: &Rkv<LmdbEnvironment>, store: &SingleStore<LmdbDatabase>) -> Result<(), StoreError> {
+fn populate_store(k: &Rkv<LmdbEnvironment>, store: SingleStore<LmdbDatabase>) -> Result<(), StoreError> {
     let mut writer = k.write()?;
     for (country, city) in vec![
         ("Canada", Value::Str("Ottawa")),

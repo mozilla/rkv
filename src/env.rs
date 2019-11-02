@@ -734,7 +734,7 @@ mod tests {
         // as the Value::I64 borrows an immutable reference to the Writer.
         // So we extract and copy its primitive value.
 
-        fn get_existing_foo(store: &SingleStore<LmdbDatabase>, writer: &Writer<LmdbRwTransaction>) -> Option<i64> {
+        fn get_existing_foo(store: SingleStore<LmdbDatabase>, writer: &Writer<LmdbRwTransaction>) -> Option<i64> {
             match store.get(writer, "foo").expect("read") {
                 Some(Value::I64(val)) => Some(val),
                 _ => None,
@@ -742,11 +742,11 @@ mod tests {
         }
 
         let mut writer = k.write().expect("writer");
-        let mut existing = get_existing_foo(&sk, &writer).unwrap_or(99);
+        let mut existing = get_existing_foo(sk, &writer).unwrap_or(99);
         existing += 1;
         sk.put(&mut writer, "foo", &Value::I64(existing)).expect("success");
 
-        let updated = get_existing_foo(&sk, &writer).unwrap_or(99);
+        let updated = get_existing_foo(sk, &writer).unwrap_or(99);
         assert_eq!(updated, 100);
         writer.commit().expect("commit");
     }
@@ -1246,7 +1246,7 @@ mod tests {
         let root = Builder::new().prefix("test_multiple_thread").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
         let rkv_arc = Arc::new(RwLock::new(Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded")));
-        let store_arc = Arc::new(rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened"));
+        let store = rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened");
 
         let num_threads = 10;
         let mut write_handles = Vec::with_capacity(num_threads as usize);
@@ -1260,11 +1260,10 @@ mod tests {
         // For each KV pair, spawn a thread that writes it to the store.
         for i in 0..num_threads {
             let rkv_arc = rkv_arc.clone();
-            let store_arc = store_arc.clone();
             write_handles.push(thread::spawn(move || {
                 let rkv = rkv_arc.write().expect("rkv");
                 let mut writer = rkv.write().expect("writer");
-                store_arc.put(&mut writer, i.to_string(), &Value::U64(i)).expect("written");
+                store.put(&mut writer, i.to_string(), &Value::U64(i)).expect("written");
                 writer.commit().unwrap();
             }));
         }
@@ -1276,11 +1275,10 @@ mod tests {
         // and returns its value.
         for i in 0..num_threads {
             let rkv_arc = rkv_arc.clone();
-            let store_arc = store_arc.clone();
             read_handles.push(thread::spawn(move || {
                 let rkv = rkv_arc.read().expect("rkv");
                 let reader = rkv.read().expect("reader");
-                let value = match store_arc.get(&reader, i.to_string()) {
+                let value = match store.get(&reader, i.to_string()) {
                     Ok(Some(Value::U64(value))) => value,
                     Ok(Some(_)) => panic!("value type unexpected"),
                     Ok(None) => panic!("value not found"),
