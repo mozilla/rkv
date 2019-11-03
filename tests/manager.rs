@@ -13,16 +13,20 @@ use std::sync::Arc;
 
 use tempfile::Builder;
 
-use rkv::backend::Lmdb;
-use rkv::{
-    Manager,
-    Rkv,
+use rkv::backend::{
+    Lmdb,
+    LmdbEnvironment,
+    SafeMode,
+    SafeModeEnvironment,
 };
+use rkv::Rkv;
 
-#[test]
 // Identical to the same-named unit test, but this one confirms that it works
-// via the public MANAGER singleton.
+// via the public MANAGER singleton for an LMDB backend.
+#[test]
 fn test_same() {
+    type Manager = rkv::Manager<LmdbEnvironment>;
+
     let root = Builder::new().prefix("test_same_singleton").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
@@ -30,6 +34,23 @@ fn test_same() {
     assert!(Manager::singleton().read().unwrap().get(p).expect("success").is_none());
 
     let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new::<Lmdb>).expect("created");
+    let fetched_arc = Manager::singleton().read().unwrap().get(p).expect("success").expect("existed");
+    assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
+}
+
+// Identical to the same-named unit test, but this one confirms that it works
+// via the public MANAGER singleton for a safe mode backend.
+#[test]
+fn test_same_safe() {
+    type Manager = rkv::Manager<SafeModeEnvironment>;
+
+    let root = Builder::new().prefix("test_same_singleton").tempdir().expect("tempdir");
+    fs::create_dir_all(root.path()).expect("dir created");
+
+    let p = root.path();
+    assert!(Manager::singleton().read().unwrap().get(p).expect("success").is_none());
+
+    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new::<SafeMode>).expect("created");
     let fetched_arc = Manager::singleton().read().unwrap().get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }
