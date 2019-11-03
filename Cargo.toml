@@ -16,7 +16,7 @@ exclude = ["/tests/envs/*"]
 [features]
 default = ["with-safe-mode"]
 backtrace = ["failure/backtrace", "failure/std"]
-with-safe-mode = ["id-arena", "log", "serde/derive", "serde/rc"]
+with-safe-mode = ["hashbrown/serde", "id-arena", "log", "serde/derive", "serde/rc"]
 with-asan = ["lmdb-rkv/with-asan"]
 with-fuzzer = ["lmdb-rkv/with-fuzzer"]
 with-fuzzer-no-link = ["lmdb-rkv/with-fuzzer-no-link"]
@@ -26,6 +26,7 @@ arrayref = "0.3"
 bincode = "1.0"
 bitflags = "1"
 byteorder = "1"
+hashbrown = { version = "0.6", optional = true }
 id-arena = { version = "2.2", optional = true }
 lazy_static = "1.0"
 lmdb-rkv = "0.12.3"

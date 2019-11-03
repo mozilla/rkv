@@ -8,12 +8,11 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::collections::{
-    BTreeSet,
-    HashMap,
-};
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
+use hashbrown::hash_map::RawEntryMut;
+use hashbrown::HashMap;
 use id_arena::Id;
 use serde_derive::{
     Deserialize,
@@ -75,35 +74,49 @@ impl Snapshot {
 
     pub(crate) fn put_one(&mut self, key: &[u8], value: &[u8]) {
         let map = Arc::make_mut(&mut self.map);
-        let values = map.entry(Box::from(key)).or_insert_with(BTreeSet::new);
-        values.clear();
+        let entry = map.raw_entry_mut().from_key(key);
+        let (_, values) = entry.and_modify(|_, v| v.clear()).or_insert_with(|| (Box::from(key), BTreeSet::new()));
         values.insert(Box::from(value));
     }
 
     pub(crate) fn put_dup(&mut self, key: &[u8], value: &[u8]) {
         let map = Arc::make_mut(&mut self.map);
-        let values = map.entry(Box::from(key)).or_insert_with(BTreeSet::new);
+        let entry = map.raw_entry_mut().from_key(key);
+        let (_, values) = entry.or_insert_with(|| (Box::from(key), BTreeSet::new()));
         values.insert(Box::from(value));
     }
 
     pub(crate) fn del_exact(&mut self, key: &[u8], value: &[u8]) -> Option<()> {
         let map = Arc::make_mut(&mut self.map);
-        let values = map.entry(Box::from(key)).or_insert_with(BTreeSet::new);
-        let was_removed = values.remove(value);
-        Some(()).filter(|_| was_removed)
+        let entry = map.raw_entry_mut().from_key(key);
+
+        match entry {
+            RawEntryMut::Vacant(_) => None,
+            RawEntryMut::Occupied(mut entry) => {
+                let values = entry.get_mut();
+                let was_removed = values.remove(value);
+                Some(()).filter(|_| was_removed)
+            },
+        }
     }
 
     pub(crate) fn del_all(&mut self, key: &[u8]) -> Option<()> {
         let map = Arc::make_mut(&mut self.map);
-        let values = map.entry(Box::from(key)).or_insert_with(BTreeSet::new);
-        let was_empty = values.is_empty();
-        values.clear();
-        Some(()).filter(|_| !was_empty)
+        let entry = map.raw_entry_mut().from_key(key);
+
+        match entry {
+            RawEntryMut::Vacant(_) => None,
+            RawEntryMut::Occupied(mut entry) => {
+                let values = entry.get_mut();
+                let was_empty = values.is_empty();
+                values.clear();
+                Some(()).filter(|_| !was_empty)
+            },
+        }
     }
 
     pub(crate) fn clear(&mut self) {
-        let map = Arc::make_mut(&mut self.map);
-        map.clear();
+        self.map = Default::default();
     }
 
     pub(crate) fn iter(&self) -> impl Iterator<Item = (&[u8], &[u8])> {
