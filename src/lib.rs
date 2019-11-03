@@ -41,7 +41,7 @@
 //! ## Basic Usage
 //! ```
 //! use rkv::{Manager, Rkv, SingleStore, Value, StoreOptions};
-//! use rkv::backend::Lmdb;
+//! use rkv::backend::{Lmdb, LmdbEnvironment};
 //! use std::fs;
 //! use tempfile::Builder;
 //!
@@ -61,7 +61,7 @@
 //! // at most once by caching a handle to each environment that it opens.
 //! // Use it to retrieve the handle to an opened environment—or create one
 //! // if it hasn't already been opened:
-//! let mut manager = Manager::singleton().write().unwrap();
+//! let mut manager = Manager::<LmdbEnvironment>::singleton().write().unwrap();
 //! let created_arc = manager.get_or_create(path, Rkv::new::<Lmdb>).unwrap();
 //! let env = created_arc.read().unwrap();
 //!

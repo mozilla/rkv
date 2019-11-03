@@ -23,7 +23,10 @@ use std::sync::{
 
 use lazy_static::lazy_static;
 
-use crate::backend::LmdbEnvironment;
+use crate::backend::{
+    LmdbEnvironment,
+    SafeModeEnvironment,
+};
 use crate::error::StoreError;
 use crate::helpers::canonicalize_path;
 use crate::Rkv;
@@ -35,6 +38,7 @@ lazy_static! {
     /// A process is only permitted to have one open handle to each Rkv environment.
     /// This manager exists to enforce that constraint: don't open environments directly.
     static ref MANAGER_LMDB: RwLock<Manager<LmdbEnvironment>> = RwLock::new(Manager::new());
+    static ref MANAGER_SAFE_MODE: RwLock<Manager<SafeModeEnvironment>> = RwLock::new(Manager::new());
 }
 
 /// A process is only permitted to have one open handle to each Rkv environment.
@@ -99,6 +103,12 @@ impl Manager<LmdbEnvironment> {
     }
 }
 
+impl Manager<SafeModeEnvironment> {
+    pub fn singleton() -> &'static RwLock<Manager<SafeModeEnvironment>> {
+        &*MANAGER_SAFE_MODE
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -112,7 +122,7 @@ mod tests {
     /// Test that a manager can be created with simple type inference.
     #[test]
     fn test_simple() {
-        let _ = Manager::singleton().write().unwrap();
+        let _ = Manager::<LmdbEnvironment>::singleton().write().unwrap();
     }
 
     /// Test that a shared Rkv instance can be created with simple type inference.
@@ -121,7 +131,7 @@ mod tests {
         let root = Builder::new().prefix("test_simple").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
-        let mut manager = Manager::singleton().write().unwrap();
+        let mut manager = Manager::<LmdbEnvironment>::singleton().write().unwrap();
         let _ = manager.get_or_create(root.path(), Rkv::new::<Lmdb>).unwrap();
     }
 
@@ -186,6 +196,65 @@ mod tests {
         assert!(manager.get(p).expect("success").is_none());
 
         let created_arc = manager.get_or_create_with_capacity(p, 10, Rkv::with_capacity::<Lmdb>).expect("created");
+        let fetched_arc = manager.get(p).expect("success").expect("existed");
+        assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
+    }
+}
+
+#[cfg(test)]
+mod tests_safe {
+    use std::fs;
+    use tempfile::Builder;
+
+    use super::*;
+    use crate::*;
+
+    use backend::SafeMode;
+
+    /// Test that a manager can be created with simple type inference.
+    #[test]
+    fn test_simple() {
+        let _ = Manager::<SafeModeEnvironment>::singleton().write().unwrap();
+    }
+
+    /// Test that a shared Rkv instance can be created with simple type inference.
+    #[test]
+    fn test_simple_2() {
+        let root = Builder::new().prefix("test_simple").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let mut manager = Manager::<SafeModeEnvironment>::singleton().write().unwrap();
+        let _ = manager.get_or_create(root.path(), Rkv::new::<SafeMode>).unwrap();
+    }
+
+    /// Test that the manager will return the same Rkv instance each time for each path.
+    #[test]
+    fn test_same() {
+        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let mut manager = Manager::<SafeModeEnvironment>::new();
+
+        let p = root.path();
+        assert!(manager.get(p).expect("success").is_none());
+
+        let created_arc = manager.get_or_create(p, Rkv::new::<SafeMode>).expect("created");
+        let fetched_arc = manager.get(p).expect("success").expect("existed");
+        assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
+    }
+
+    /// Test that the manager will return the same Rkv instance each time for each path.
+    #[test]
+    fn test_same_with_capacity() {
+        let root = Builder::new().prefix("test_same").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let mut manager = Manager::<SafeModeEnvironment>::new();
+
+        let p = root.path();
+        assert!(manager.get(p).expect("success").is_none());
+
+        let created_arc = manager.get_or_create_with_capacity(p, 10, Rkv::with_capacity::<SafeMode>).expect("created");
         let fetched_arc = manager.get(p).expect("success").expect("existed");
         assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
     }

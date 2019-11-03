@@ -31,7 +31,8 @@ fn main() {
     fs::create_dir_all(root.path()).unwrap();
     let p = root.path();
 
-    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new::<Lmdb>).unwrap();
+    let mut manager = Manager::<LmdbEnvironment>::singleton().write().unwrap();
+    let created_arc = manager.get_or_create(p, Rkv::new::<Lmdb>).unwrap();
     let k = created_arc.read().unwrap();
     let store = k.open_single("store", StoreOptions::create()).unwrap();
 
