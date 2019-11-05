@@ -66,8 +66,24 @@ where
         Rkv::with_capacity::<B>(path, DEFAULT_MAX_DBS)
     }
 
+    /// Return a new Rkv environment that supports the specified number of open databases.
+    pub fn with_capacity<B>(path: &Path, max_dbs: c_uint) -> Result<Rkv<E>, StoreError>
+    where
+        B: BackendEnvironmentBuilder<'env, Environment = E>,
+    {
+        if !path.is_dir() {
+            return Err(StoreError::DirectoryDoesNotExistError(path.into()));
+        }
+
+        let mut builder = B::new();
+        builder.set_max_dbs(max_dbs);
+
+        // Future: set flags, maximum size, etc. here if necessary.
+        Rkv::from_builder(path, builder)
+    }
+
     /// Return a new Rkv environment from the provided builder.
-    pub fn from_env<B>(path: &Path, builder: B) -> Result<Rkv<E>, StoreError>
+    pub fn from_builder<B>(path: &Path, builder: B) -> Result<Rkv<E>, StoreError>
     where
         B: BackendEnvironmentBuilder<'env, Environment = E>,
     {
@@ -82,22 +98,6 @@ where
                 e => e,
             })?,
         })
-    }
-
-    /// Return a new Rkv environment that supports the specified number of open databases.
-    pub fn with_capacity<B>(path: &Path, max_dbs: c_uint) -> Result<Rkv<E>, StoreError>
-    where
-        B: BackendEnvironmentBuilder<'env, Environment = E>,
-    {
-        if !path.is_dir() {
-            return Err(StoreError::DirectoryDoesNotExistError(path.into()));
-        }
-
-        let mut builder = B::new();
-        builder.set_max_dbs(max_dbs);
-
-        // Future: set flags, maximum size, etc. here if necessary.
-        Rkv::from_env(path, builder)
     }
 }
 
@@ -374,15 +374,15 @@ mod tests {
     }
 
     #[test]
-    fn test_open_from_env() {
-        let root = Builder::new().prefix("test_open_from_env").tempdir().expect("tempdir");
+    fn test_open_from_builder() {
+        let root = Builder::new().prefix("test_open_from_builder").tempdir().expect("tempdir");
         println!("Root path: {:?}", root.path());
         fs::create_dir_all(root.path()).expect("dir created");
         assert!(root.path().is_dir());
 
         let mut builder = Rkv::environment_builder::<backend::Lmdb>();
         builder.set_max_dbs(2);
-        let k = Rkv::from_env(root.path(), builder).expect("rkv");
+        let k = Rkv::from_builder(root.path(), builder).expect("rkv");
 
         check_rkv(&k);
     }
@@ -466,7 +466,7 @@ mod tests {
         // which ensures that there's enough space for the value and metadata.
         builder.set_map_size(get_larger_than_default_map_size_value() + 100 * 1024 /* 100KiB */);
         builder.set_max_dbs(2);
-        let k = Rkv::from_env(root.path(), builder).unwrap();
+        let k = Rkv::from_builder(root.path(), builder).unwrap();
         let sk = k.open_single("test", StoreOptions::create()).expect("opened");
         let val = "x".repeat(get_larger_than_default_map_size_value());
 
@@ -883,7 +883,7 @@ mod tests {
         builder.set_max_dbs(1);
         builder.set_flags(EnvironmentFlags::NO_SYNC);
         {
-            let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
+            let k = Rkv::from_builder(root.path(), builder).expect("new succeeded");
             let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
             {
@@ -893,7 +893,7 @@ mod tests {
                 k.sync(true).expect("synced");
             }
         }
-        let k = Rkv::from_env(root.path(), builder).expect("new succeeded");
+        let k = Rkv::from_builder(root.path(), builder).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
         let reader = k.read().expect("reader");
         assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));

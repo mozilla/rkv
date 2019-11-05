@@ -28,7 +28,7 @@ pub(crate) fn read_transform(value: Result<&[u8], StoreError>) -> Result<Option<
 }
 
 // Workaround the UNC path on Windows, see https://github.com/rust-lang/rust/issues/42869.
-// Otherwise, `Env::from_env()` will panic with error_no(123).
+// Otherwise, `Env::from_builder()` will panic with error_no(123).
 pub(crate) fn canonicalize_path<'p, P>(path: P) -> io::Result<PathBuf>
 where
     P: Into<&'p Path>,
