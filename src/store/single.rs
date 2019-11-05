@@ -27,6 +27,7 @@ use crate::value::Value;
 
 type EmptyResult = Result<(), StoreError>;
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct SingleStore<D> {
     db: D,
 }

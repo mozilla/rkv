@@ -22,7 +22,7 @@ pub use cursor::{
     RoCursorImpl,
     RwCursorImpl,
 };
-pub use database::DatabaseImpl;
+pub use database::DatabaseId;
 pub use environment::{
     EnvironmentBuilderImpl,
     EnvironmentImpl,

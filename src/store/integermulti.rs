@@ -33,6 +33,7 @@ use crate::value::Value;
 
 type EmptyResult = Result<(), StoreError>;
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct MultiIntegerStore<D, K> {
     inner: MultiStore<D>,
     phantom: PhantomData<K>,
@@ -282,6 +283,40 @@ mod tests {
             assert!(iter.next().is_none());
         }
     }
+
+    #[test]
+    fn test_persist() {
+        let root = Builder::new().prefix("test_multi_integer_persist").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        {
+            let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+            let s = k.open_multi_integer("s", StoreOptions::create()).expect("open");
+
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 1, &Value::Str("hello1!")).expect("write");
+            s.put(&mut writer, 2, &Value::Str("hello!")).expect("write");
+            {
+                let mut iter = s.get(&writer, 1).expect("read");
+                assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
+                assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+                assert!(iter.next().is_none());
+            }
+            writer.commit().expect("committed");
+        }
+
+        {
+            let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+            let s = k.open_multi_integer("s", StoreOptions::create()).expect("open");
+
+            let reader = k.read().expect("reader");
+            let mut iter = s.get(&reader, 1).expect("read");
+            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
+            assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+            assert!(iter.next().is_none());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -461,6 +496,40 @@ mod tests_safe {
 
             let reader = k.read().expect("reader");
             let mut iter = s.get(&reader, 1).expect("read");
+            assert!(iter.next().is_none());
+        }
+    }
+
+    #[test]
+    fn test_persist() {
+        let root = Builder::new().prefix("test_multi_integer_persist").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        {
+            let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
+            let s = k.open_multi_integer("s", StoreOptions::create()).expect("open");
+
+            let mut writer = k.write().expect("writer");
+            s.put(&mut writer, 1, &Value::Str("hello!")).expect("write");
+            s.put(&mut writer, 1, &Value::Str("hello1!")).expect("write");
+            s.put(&mut writer, 2, &Value::Str("hello!")).expect("write");
+            {
+                let mut iter = s.get(&writer, 1).expect("read");
+                assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
+                assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+                assert!(iter.next().is_none());
+            }
+            writer.commit().expect("committed");
+        }
+
+        {
+            let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
+            let s = k.open_multi_integer("s", StoreOptions::create()).expect("open");
+
+            let reader = k.read().expect("reader");
+            let mut iter = s.get(&reader, 1).expect("read");
+            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
+            assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
             assert!(iter.next().is_none());
         }
     }

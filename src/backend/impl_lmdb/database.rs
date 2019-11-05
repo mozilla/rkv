@@ -10,7 +10,7 @@
 
 use crate::backend::traits::BackendDatabase;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct DatabaseImpl(pub(crate) lmdb::Database);
 
 impl BackendDatabase for DatabaseImpl {}

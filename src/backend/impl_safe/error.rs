@@ -22,7 +22,6 @@ pub enum ErrorImpl {
     DbPoisonError,
     DbNotFoundError,
     DbIsForeignError,
-    TxnPoisonError,
     IoError(io::Error),
     BincodeError(BincodeError),
 }
@@ -36,7 +35,6 @@ impl fmt::Display for ErrorImpl {
             ErrorImpl::DbPoisonError => write!(fmt, "DbPoisonError (safe mode)"),
             ErrorImpl::DbNotFoundError => write!(fmt, "DbNotFoundError (safe mode)"),
             ErrorImpl::DbIsForeignError => write!(fmt, "DbIsForeignError (safe mode)"),
-            ErrorImpl::TxnPoisonError => write!(fmt, "TxnPoisonError (safe mode)"),
             ErrorImpl::IoError(e) => e.fmt(fmt),
             ErrorImpl::BincodeError(e) => e.fmt(fmt),
         }

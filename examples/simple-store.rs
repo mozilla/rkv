@@ -27,7 +27,7 @@ use rkv::{
 type MultiStore = rkv::MultiStore<LmdbDatabase>;
 type Writer<'env> = rkv::Writer<LmdbRwTransaction<'env>>;
 
-fn getput<'env, 's>(store: &MultiStore, writer: &'env mut Writer, ids: &'s mut Vec<String>) {
+fn getput<'env, 's>(store: MultiStore, writer: &'env mut Writer, ids: &'s mut Vec<String>) {
     let keys = vec!["str1", "str2", "str3"];
     // we convert the writer into a cursor so that we can safely read
     for k in keys.iter() {
@@ -46,7 +46,7 @@ fn getput<'env, 's>(store: &MultiStore, writer: &'env mut Writer, ids: &'s mut V
     }
 }
 
-fn delete(store: &MultiStore, writer: &mut Writer) {
+fn delete(store: MultiStore, writer: &mut Writer) {
     let keys = vec!["str1", "str2", "str3"];
     let vals = vec!["string uno", "string quatro", "string siete"];
     // we convert the writer into a cursor so that we can safely read
@@ -96,10 +96,10 @@ fn main() {
         multistore.put(&mut writer, "str3", &Value::Str("string siete")).unwrap();
         multistore.put(&mut writer, "str3", &Value::Str("string ocho")).unwrap();
         multistore.put(&mut writer, "str3", &Value::Str("string nueve")).unwrap();
-        getput(&multistore, &mut writer, &mut ids);
+        getput(multistore, &mut writer, &mut ids);
         writer.commit().unwrap();
         let mut writer = k.write().unwrap();
-        delete(&multistore, &mut writer);
+        delete(multistore, &mut writer);
         writer.commit().unwrap();
     }
 
