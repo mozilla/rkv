@@ -15,6 +15,7 @@ use rkv::backend::{
     BackendStat,
     Lmdb,
     LmdbDatabase,
+    LmdbEnvironment,
     LmdbRwTransaction,
 };
 use rkv::{
@@ -61,7 +62,8 @@ fn main() {
     let p = root.path();
 
     // The manager enforces that each process opens the same lmdb environment at most once
-    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new::<Lmdb>).unwrap();
+    let mut manager = Manager::<LmdbEnvironment>::singleton().write().unwrap();
+    let created_arc = manager.get_or_create(p, Rkv::new::<Lmdb>).unwrap();
     let k = created_arc.read().unwrap();
 
     // Creates a store called "store"
