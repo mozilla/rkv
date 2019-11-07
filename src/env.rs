@@ -23,6 +23,7 @@ use crate::backend::{
     BackendRwCursorTransaction,
     BackendStat,
     DatabaseFlags,
+    SafeModeError,
 };
 use crate::error::StoreError;
 use crate::readwrite::{
@@ -175,11 +176,13 @@ where
         if opts.create {
             self.env.create_db(name.into(), opts.flags).map_err(|e| match e.into() {
                 StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
+                StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
                 e => e,
             })
         } else {
             self.env.open_db(name.into()).map_err(|e| match e.into() {
                 StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
+                StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
                 e => e,
             })
         }
