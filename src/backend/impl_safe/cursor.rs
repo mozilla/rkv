@@ -30,7 +30,7 @@ impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
     {
         // FIXME: Don't allocate.
         let key = key.as_ref().to_vec();
-        IterImpl(Box::new(self.0.iter().skip_while(move |&(k, _)| k != &key[..])))
+        IterImpl(Box::new(self.0.iter().skip_while(move |&(k, _)| k < key.as_slice())))
     }
 
     fn iter_dup_of<K>(&mut self, key: K) -> Self::Iter
@@ -39,7 +39,7 @@ impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
     {
         // FIXME: Don't allocate.
         let key = key.as_ref().to_vec();
-        IterImpl(Box::new(self.0.iter().filter(move |&(k, _)| k == &key[..])))
+        IterImpl(Box::new(self.0.iter().filter(move |&(k, _)| k == key.as_slice())))
     }
 }
 

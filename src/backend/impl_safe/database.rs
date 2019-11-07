@@ -8,11 +8,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::collections::BTreeSet;
+use std::collections::{
+    BTreeMap,
+    BTreeSet,
+};
 use std::sync::Arc;
 
-use hashbrown::hash_map::RawEntryMut;
-use hashbrown::HashMap;
 use id_arena::Id;
 use serde_derive::{
     Deserialize,
@@ -53,7 +54,7 @@ type Value = Box<[u8]>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
     flags: DatabaseFlagsImpl,
-    map: Arc<HashMap<Key, BTreeSet<Value>>>,
+    map: Arc<BTreeMap<Key, BTreeSet<Value>>>,
 }
 
 impl Snapshot {
@@ -74,26 +75,38 @@ impl Snapshot {
 
     pub(crate) fn put_one(&mut self, key: &[u8], value: &[u8]) {
         let map = Arc::make_mut(&mut self.map);
-        let entry = map.raw_entry_mut().from_key(key);
-        let (_, values) = entry.and_modify(|_, v| v.clear()).or_insert_with(|| (Box::from(key), BTreeSet::new()));
-        values.insert(Box::from(value));
+        match map.get_mut(key) {
+            None => {
+                let mut values = BTreeSet::new();
+                values.insert(Box::from(value));
+                map.insert(Box::from(key), values);
+            },
+            Some(values) => {
+                values.clear();
+                values.insert(Box::from(value));
+            },
+        }
     }
 
     pub(crate) fn put_dup(&mut self, key: &[u8], value: &[u8]) {
         let map = Arc::make_mut(&mut self.map);
-        let entry = map.raw_entry_mut().from_key(key);
-        let (_, values) = entry.or_insert_with(|| (Box::from(key), BTreeSet::new()));
-        values.insert(Box::from(value));
+        match map.get_mut(key) {
+            None => {
+                let mut values = BTreeSet::new();
+                values.insert(Box::from(value));
+                map.insert(Box::from(key), values);
+            },
+            Some(values) => {
+                values.insert(Box::from(value));
+            },
+        }
     }
 
     pub(crate) fn del_exact(&mut self, key: &[u8], value: &[u8]) -> Option<()> {
         let map = Arc::make_mut(&mut self.map);
-        let entry = map.raw_entry_mut().from_key(key);
-
-        match entry {
-            RawEntryMut::Vacant(_) => None,
-            RawEntryMut::Occupied(mut entry) => {
-                let values = entry.get_mut();
+        match map.get_mut(key) {
+            None => None,
+            Some(values) => {
                 let was_removed = values.remove(value);
                 Some(()).filter(|_| was_removed)
             },
@@ -102,12 +115,9 @@ impl Snapshot {
 
     pub(crate) fn del_all(&mut self, key: &[u8]) -> Option<()> {
         let map = Arc::make_mut(&mut self.map);
-        let entry = map.raw_entry_mut().from_key(key);
-
-        match entry {
-            RawEntryMut::Vacant(_) => None,
-            RawEntryMut::Occupied(mut entry) => {
-                let values = entry.get_mut();
+        match map.get_mut(key) {
+            None => None,
+            Some(values) => {
                 let was_empty = values.is_empty();
                 values.clear();
                 Some(()).filter(|_| !was_empty)
