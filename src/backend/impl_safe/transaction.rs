@@ -9,6 +9,7 @@
 // specific language governing permissions and limitations under the License.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use super::{
     database::Snapshot,
@@ -30,14 +31,16 @@ use crate::backend::traits::{
 pub struct RoTransactionImpl<'env> {
     env: &'env EnvironmentImpl,
     snapshots: HashMap<DatabaseId, Snapshot>,
+    idx: Arc<()>,
 }
 
 impl<'env> RoTransactionImpl<'env> {
-    pub(crate) fn new(env: &'env EnvironmentImpl) -> Result<RoTransactionImpl<'env>, ErrorImpl> {
+    pub(crate) fn new(env: &'env EnvironmentImpl, idx: Arc<()>) -> Result<RoTransactionImpl<'env>, ErrorImpl> {
         let snapshots = env.dbs()?.iter().map(|(id, db)| (id, db.snapshot())).collect();
         Ok(RoTransactionImpl {
             env,
             snapshots,
+            idx,
         })
     }
 }
@@ -69,14 +72,16 @@ impl<'env> BackendRoCursorTransaction<'env> for RoTransactionImpl<'env> {
 pub struct RwTransactionImpl<'env> {
     env: &'env EnvironmentImpl,
     snapshots: HashMap<DatabaseId, Snapshot>,
+    idx: Arc<()>,
 }
 
 impl<'env> RwTransactionImpl<'env> {
-    pub(crate) fn new(env: &'env EnvironmentImpl) -> Result<RwTransactionImpl<'env>, ErrorImpl> {
+    pub(crate) fn new(env: &'env EnvironmentImpl, idx: Arc<()>) -> Result<RwTransactionImpl<'env>, ErrorImpl> {
         let snapshots = env.dbs()?.iter().map(|(id, db)| (id, db.snapshot())).collect();
         Ok(RwTransactionImpl {
             env,
             snapshots,
+            idx,
         })
     }
 }

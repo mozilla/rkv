@@ -15,6 +15,7 @@ use std::path::{
     Path,
     PathBuf,
 };
+use std::sync::Arc;
 use std::sync::{
     RwLock,
     RwLockReadGuard,
@@ -96,6 +97,8 @@ pub struct EnvironmentImpl {
     path: PathBuf,
     arena: RwLock<DatabaseArena>,
     dbs: RwLock<DatabaseNameMap>,
+    ro_txns: Arc<()>,
+    rw_txns: Arc<()>,
 }
 
 impl EnvironmentImpl {
@@ -123,6 +126,8 @@ impl EnvironmentImpl {
             path: path.to_path_buf(),
             arena: RwLock::new(DatabaseArena::new()),
             dbs: RwLock::new(HashMap::new()),
+            ro_txns: Arc::new(()),
+            rw_txns: Arc::new(()),
         })
     }
 
@@ -168,6 +173,9 @@ impl<'env> BackendEnvironment<'env> for EnvironmentImpl {
     type RwTransaction = RwTransactionImpl<'env>;
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
+        if Arc::strong_count(&self.ro_txns) > 1 {
+            return Err(ErrorImpl::DbsIllegalOpen);
+        }
         // TOOD: don't reallocate `name`.
         let key = name.map(String::from);
         let dbs = self.dbs.read().map_err(|_| ErrorImpl::DbPoisonError)?;
@@ -185,11 +193,11 @@ impl<'env> BackendEnvironment<'env> for EnvironmentImpl {
     }
 
     fn begin_ro_txn(&'env self) -> Result<Self::RoTransaction, Self::Error> {
-        RoTransactionImpl::new(self)
+        RoTransactionImpl::new(self, self.ro_txns.clone())
     }
 
     fn begin_rw_txn(&'env self) -> Result<Self::RwTransaction, Self::Error> {
-        RwTransactionImpl::new(self)
+        RwTransactionImpl::new(self, self.rw_txns.clone())
     }
 
     fn sync(&self, force: bool) -> Result<(), Self::Error> {
