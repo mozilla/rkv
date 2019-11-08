@@ -618,6 +618,19 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "KeyValuePairNotFound")]
+    fn test_single_store_delete_nonexistent() {
+        let root = Builder::new().prefix("test_single_store_delete_nonexistent").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+        let mut writer = k.write().expect("writer");
+        sk.delete(&mut writer, "bogus").unwrap();
+    }
+
+    #[test]
     fn test_multi_put_get_del() {
         let root = Builder::new().prefix("test_multi_put_get_del").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -1644,6 +1657,19 @@ mod tests_safe {
             let iter = sk.iter_start(&r).expect("iter");
             assert_eq!(iter.count(), 0);
         }
+    }
+
+    #[test]
+    #[should_panic(expected = "KeyValuePairNotFound")]
+    fn test_single_store_delete_nonexistent_safe() {
+        let root = Builder::new().prefix("test_single_store_delete_nonexistent_safe").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+        let mut writer = k.write().expect("writer");
+        sk.delete(&mut writer, "bogus").unwrap();
     }
 
     #[test]
