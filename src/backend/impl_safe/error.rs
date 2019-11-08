@@ -49,6 +49,7 @@ impl Into<StoreError> for ErrorImpl {
     fn into(self) -> StoreError {
         match self {
             ErrorImpl::KeyValuePairNotFound => StoreError::KeyValuePairNotFound,
+            ErrorImpl::BincodeError(_) => StoreError::DatabaseInvalid,
             _ => StoreError::SafeModeError(self),
         }
     }

@@ -720,6 +720,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "new failed: DatabaseInvalid")]
+    fn test_open_a_broken_store() {
+        let root = Builder::new().prefix("test_open_a_missing_store").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let dbfile = root.path().join("data.mdb");
+        fs::write(dbfile, "bogus").expect("dbfile created");
+
+        let _ = Rkv::new::<backend::Lmdb>(root.path()).expect("new failed");
+    }
+
+    #[test]
     fn test_open_fail_with_badrslot() {
         let root = Builder::new().prefix("test_open_fail_with_badrslot").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -1734,6 +1746,18 @@ mod tests_safe {
 
         let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
         let _sk = k.open("sk", StoreOptions::default()).expect("open a missing store");
+    }
+
+    #[test]
+    #[should_panic(expected = "new failed: DatabaseInvalid")]
+    fn test_open_a_broken_store_safe() {
+        let root = Builder::new().prefix("test_open_a_missing_store_safe").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let dbfile = root.path().join("data.safe.bin");
+        fs::write(dbfile, "bogus").expect("dbfile created");
+
+        let _ = Rkv::new::<SafeMode>(root.path()).expect("new failed");
     }
 
     #[test]
