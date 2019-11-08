@@ -58,6 +58,9 @@ pub enum StoreError {
     #[fail(display = "database corrupted")]
     DatabaseCorrupted,
 
+    #[fail(display = "database invalid")]
+    DatabaseInvalid,
+
     #[fail(display = "key/value pair not found")]
     KeyValuePairNotFound,
 
