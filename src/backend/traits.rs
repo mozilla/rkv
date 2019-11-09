@@ -133,6 +133,10 @@ pub trait BackendRwTransaction: Debug {
 
     fn put(&mut self, db: &Self::Database, key: &[u8], value: &[u8], flags: Self::Flags) -> Result<(), Self::Error>;
 
+    #[cfg(not(feature = "db-dup-sort"))]
+    fn del(&mut self, db: &Self::Database, key: &[u8]) -> Result<(), Self::Error>;
+
+    #[cfg(feature = "db-dup-sort")]
     fn del(&mut self, db: &Self::Database, key: &[u8], value: Option<&[u8]>) -> Result<(), Self::Error>;
 
     fn clear_db(&mut self, db: &Self::Database) -> Result<(), Self::Error>;

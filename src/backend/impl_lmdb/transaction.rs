@@ -63,6 +63,12 @@ impl<'env> BackendRwTransaction for RwTransactionImpl<'env> {
         self.0.put(db.0, &key, &value, flags.0).map_err(ErrorImpl)
     }
 
+    #[cfg(not(feature = "db-dup-sort"))]
+    fn del(&mut self, db: &Self::Database, key: &[u8]) -> Result<(), Self::Error> {
+        self.0.del(db.0, &key, None).map_err(ErrorImpl)
+    }
+
+    #[cfg(feature = "db-dup-sort")]
     fn del(&mut self, db: &Self::Database, key: &[u8], value: Option<&[u8]>) -> Result<(), Self::Error> {
         self.0.del(db.0, &key, value).map_err(ErrorImpl)
     }
