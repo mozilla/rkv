@@ -9,7 +9,7 @@
 // specific language governing permissions and limitations under the License.
 
 use super::{
-    database::Snapshot,
+    snapshot::Snapshot,
     IterImpl,
 };
 use crate::backend::traits::BackendRoCursor;

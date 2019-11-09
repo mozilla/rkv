@@ -229,16 +229,21 @@ pub use readwrite::{
     Reader,
     Writer,
 };
-pub use store::integer::IntegerStore;
-pub use store::integermulti::MultiIntegerStore;
-pub use store::keys::{
-    EncodableKey,
-    PrimitiveInt,
-};
-pub use store::multi::MultiStore;
+pub use store::keys::EncodableKey;
 pub use store::single::SingleStore;
 pub use store::Options as StoreOptions;
 pub use value::{
     OwnedValue,
     Value,
 };
+
+#[cfg(feature = "db-dup-sort")]
+pub use store::multi::MultiStore;
+
+#[cfg(feature = "db-int-key")]
+pub use store::integer::IntegerStore;
+#[cfg(feature = "db-int-key")]
+pub use store::keys::PrimitiveInt;
+
+#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
+pub use store::integermulti::MultiIntegerStore;

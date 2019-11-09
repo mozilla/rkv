@@ -8,11 +8,17 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod integer;
-pub mod integermulti;
 pub mod keys;
-pub mod multi;
 pub mod single;
+
+#[cfg(feature = "db-dup-sort")]
+pub mod multi;
+
+#[cfg(feature = "db-int-key")]
+pub mod integer;
+
+#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
+pub mod integermulti;
 
 use crate::backend::BackendDatabaseFlags;
 

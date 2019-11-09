@@ -12,8 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::{
-    database::Snapshot,
-    DatabaseFlagsImpl,
+    snapshot::Snapshot,
     DatabaseId,
     EnvironmentImpl,
     ErrorImpl,
@@ -96,21 +95,39 @@ impl<'env> BackendRwTransaction for RwTransactionImpl<'env> {
         snapshot.get(key).ok_or_else(|| ErrorImpl::KeyValuePairNotFound)
     }
 
+    #[cfg(not(feature = "db-dup-sort"))]
     fn put(&mut self, db: &Self::Database, key: &[u8], value: &[u8], _flags: Self::Flags) -> Result<(), Self::Error> {
+        let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        snapshot.put(key, value);
+        Ok(())
+    }
+
+    #[cfg(feature = "db-dup-sort")]
+    fn put(&mut self, db: &Self::Database, key: &[u8], value: &[u8], _flags: Self::Flags) -> Result<(), Self::Error> {
+        use super::DatabaseFlagsImpl;
         let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
         if snapshot.flags().contains(DatabaseFlagsImpl::DUP_SORT) {
             snapshot.put_dup(key, value);
         } else {
-            snapshot.put_one(key, value);
+            snapshot.put(key, value);
         }
         Ok(())
     }
 
+    #[cfg(not(feature = "db-dup-sort"))]
+    fn del(&mut self, db: &Self::Database, key: &[u8]) -> Result<(), Self::Error> {
+        let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        let deleted = snapshot.del(key);
+        Ok(deleted.ok_or_else(|| ErrorImpl::KeyValuePairNotFound)?)
+    }
+
+    #[cfg(feature = "db-dup-sort")]
     fn del(&mut self, db: &Self::Database, key: &[u8], value: Option<&[u8]>) -> Result<(), Self::Error> {
+        use super::DatabaseFlagsImpl;
         let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
         let deleted = match (value, snapshot.flags()) {
             (Some(value), flags) if flags.contains(DatabaseFlagsImpl::DUP_SORT) => snapshot.del_exact(key, value),
-            _ => snapshot.del_all(key),
+            _ => snapshot.del(key),
         };
         Ok(deleted.ok_or_else(|| ErrorImpl::KeyValuePairNotFound)?)
     }
