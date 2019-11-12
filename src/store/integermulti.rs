@@ -51,7 +51,7 @@ where
         }
     }
 
-    pub fn get<'env, R, I, C>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
+    pub fn get<'env, R, I, C>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I>, StoreError>
     where
         R: Readable<'env, Database = D, RoCursor = C>,
         I: BackendIter<'env>,

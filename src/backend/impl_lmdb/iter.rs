@@ -11,13 +11,31 @@
 use super::ErrorImpl;
 use crate::backend::traits::BackendIter;
 
-pub struct IterImpl<'env>(pub(crate) lmdb::Iter<'env>);
+pub struct IterImpl<'env, C> {
+    // LMDB semantics dictate that a cursor must be valid for the entire lifetime
+    // of an iterator. In other words, cursors must not be dropped while an
+    // iterator built from it is alive. Unfortunately, the LMDB crate API does
+    // not express this through the type system, so we must enforce it somehow.
+    #[allow(dead_code)]
+    cursor: C,
+    iter: lmdb::Iter<'env>,
+}
 
-impl<'env> BackendIter<'env> for IterImpl<'env> {
+impl<'env, C> IterImpl<'env, C> {
+    pub(crate) fn new(mut cursor: C, to_iter: impl FnOnce(&mut C) -> lmdb::Iter<'env>) -> IterImpl<'env, C> {
+        let iter = to_iter(&mut cursor);
+        IterImpl {
+            cursor,
+            iter,
+        }
+    }
+}
+
+impl<'env, C> BackendIter<'env> for IterImpl<'env, C> {
     type Error = ErrorImpl;
 
     #[allow(clippy::type_complexity)]
     fn next(&mut self) -> Option<Result<(&'env [u8], &'env [u8]), Self::Error>> {
-        self.0.next().map(|e| e.map_err(ErrorImpl))
+        self.iter.next().map(|e| e.map_err(ErrorImpl))
     }
 }
