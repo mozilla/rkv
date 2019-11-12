@@ -120,18 +120,6 @@ fn uuid(bytes: &[u8]) -> Result<Value, DataError> {
 }
 
 impl<'s> Value<'s> {
-    fn expected_from_tagged_slice(expected: Type, slice: &'s [u8]) -> Result<Value<'s>, DataError> {
-        let (tag, data) = slice.split_first().ok_or(DataError::Empty)?;
-        let t = Type::from_tag(*tag)?;
-        if t == expected {
-            return Err(DataError::UnexpectedType {
-                expected,
-                actual: t,
-            });
-        }
-        Value::from_type_and_data(t, data)
-    }
-
     pub fn from_tagged_slice(slice: &'s [u8]) -> Result<Value<'s>, DataError> {
         let (tag, data) = slice.split_first().ok_or(DataError::Empty)?;
         let t = Type::from_tag(*tag)?;

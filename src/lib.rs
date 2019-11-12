@@ -199,8 +199,6 @@
 //!
 //! ```
 
-#![allow(dead_code)]
-
 mod env;
 mod error;
 mod helpers;
