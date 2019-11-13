@@ -208,8 +208,8 @@ impl<'s> From<&'s Value<'s>> for OwnedValue {
             Value::F64(v) => OwnedValue::F64(**v),
             Value::Instant(v) => OwnedValue::Instant(*v),
             Value::Uuid(v) => OwnedValue::Uuid(Uuid::from_bytes(**v)),
-            Value::Str(v) => OwnedValue::Str(v.to_string()),
-            Value::Json(v) => OwnedValue::Json(v.to_string()),
+            Value::Str(v) => OwnedValue::Str((*v).to_string()),
+            Value::Json(v) => OwnedValue::Json((*v).to_string()),
             Value::Blob(v) => OwnedValue::Blob(v.to_vec()),
         }
     }
