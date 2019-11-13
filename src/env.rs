@@ -720,6 +720,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "new failed: DatabaseInvalid")]
+    fn test_open_a_broken_store() {
+        let root = Builder::new().prefix("test_open_a_missing_store").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let dbfile = root.path().join("data.mdb");
+        fs::write(dbfile, "bogus").expect("dbfile created");
+
+        let _ = Rkv::new::<backend::Lmdb>(root.path()).expect("new failed");
+    }
+
+    #[test]
     fn test_open_fail_with_badrslot() {
         let root = Builder::new().prefix("test_open_fail_with_badrslot").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -1737,6 +1749,18 @@ mod tests_safe {
     }
 
     #[test]
+    #[should_panic(expected = "new failed: DatabaseInvalid")]
+    fn test_open_a_broken_store_safe() {
+        let root = Builder::new().prefix("test_open_a_missing_store_safe").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let dbfile = root.path().join("data.safe.bin");
+        fs::write(dbfile, "bogus").expect("dbfile created");
+
+        let _ = Rkv::new::<SafeMode>(root.path()).expect("new failed");
+    }
+
+    #[test]
     fn test_open_fail_with_badrslot_safe() {
         let root = Builder::new().prefix("test_open_fail_with_badrslot_safe").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -2310,6 +2334,188 @@ mod tests_safe {
                 store.delete(&mut writer, key).expect("deleted");
             }
             writer.commit().expect("committed");
+        }
+    }
+}
+
+// TODO: change this back to `clippy::cognitive_complexity` when Clippy stable
+// deprecates `clippy::cyclomatic_complexity`.
+#[allow(clippy::complexity)]
+#[cfg(test)]
+mod tests_backends_interop {
+    use std::fs;
+
+    use tempfile::Builder;
+
+    use super::*;
+    use crate::*;
+
+    use crate::backend::{
+        Lmdb,
+        SafeMode,
+    };
+
+    #[test]
+    fn test_open_safe_same_dir_as_lmdb() {
+        let root = Builder::new().prefix("test_open_safe_same_dir_as_lmdb").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        // Create database of type A and save to disk.
+        {
+            let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+            let mut writer = k.write().expect("writer");
+            sk.put(&mut writer, "foo", &Value::I64(1234)).expect("wrote");
+            sk.put(&mut writer, "bar", &Value::Bool(true)).expect("wrote");
+            sk.put(&mut writer, "baz", &Value::Str("héllo, yöu")).expect("wrote");
+            assert_eq!(sk.get(&writer, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&writer, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&writer, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+            writer.commit().expect("committed");
+            k.sync(true).expect("synced");
+        }
+        // Verify that database of type A was written to disk.
+        {
+            let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+        // Create database of type B and verify that it is empty.
+        {
+            let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+            let _ = k.open_single("sk", StoreOptions::default()).expect_err("not opened");
+        }
+        // Verify that database of type A wasn't changed.
+        {
+            let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+        // Create database of type B and save to disk (database of type A exists at the same path).
+        {
+            let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+            let mut writer = k.write().expect("writer");
+            sk.put(&mut writer, "foo1", &Value::I64(5678)).expect("wrote");
+            sk.put(&mut writer, "bar1", &Value::Bool(false)).expect("wrote");
+            sk.put(&mut writer, "baz1", &Value::Str("héllo~ yöu")).expect("wrote");
+            assert_eq!(sk.get(&writer, "foo1").expect("read"), Some(Value::I64(5678)));
+            assert_eq!(sk.get(&writer, "bar1").expect("read"), Some(Value::Bool(false)));
+            assert_eq!(sk.get(&writer, "baz1").expect("read"), Some(Value::Str("héllo~ yöu")));
+            writer.commit().expect("committed");
+            k.sync(true).expect("synced");
+        }
+        // Verify that database of type B was written to disk.
+        {
+            let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo1").expect("read"), Some(Value::I64(5678)));
+            assert_eq!(sk.get(&reader, "bar1").expect("read"), Some(Value::Bool(false)));
+            assert_eq!(sk.get(&reader, "baz1").expect("read"), Some(Value::Str("héllo~ yöu")));
+        }
+        // Verify that database of type A still wasn't changed.
+        {
+            let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+    }
+
+    #[test]
+    fn test_open_lmdb_same_dir_as_safe() {
+        let root = Builder::new().prefix("test_open_lmdb_same_dir_as_safe").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        // Create database of type A and save to disk.
+        {
+            let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+            let mut writer = k.write().expect("writer");
+            sk.put(&mut writer, "foo", &Value::I64(1234)).expect("wrote");
+            sk.put(&mut writer, "bar", &Value::Bool(true)).expect("wrote");
+            sk.put(&mut writer, "baz", &Value::Str("héllo, yöu")).expect("wrote");
+            assert_eq!(sk.get(&writer, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&writer, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&writer, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+            writer.commit().expect("committed");
+            k.sync(true).expect("synced");
+        }
+        // Verify that database of type A was written to disk.
+        {
+            let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+        // Create database of type B and verify that it is empty.
+        {
+            let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+            let _ = k.open_single("sk", StoreOptions::default()).expect_err("not opened");
+        }
+        // Verify that database of type A wasn't changed.
+        {
+            let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
+        }
+        // Create database of type B and save to disk (database of type A exists at the same path).
+        {
+            let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+            let mut writer = k.write().expect("writer");
+            sk.put(&mut writer, "foo1", &Value::I64(5678)).expect("wrote");
+            sk.put(&mut writer, "bar1", &Value::Bool(false)).expect("wrote");
+            sk.put(&mut writer, "baz1", &Value::Str("héllo~ yöu")).expect("wrote");
+            assert_eq!(sk.get(&writer, "foo1").expect("read"), Some(Value::I64(5678)));
+            assert_eq!(sk.get(&writer, "bar1").expect("read"), Some(Value::Bool(false)));
+            assert_eq!(sk.get(&writer, "baz1").expect("read"), Some(Value::Str("héllo~ yöu")));
+            writer.commit().expect("committed");
+            k.sync(true).expect("synced");
+        }
+        // Verify that database of type B was written to disk.
+        {
+            let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo1").expect("read"), Some(Value::I64(5678)));
+            assert_eq!(sk.get(&reader, "bar1").expect("read"), Some(Value::Bool(false)));
+            assert_eq!(sk.get(&reader, "baz1").expect("read"), Some(Value::Str("héllo~ yöu")));
+        }
+        // Verify that database of type A still wasn't changed.
+        {
+            let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+            let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
+
+            let reader = k.read().expect("reader");
+            assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
+            assert_eq!(sk.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
+            assert_eq!(sk.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
         }
     }
 }
