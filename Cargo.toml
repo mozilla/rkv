@@ -25,7 +25,6 @@ arrayref = "0.3"
 bincode = "1.0"
 bitflags = "1"
 byteorder = "1"
-hashbrown = { version = "0.6", features = ["serde"] }
 id-arena = "2.2"
 lazy_static = "1.0"
 lmdb-rkv = "0.12.3"

@@ -15,6 +15,7 @@ use std::path::{
     Path,
     PathBuf,
 };
+use std::sync::Arc;
 use std::sync::{
     RwLock,
     RwLockReadGuard,
@@ -48,6 +49,9 @@ type DatabaseNameMap = HashMap<Option<String>, DatabaseId>;
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct EnvironmentBuilderImpl {
     flags: EnvironmentFlagsImpl,
+    max_readers: Option<usize>,
+    max_dbs: Option<usize>,
+    map_size: Option<usize>,
 }
 
 impl<'env> BackendEnvironmentBuilder<'env> for EnvironmentBuilderImpl {
@@ -58,6 +62,9 @@ impl<'env> BackendEnvironmentBuilder<'env> for EnvironmentBuilderImpl {
     fn new() -> EnvironmentBuilderImpl {
         EnvironmentBuilderImpl {
             flags: EnvironmentFlagsImpl::empty(),
+            max_readers: None,
+            max_dbs: None,
+            map_size: None,
         }
     }
 
@@ -70,22 +77,22 @@ impl<'env> BackendEnvironmentBuilder<'env> for EnvironmentBuilderImpl {
     }
 
     fn set_max_readers(&mut self, max_readers: u32) -> &mut Self {
-        warn!("Ignoring `set_max_readers({})`", max_readers);
+        self.max_readers = Some(max_readers as usize);
         self
     }
 
     fn set_max_dbs(&mut self, max_dbs: u32) -> &mut Self {
-        warn!("Ignoring `set_max_dbs({})`", max_dbs);
+        self.max_dbs = Some(max_dbs as usize);
         self
     }
 
-    fn set_map_size(&mut self, size: usize) -> &mut Self {
-        warn!("Ignoring `set_map_size({})`", size);
+    fn set_map_size(&mut self, map_size: usize) -> &mut Self {
+        self.map_size = Some(map_size);
         self
     }
 
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error> {
-        let mut env = EnvironmentImpl::new(path, self.flags)?;
+        let mut env = EnvironmentImpl::new(path, self.flags, self.max_readers, self.max_dbs, self.map_size)?;
         env.read_from_disk()?;
         Ok(env)
     }
@@ -94,8 +101,11 @@ impl<'env> BackendEnvironmentBuilder<'env> for EnvironmentBuilderImpl {
 #[derive(Debug)]
 pub struct EnvironmentImpl {
     path: PathBuf,
+    max_dbs: usize,
     arena: RwLock<DatabaseArena>,
     dbs: RwLock<DatabaseNameMap>,
+    ro_txns: Arc<()>,
+    rw_txns: Arc<()>,
 }
 
 impl EnvironmentImpl {
@@ -118,11 +128,30 @@ impl EnvironmentImpl {
 }
 
 impl EnvironmentImpl {
-    pub(crate) fn new(path: &Path, _flags: EnvironmentFlagsImpl) -> Result<EnvironmentImpl, ErrorImpl> {
+    pub(crate) fn new(
+        path: &Path,
+        flags: EnvironmentFlagsImpl,
+        max_readers: Option<usize>,
+        max_dbs: Option<usize>,
+        map_size: Option<usize>,
+    ) -> Result<EnvironmentImpl, ErrorImpl> {
+        if !flags.is_empty() {
+            warn!("Ignoring `flags={:?}`", flags);
+        }
+        if let Some(max_readers) = max_readers {
+            warn!("Ignoring `max_readers={}`", max_readers);
+        }
+        if let Some(map_size) = map_size {
+            warn!("Ignoring `map_size={}`", map_size);
+        }
+
         Ok(EnvironmentImpl {
             path: path.to_path_buf(),
+            max_dbs: max_dbs.unwrap_or(std::usize::MAX),
             arena: RwLock::new(DatabaseArena::new()),
             dbs: RwLock::new(HashMap::new()),
+            ro_txns: Arc::new(()),
+            rw_txns: Arc::new(()),
         })
     }
 
@@ -168,6 +197,9 @@ impl<'env> BackendEnvironment<'env> for EnvironmentImpl {
     type RwTransaction = RwTransactionImpl<'env>;
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
+        if Arc::strong_count(&self.ro_txns) > 1 {
+            return Err(ErrorImpl::DbsIllegalOpen);
+        }
         // TOOD: don't reallocate `name`.
         let key = name.map(String::from);
         let dbs = self.dbs.read().map_err(|_| ErrorImpl::DbPoisonError)?;
@@ -180,16 +212,19 @@ impl<'env> BackendEnvironment<'env> for EnvironmentImpl {
         let key = name.map(String::from);
         let mut dbs = self.dbs.write().map_err(|_| ErrorImpl::DbPoisonError)?;
         let mut arena = self.arena.write().map_err(|_| ErrorImpl::DbPoisonError)?;
+        if dbs.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs {
+            return Err(ErrorImpl::DbsFull);
+        }
         let id = dbs.entry(key).or_insert_with(|| arena.alloc(DatabaseImpl::new(Some(flags), None)));
         Ok(*id)
     }
 
     fn begin_ro_txn(&'env self) -> Result<Self::RoTransaction, Self::Error> {
-        RoTransactionImpl::new(self)
+        RoTransactionImpl::new(self, self.ro_txns.clone())
     }
 
     fn begin_rw_txn(&'env self) -> Result<Self::RwTransaction, Self::Error> {
-        RwTransactionImpl::new(self)
+        RwTransactionImpl::new(self, self.rw_txns.clone())
     }
 
     fn sync(&self, force: bool) -> Result<(), Self::Error> {
