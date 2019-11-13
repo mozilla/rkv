@@ -17,24 +17,29 @@ use crate::backend::traits::BackendRoCursor;
 pub struct RoCursorImpl<'env>(pub(crate) lmdb::RoCursor<'env>);
 
 impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
-    type Iter = IterImpl<'env>;
+    type Iter = IterImpl<'env, lmdb::RoCursor<'env>>;
 
-    fn iter(&mut self) -> Self::Iter {
-        IterImpl(self.0.iter())
+    fn into_iter(self) -> Self::Iter {
+        // We call RoCursor.iter() instead of RoCursor.iter_start() because
+        // the latter panics when there are no items in the store, whereas the
+        // former returns an iterator that yields no items. And since we create
+        // the Cursor and don't change its position, we can be sure that a call
+        // to Cursor.iter() will start at the beginning.
+        IterImpl::new(self.0, lmdb::RoCursor::iter)
     }
 
-    fn iter_from<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_from<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
-        IterImpl(self.0.iter_from(key))
+        IterImpl::new(self.0, |cursor| cursor.iter_from(key))
     }
 
-    fn iter_dup_of<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_dup_of<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
-        IterImpl(self.0.iter_dup_of(key))
+        IterImpl::new(self.0, |cursor| cursor.iter_dup_of(key))
     }
 }
 
@@ -42,23 +47,23 @@ impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
 pub struct RwCursorImpl<'env>(pub(crate) lmdb::RwCursor<'env>);
 
 impl<'env> BackendRoCursor<'env> for RwCursorImpl<'env> {
-    type Iter = IterImpl<'env>;
+    type Iter = IterImpl<'env, lmdb::RwCursor<'env>>;
 
-    fn iter(&mut self) -> Self::Iter {
-        IterImpl(self.0.iter())
+    fn into_iter(self) -> Self::Iter {
+        IterImpl::new(self.0, lmdb::RwCursor::iter)
     }
 
-    fn iter_from<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_from<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
-        IterImpl(self.0.iter_from(key))
+        IterImpl::new(self.0, |cursor| cursor.iter_from(key))
     }
 
-    fn iter_dup_of<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_dup_of<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
-        IterImpl(self.0.iter_dup_of(key))
+        IterImpl::new(self.0, |cursor| cursor.iter_dup_of(key))
     }
 }

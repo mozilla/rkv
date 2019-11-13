@@ -161,13 +161,13 @@ pub trait BackendRwCursorTransaction<'env>: BackendRwTransaction {
 pub trait BackendRoCursor<'env>: Debug {
     type Iter: BackendIter<'env>;
 
-    fn iter(&mut self) -> Self::Iter;
+    fn into_iter(self) -> Self::Iter;
 
-    fn iter_from<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_from<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>;
 
-    fn iter_dup_of<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_dup_of<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>;
 }

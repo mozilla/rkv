@@ -32,9 +32,8 @@ pub struct MultiStore<D> {
     db: D,
 }
 
-pub struct Iter<'env, I, C> {
+pub struct Iter<'env, I> {
     iter: I,
-    cursor: C,
     phantom: PhantomData<&'env ()>,
 }
 
@@ -49,19 +48,18 @@ where
     }
 
     /// Provides a cursor to all of the values for the duplicate entries that match this key
-    pub fn get<'env, R, I, C, K>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
+    pub fn get<'env, R, I, C, K>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I>, StoreError>
     where
         R: Readable<'env, Database = D, RoCursor = C>,
         I: BackendIter<'env>,
         C: BackendRoCursor<'env, Iter = I>,
         K: AsRef<[u8]>,
     {
-        let mut cursor = reader.open_ro_cursor(&self.db)?;
-        let iter = cursor.iter_dup_of(k);
+        let cursor = reader.open_ro_cursor(&self.db)?;
+        let iter = cursor.into_iter_dup_of(k);
 
         Ok(Iter {
             iter,
-            cursor,
             phantom: PhantomData,
         })
     }
@@ -118,10 +116,9 @@ where
     }
 }
 
-impl<'env, I, C> Iterator for Iter<'env, I, C>
+impl<'env, I> Iterator for Iter<'env, I>
 where
     I: BackendIter<'env>,
-    C: BackendRoCursor<'env, Iter = I>,
 {
     type Item = Result<(&'env [u8], Option<Value<'env>>), StoreError>;
 

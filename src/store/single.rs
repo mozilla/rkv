@@ -32,9 +32,8 @@ pub struct SingleStore<D> {
     db: D,
 }
 
-pub struct Iter<'env, I, C> {
+pub struct Iter<'env, I> {
     iter: I,
-    cursor: C,
     phantom: PhantomData<&'env ()>,
 }
 
@@ -83,44 +82,33 @@ where
         writer.delete(&self.db, &k, None)
     }
 
-    pub fn iter_start<'env, R, I, C>(&self, reader: &'env R) -> Result<Iter<'env, I, C>, StoreError>
+    pub fn iter_start<'env, R, I, C>(&self, reader: &'env R) -> Result<Iter<'env, I>, StoreError>
     where
         R: Readable<'env, Database = D, RoCursor = C>,
         I: BackendIter<'env>,
         C: BackendRoCursor<'env, Iter = I>,
     {
-        let mut cursor = reader.open_ro_cursor(&self.db)?;
-
-        // We call Cursor.iter() instead of Cursor.iter_start() because
-        // the latter panics at "called `Result::unwrap()` on an `Err` value:
-        // NotFound" when there are no items in the store, whereas the former
-        // returns an iterator that yields no items.
-        //
-        // And since we create the Cursor and don't change its position, we can
-        // be sure that a call to Cursor.iter() will start at the beginning.
-        //
-        let iter = cursor.iter();
+        let cursor = reader.open_ro_cursor(&self.db)?;
+        let iter = cursor.into_iter();
 
         Ok(Iter {
             iter,
-            cursor,
             phantom: PhantomData,
         })
     }
 
-    pub fn iter_from<'env, R, I, C, K>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I, C>, StoreError>
+    pub fn iter_from<'env, R, I, C, K>(&self, reader: &'env R, k: K) -> Result<Iter<'env, I>, StoreError>
     where
         R: Readable<'env, Database = D, RoCursor = C>,
         I: BackendIter<'env>,
         C: BackendRoCursor<'env, Iter = I>,
         K: AsRef<[u8]>,
     {
-        let mut cursor = reader.open_ro_cursor(&self.db)?;
-        let iter = cursor.iter_from(k);
+        let cursor = reader.open_ro_cursor(&self.db)?;
+        let iter = cursor.into_iter_from(k);
 
         Ok(Iter {
             iter,
-            cursor,
             phantom: PhantomData,
         })
     }
@@ -134,10 +122,9 @@ where
     }
 }
 
-impl<'env, I, C> Iterator for Iter<'env, I, C>
+impl<'env, I> Iterator for Iter<'env, I>
 where
     I: BackendIter<'env>,
-    C: BackendRoCursor<'env, Iter = I>,
 {
     type Item = Result<(&'env [u8], Option<Value<'env>>), StoreError>;
 

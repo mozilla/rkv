@@ -20,11 +20,11 @@ pub struct RoCursorImpl<'env>(pub(crate) &'env Snapshot);
 impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
     type Iter = IterImpl<'env>;
 
-    fn iter(&mut self) -> Self::Iter {
+    fn into_iter(self) -> Self::Iter {
         IterImpl(Box::new(self.0.iter()))
     }
 
-    fn iter_from<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_from<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
@@ -33,7 +33,7 @@ impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
         IterImpl(Box::new(self.0.iter().skip_while(move |&(k, _)| k < key.as_slice())))
     }
 
-    fn iter_dup_of<K>(&mut self, key: K) -> Self::Iter
+    fn into_iter_dup_of<K>(self, key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
@@ -49,18 +49,18 @@ pub struct RwCursorImpl<'env>(&'env mut Snapshot);
 impl<'env> BackendRoCursor<'env> for RwCursorImpl<'env> {
     type Iter = IterImpl<'env>;
 
-    fn iter(&mut self) -> Self::Iter {
+    fn into_iter(self) -> Self::Iter {
         unimplemented!()
     }
 
-    fn iter_from<K>(&mut self, _key: K) -> Self::Iter
+    fn into_iter_from<K>(self, _key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
         unimplemented!()
     }
 
-    fn iter_dup_of<K>(&mut self, _key: K) -> Self::Iter
+    fn into_iter_dup_of<K>(self, _key: K) -> Self::Iter
     where
         K: AsRef<[u8]>,
     {
