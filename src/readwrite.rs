@@ -115,6 +115,15 @@ where
         self.0.put(db, k.as_ref(), &v.to_bytes()?, flags).map_err(|e| e.into())
     }
 
+    #[cfg(not(feature = "db-dup-sort"))]
+    pub(crate) fn delete<K>(&mut self, db: &T::Database, k: &K) -> Result<(), StoreError>
+    where
+        K: AsRef<[u8]>,
+    {
+        self.0.del(db, k.as_ref()).map_err(|e| e.into())
+    }
+
+    #[cfg(feature = "db-dup-sort")]
     pub(crate) fn delete<K>(&mut self, db: &T::Database, k: &K, v: Option<&[u8]>) -> Result<(), StoreError>
     where
         K: AsRef<[u8]>,

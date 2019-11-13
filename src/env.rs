@@ -14,15 +14,18 @@ use std::path::{
     PathBuf,
 };
 
+#[cfg(any(feature = "db-dup-sort", feature = "db-int-key"))]
 use crate::backend::{
     BackendDatabaseFlags,
+    DatabaseFlags,
+};
+use crate::backend::{
     BackendEnvironment,
     BackendEnvironmentBuilder,
     BackendInfo,
     BackendRoCursorTransaction,
     BackendRwCursorTransaction,
     BackendStat,
-    DatabaseFlags,
     SafeModeError,
 };
 use crate::error::StoreError;
@@ -30,12 +33,19 @@ use crate::readwrite::{
     Reader,
     Writer,
 };
-use crate::store::integer::IntegerStore;
-use crate::store::integermulti::MultiIntegerStore;
-use crate::store::keys::PrimitiveInt;
-use crate::store::multi::MultiStore;
 use crate::store::single::SingleStore;
 use crate::store::Options as StoreOptions;
+
+#[cfg(feature = "db-dup-sort")]
+use crate::store::multi::MultiStore;
+
+#[cfg(feature = "db-int-key")]
+use crate::store::integer::IntegerStore;
+#[cfg(feature = "db-int-key")]
+use crate::store::keys::PrimitiveInt;
+
+#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
+use crate::store::integermulti::MultiIntegerStore;
 
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
@@ -124,6 +134,7 @@ where
     /// Create or Open an existing database in (Integer -> Single Value) mode.
     /// Note: that create=true cannot be called concurrently with other operations
     /// so if you are sure that the database exists, call this with create=false.
+    #[cfg(feature = "db-int-key")]
     pub fn open_integer<'s, T, K>(
         &self,
         name: T,
@@ -140,6 +151,7 @@ where
     /// Create or Open an existing database in (&[u8] -> Multiple Values) mode.
     /// Note: that create=true cannot be called concurrently with other operations
     /// so if you are sure that the database exists, call this with create=false.
+    #[cfg(feature = "db-dup-sort")]
     pub fn open_multi<'s, T>(
         &self,
         name: T,
@@ -155,6 +167,7 @@ where
     /// Create or Open an existing database in (Integer -> Multiple Values) mode.
     /// Note: that create=true cannot be called concurrently with other operations
     /// so if you are sure that the database exists, call this with create=false.
+    #[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
     pub fn open_multi_integer<'s, T, K>(
         &self,
         name: T,
@@ -631,6 +644,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "db-dup-sort")]
     fn test_multi_put_get_del() {
         let root = Builder::new().prefix("test_multi_put_get_del").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -668,6 +682,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "db-dup-sort")]
     fn test_multiple_store_clear() {
         let root = Builder::new().prefix("test_multiple_store_clear").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -953,6 +968,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "db-int-key")]
     fn test_stat() {
         let root = Builder::new().prefix("test_stat").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -1673,6 +1689,7 @@ mod tests_safe {
     }
 
     #[test]
+    #[cfg(feature = "db-dup-sort")]
     fn test_multi_put_get_del_safe() {
         let root = Builder::new().prefix("test_multi_put_get_del_safe").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -1710,6 +1727,7 @@ mod tests_safe {
     }
 
     #[test]
+    #[cfg(feature = "db-dup-sort")]
     fn test_multiple_store_clear_safe() {
         let root = Builder::new().prefix("test_multiple_store_clear_safe").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");

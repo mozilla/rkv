@@ -65,6 +65,16 @@ where
         writer.put(&self.db, &k, v, T::Flags::empty())
     }
 
+    #[cfg(not(feature = "db-dup-sort"))]
+    pub fn delete<T, K>(&self, writer: &mut Writer<T>, k: K) -> EmptyResult
+    where
+        T: BackendRwTransaction<Database = D>,
+        K: AsRef<[u8]>,
+    {
+        writer.delete(&self.db, &k)
+    }
+
+    #[cfg(feature = "db-dup-sort")]
     pub fn delete<T, K>(&self, writer: &mut Writer<T>, k: K) -> EmptyResult
     where
         T: BackendRwTransaction<Database = D>,

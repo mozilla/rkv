@@ -15,6 +15,7 @@ mod error;
 mod flags;
 mod info;
 mod iter;
+mod snapshot;
 mod stat;
 mod transaction;
 

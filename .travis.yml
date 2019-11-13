@@ -41,5 +41,8 @@ script:
   - cargo build --verbose
   - export RUST_BACKTRACE=1
   - cargo test --all --verbose
+  - cargo test --lib --no-default-features --verbose
+  - cargo test --lib --no-default-features --features "db-dup-sort" --verbose
+  - cargo test --lib --no-default-features --features "db-int-key" --verbose
   - cargo test --release --all --verbose
   - ./run-all-examples.sh

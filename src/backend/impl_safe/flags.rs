@@ -66,7 +66,10 @@ impl Into<EnvironmentFlagsImpl> for EnvironmentFlags {
 bitflags! {
     #[derive(Default, Serialize, Deserialize)]
     pub struct DatabaseFlagsImpl: u32 {
+        const NIL = 0b0000_0000;
+        #[cfg(feature = "db-dup-sort")]
         const DUP_SORT = 0b0000_0001;
+        #[cfg(feature = "db-int-key")]
         const INTEGER_KEY = 0b0000_0010;
     }
 }
@@ -87,7 +90,9 @@ impl Into<DatabaseFlagsImpl> for DatabaseFlags {
     fn into(self) -> DatabaseFlagsImpl {
         match self {
             DatabaseFlags::REVERSE_KEY => unimplemented!(),
+            #[cfg(feature = "db-dup-sort")]
             DatabaseFlags::DUP_SORT => DatabaseFlagsImpl::DUP_SORT,
+            #[cfg(feature = "db-int-key")]
             DatabaseFlags::INTEGER_KEY => DatabaseFlagsImpl::INTEGER_KEY,
             DatabaseFlags::DUP_FIXED => unimplemented!(),
             DatabaseFlags::INTEGER_DUP => unimplemented!(),
