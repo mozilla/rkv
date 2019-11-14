@@ -57,13 +57,13 @@ pub struct Rkv<E> {
 }
 
 /// Static methods.
-impl<'env, E> Rkv<E>
+impl<'e, E> Rkv<E>
 where
-    E: BackendEnvironment<'env>,
+    E: BackendEnvironment<'e>,
 {
     pub fn environment_builder<B>() -> B
     where
-        B: BackendEnvironmentBuilder<'env, Environment = E>,
+        B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
         B::new()
     }
@@ -72,7 +72,7 @@ where
     #[allow(clippy::new_ret_no_self)]
     pub fn new<B>(path: &Path) -> Result<Rkv<E>, StoreError>
     where
-        B: BackendEnvironmentBuilder<'env, Environment = E>,
+        B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
         Rkv::with_capacity::<B>(path, DEFAULT_MAX_DBS)
     }
@@ -80,7 +80,7 @@ where
     /// Return a new Rkv environment that supports the specified number of open databases.
     pub fn with_capacity<B>(path: &Path, max_dbs: c_uint) -> Result<Rkv<E>, StoreError>
     where
-        B: BackendEnvironmentBuilder<'env, Environment = E>,
+        B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
@@ -96,7 +96,7 @@ where
     /// Return a new Rkv environment from the provided builder.
     pub fn from_builder<B>(path: &Path, builder: B) -> Result<Rkv<E>, StoreError>
     where
-        B: BackendEnvironmentBuilder<'env, Environment = E>,
+        B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
         if !path.is_dir() {
             return Err(StoreError::DirectoryDoesNotExistError(path.into()));
@@ -113,9 +113,9 @@ where
 }
 
 /// Store creation methods.
-impl<'env, E> Rkv<E>
+impl<'e, E> Rkv<E>
 where
-    E: BackendEnvironment<'env>,
+    E: BackendEnvironment<'e>,
 {
     /// Create or Open an existing database in (&[u8] -> Single Value) mode.
     /// Note: that create=true cannot be called concurrently with other operations
@@ -203,17 +203,17 @@ where
 }
 
 /// Read and write accessors.
-impl<'env, E> Rkv<E>
+impl<'e, E> Rkv<E>
 where
-    E: BackendEnvironment<'env>,
+    E: BackendEnvironment<'e>,
 {
     /// Create a read transaction.  There can be multiple concurrent readers
     /// for an environment, up to the maximum specified by LMDB (default 126),
     /// and you can open readers while a write transaction is active.
-    pub fn read<T>(&'env self) -> Result<Reader<T>, StoreError>
+    pub fn read<T>(&'e self) -> Result<Reader<T>, StoreError>
     where
-        E: BackendEnvironment<'env, RoTransaction = T>,
-        T: BackendRoCursorTransaction<'env, Database = E::Database>,
+        E: BackendEnvironment<'e, RoTransaction = T>,
+        T: BackendRoCursorTransaction<'e, Database = E::Database>,
     {
         Ok(Reader::new(self.env.begin_ro_txn().map_err(|e| e.into())?))
     }
@@ -221,19 +221,19 @@ where
     /// Create a write transaction.  There can be only one write transaction
     /// active at any given time, so trying to create a second one will block
     /// until the first is committed or aborted.
-    pub fn write<T>(&'env self) -> Result<Writer<T>, StoreError>
+    pub fn write<T>(&'e self) -> Result<Writer<T>, StoreError>
     where
-        E: BackendEnvironment<'env, RwTransaction = T>,
-        T: BackendRwCursorTransaction<'env, Database = E::Database>,
+        E: BackendEnvironment<'e, RwTransaction = T>,
+        T: BackendRwCursorTransaction<'e, Database = E::Database>,
     {
         Ok(Writer::new(self.env.begin_rw_txn().map_err(|e| e.into())?))
     }
 }
 
 /// Other environment methods.
-impl<'env, E> Rkv<E>
+impl<'e, E> Rkv<E>
 where
-    E: BackendEnvironment<'env>,
+    E: BackendEnvironment<'e>,
 {
     /// Flush the data buffers to disk. This call is only useful, when the environment
     /// was open with either `NO_SYNC`, `NO_META_SYNC` or `MAP_ASYNC` (see below).

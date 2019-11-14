@@ -14,10 +14,10 @@ use super::IterImpl;
 use crate::backend::traits::BackendRoCursor;
 
 #[derive(Debug)]
-pub struct RoCursorImpl<'env>(pub(crate) lmdb::RoCursor<'env>);
+pub struct RoCursorImpl<'c>(pub(crate) lmdb::RoCursor<'c>);
 
-impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
-    type Iter = IterImpl<'env, lmdb::RoCursor<'env>>;
+impl<'c> BackendRoCursor<'c> for RoCursorImpl<'c> {
+    type Iter = IterImpl<'c, lmdb::RoCursor<'c>>;
 
     fn into_iter(self) -> Self::Iter {
         // We call RoCursor.iter() instead of RoCursor.iter_start() because
@@ -44,10 +44,10 @@ impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
 }
 
 #[derive(Debug)]
-pub struct RwCursorImpl<'env>(pub(crate) lmdb::RwCursor<'env>);
+pub struct RwCursorImpl<'c>(pub(crate) lmdb::RwCursor<'c>);
 
-impl<'env> BackendRoCursor<'env> for RwCursorImpl<'env> {
-    type Iter = IterImpl<'env, lmdb::RwCursor<'env>>;
+impl<'c> BackendRoCursor<'c> for RwCursorImpl<'c> {
+    type Iter = IterImpl<'c, lmdb::RwCursor<'c>>;
 
     fn into_iter(self) -> Self::Iter {
         IterImpl::new(self.0, lmdb::RwCursor::iter)

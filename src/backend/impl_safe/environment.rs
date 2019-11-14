@@ -54,7 +54,7 @@ pub struct EnvironmentBuilderImpl {
     map_size: Option<usize>,
 }
 
-impl<'env> BackendEnvironmentBuilder<'env> for EnvironmentBuilderImpl {
+impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
     type Error = ErrorImpl;
     type Environment = EnvironmentImpl;
     type Flags = EnvironmentFlagsImpl;
@@ -187,14 +187,14 @@ impl EnvironmentImpl {
     }
 }
 
-impl<'env> BackendEnvironment<'env> for EnvironmentImpl {
+impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type Error = ErrorImpl;
     type Database = DatabaseId;
     type Flags = DatabaseFlagsImpl;
     type Stat = StatImpl;
     type Info = InfoImpl;
-    type RoTransaction = RoTransactionImpl<'env>;
-    type RwTransaction = RwTransactionImpl<'env>;
+    type RoTransaction = RoTransactionImpl<'e>;
+    type RwTransaction = RwTransactionImpl<'e>;
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
         if Arc::strong_count(&self.ro_txns) > 1 {
@@ -219,11 +219,11 @@ impl<'env> BackendEnvironment<'env> for EnvironmentImpl {
         Ok(*id)
     }
 
-    fn begin_ro_txn(&'env self) -> Result<Self::RoTransaction, Self::Error> {
+    fn begin_ro_txn(&'e self) -> Result<Self::RoTransaction, Self::Error> {
         RoTransactionImpl::new(self, self.ro_txns.clone())
     }
 
-    fn begin_rw_txn(&'env self) -> Result<Self::RwTransaction, Self::Error> {
+    fn begin_rw_txn(&'e self) -> Result<Self::RwTransaction, Self::Error> {
         RwTransactionImpl::new(self, self.rw_txns.clone())
     }
 

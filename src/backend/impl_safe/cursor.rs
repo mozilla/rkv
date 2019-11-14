@@ -15,10 +15,10 @@ use super::{
 use crate::backend::traits::BackendRoCursor;
 
 #[derive(Debug)]
-pub struct RoCursorImpl<'env>(pub(crate) &'env Snapshot);
+pub struct RoCursorImpl<'c>(pub(crate) &'c Snapshot);
 
-impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
-    type Iter = IterImpl<'env>;
+impl<'c> BackendRoCursor<'c> for RoCursorImpl<'c> {
+    type Iter = IterImpl<'c>;
 
     fn into_iter(self) -> Self::Iter {
         IterImpl(Box::new(self.0.iter()))
@@ -44,10 +44,10 @@ impl<'env> BackendRoCursor<'env> for RoCursorImpl<'env> {
 }
 
 #[derive(Debug)]
-pub struct RwCursorImpl<'env>(&'env mut Snapshot);
+pub struct RwCursorImpl<'c>(&'c mut Snapshot);
 
-impl<'env> BackendRoCursor<'env> for RwCursorImpl<'env> {
-    type Iter = IterImpl<'env>;
+impl<'c> BackendRoCursor<'c> for RwCursorImpl<'c> {
+    type Iter = IterImpl<'c>;
 
     fn into_iter(self) -> Self::Iter {
         unimplemented!()
