@@ -26,20 +26,16 @@ impl<'c> BackendRoCursor<'c> for RoCursorImpl<'c> {
 
     fn into_iter_from<K>(self, key: K) -> Self::Iter
     where
-        K: AsRef<[u8]>,
+        K: AsRef<[u8]> + 'c,
     {
-        // FIXME: Don't allocate.
-        let key = key.as_ref().to_vec();
-        IterImpl(Box::new(self.0.iter().skip_while(move |&(k, _)| k < key.as_slice())))
+        IterImpl(Box::new(self.0.iter().skip_while(move |&(k, _)| k < key.as_ref())))
     }
 
     fn into_iter_dup_of<K>(self, key: K) -> Self::Iter
     where
-        K: AsRef<[u8]>,
+        K: AsRef<[u8]> + 'c,
     {
-        // FIXME: Don't allocate.
-        let key = key.as_ref().to_vec();
-        IterImpl(Box::new(self.0.iter().filter(move |&(k, _)| k == key.as_slice())))
+        IterImpl(Box::new(self.0.iter().filter(move |&(k, _)| k == key.as_ref())))
     }
 }
 
@@ -55,14 +51,14 @@ impl<'c> BackendRoCursor<'c> for RwCursorImpl<'c> {
 
     fn into_iter_from<K>(self, _key: K) -> Self::Iter
     where
-        K: AsRef<[u8]>,
+        K: AsRef<[u8]> + 'c,
     {
         unimplemented!()
     }
 
     fn into_iter_dup_of<K>(self, _key: K) -> Self::Iter
     where
-        K: AsRef<[u8]>,
+        K: AsRef<[u8]> + 'c,
     {
         unimplemented!()
     }

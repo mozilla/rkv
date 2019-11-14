@@ -53,7 +53,7 @@ where
         R: Readable<'r, Database = D, RoCursor = C>,
         I: BackendIter<'r>,
         C: BackendRoCursor<'r, Iter = I>,
-        K: AsRef<[u8]>,
+        K: AsRef<[u8]> + 'r,
     {
         let cursor = reader.open_ro_cursor(&self.db)?;
         let iter = cursor.into_iter_dup_of(k);

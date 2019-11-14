@@ -165,11 +165,11 @@ pub trait BackendRoCursor<'c>: Debug {
 
     fn into_iter_from<K>(self, key: K) -> Self::Iter
     where
-        K: AsRef<[u8]>;
+        K: AsRef<[u8]> + 'c;
 
     fn into_iter_dup_of<K>(self, key: K) -> Self::Iter
     where
-        K: AsRef<[u8]>;
+        K: AsRef<[u8]> + 'c;
 }
 
 pub trait BackendIter<'i> {
