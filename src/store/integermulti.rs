@@ -56,6 +56,7 @@ where
         R: Readable<'r, Database = D, RoCursor = C>,
         I: BackendIter<'r>,
         C: BackendRoCursor<'r, Iter = I>,
+        K: 'r,
     {
         self.inner.get(reader, Key::new(&k)?)
     }

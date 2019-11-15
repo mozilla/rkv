@@ -90,7 +90,7 @@ fn read_many() {
     }
 }
 
-fn get_ids_by_field<'t, T>(txn: &'t T, store: MultiStore, field: &str) -> Vec<u64>
+fn get_ids_by_field<'t, T>(txn: &'t T, store: MultiStore, field: &'t str) -> Vec<u64>
 where
     T: Readable<'t, Database = LmdbDatabase, RoCursor = LmdbRoCursor<'t>>,
 {
