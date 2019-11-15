@@ -17,6 +17,7 @@ use crate::backend::traits::BackendRoCursor;
 #[derive(Debug)]
 pub struct RoCursorImpl<'c>(pub(crate) &'c Snapshot);
 
+#[cfg(not(feature = "db-dup-sort"))]
 impl<'c> BackendRoCursor<'c> for RoCursorImpl<'c> {
     type Iter = IterImpl<'c>;
 
@@ -36,6 +37,34 @@ impl<'c> BackendRoCursor<'c> for RoCursorImpl<'c> {
         K: AsRef<[u8]> + 'c,
     {
         IterImpl(Box::new(self.0.iter().filter(move |&(k, _)| k == key.as_ref())))
+    }
+}
+
+#[cfg(feature = "db-dup-sort")]
+impl<'c> BackendRoCursor<'c> for RoCursorImpl<'c> {
+    type Iter = IterImpl<'c>;
+
+    fn into_iter(self) -> Self::Iter {
+        let flattened = self.0.iter().flat_map(|(key, values)| values.map(move |value| (key, value)));
+        IterImpl(Box::new(flattened))
+    }
+
+    fn into_iter_from<K>(self, key: K) -> Self::Iter
+    where
+        K: AsRef<[u8]> + 'c,
+    {
+        let skipped = self.0.iter().skip_while(move |&(k, _)| k < key.as_ref());
+        let flattened = skipped.flat_map(|(key, values)| values.map(move |value| (key, value)));
+        IterImpl(Box::new(flattened))
+    }
+
+    fn into_iter_dup_of<K>(self, key: K) -> Self::Iter
+    where
+        K: AsRef<[u8]> + 'c,
+    {
+        let filtered = self.0.iter().filter(move |&(k, _)| k == key.as_ref());
+        let flattened = filtered.flat_map(|(key, values)| values.map(move |value| (key, value)));
+        IterImpl(Box::new(flattened))
     }
 }
 
