@@ -7,17 +7,11 @@
 
 The [rkv Rust crate](https://crates.io/crates/rkv) is a simple, humane, typed key-value storage solution. It supports multiple backend engines with varying guarantees, such as [LMDB](http://www.lmdb.tech/doc/) for performance, or "SafeMode" for reliability.
 
-This master branch only supports the LMDB backend. We're looking into supporting multiple backends, starting with "SafeMode" in the [feature branch](https://github.com/mozilla/rkv/tree/safe-mode).
-
 ## ⚠️ Warning ⚠️
 
 The LMDB backend is currently unstable and crash-prone. We're attempting to fix these crashes in bugs [538539](https://bugzilla.mozilla.org/show_bug.cgi?id=1538539), [1538541](https://bugzilla.mozilla.org/show_bug.cgi?id=1538541) and [1550174](https://bugzilla.mozilla.org/show_bug.cgi?id=1550174).
 
 To use rkv in production/release environments at Mozilla, you may do so with the "SafeMode" backend, for example:
-
-```toml
-rkv = { git = "https://github.com/mozilla/rkv", branch="safe-mode", default-features = false }
-```
 
 ```rust
 use rkv::{Manager, Rkv};
@@ -28,8 +22,6 @@ let shared_rkv = manager.get_or_create(path, Rkv::new::<SafeMode>).unwrap();
 
 ...
 ```
-
-Instead of a branch, we suggest using a specific `rev` instead. For example, `4a1cc23906865626fa715fd99d98620169d3fd7b` is the latest stable version for "safe-mode".
 
 The "SafeMode` backend performs well, with two caveats: the entire database is stored in memory, and write transactions are synchronously written to disk on commit.
 
