@@ -110,8 +110,8 @@ pub struct EnvironmentImpl {
 
 impl EnvironmentImpl {
     fn serialize(&self) -> Result<Vec<u8>, ErrorImpl> {
-        let arena = self.arena.read().map_err(|_| ErrorImpl::DbPoisonError)?;
-        let dbs = self.dbs.read().map_err(|_| ErrorImpl::DbPoisonError)?;
+        let arena = self.arena.read().map_err(|_| ErrorImpl::EnvPoisonError)?;
+        let dbs = self.dbs.read().map_err(|_| ErrorImpl::EnvPoisonError)?;
         let data: HashMap<_, _> = dbs.iter().map(|(name, id)| (name, &arena[id.0])).collect();
         Ok(bincode::serialize(&data)?)
     }
@@ -179,11 +179,11 @@ impl EnvironmentImpl {
     }
 
     pub(crate) fn dbs(&self) -> Result<RwLockReadGuard<DatabaseArena>, ErrorImpl> {
-        self.arena.read().map_err(|_| ErrorImpl::DbPoisonError)
+        self.arena.read().map_err(|_| ErrorImpl::EnvPoisonError)
     }
 
     pub(crate) fn dbs_mut(&self) -> Result<RwLockWriteGuard<DatabaseArena>, ErrorImpl> {
-        self.arena.write().map_err(|_| ErrorImpl::DbPoisonError)
+        self.arena.write().map_err(|_| ErrorImpl::EnvPoisonError)
     }
 }
 
@@ -202,7 +202,7 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         }
         // TOOD: don't reallocate `name`.
         let key = name.map(String::from);
-        let dbs = self.dbs.read().map_err(|_| ErrorImpl::DbPoisonError)?;
+        let dbs = self.dbs.read().map_err(|_| ErrorImpl::EnvPoisonError)?;
         let id = dbs.get(&key).ok_or(ErrorImpl::DbNotFoundError)?;
         Ok(*id)
     }
@@ -213,8 +213,8 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         }
         // TOOD: don't reallocate `name`.
         let key = name.map(String::from);
-        let mut dbs = self.dbs.write().map_err(|_| ErrorImpl::DbPoisonError)?;
-        let mut arena = self.arena.write().map_err(|_| ErrorImpl::DbPoisonError)?;
+        let mut dbs = self.dbs.write().map_err(|_| ErrorImpl::EnvPoisonError)?;
+        let mut arena = self.arena.write().map_err(|_| ErrorImpl::EnvPoisonError)?;
         if dbs.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs {
             return Err(ErrorImpl::DbsFull);
         }

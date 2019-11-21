@@ -19,7 +19,7 @@ use crate::error::StoreError;
 #[derive(Debug)]
 pub enum ErrorImpl {
     KeyValuePairNotFound,
-    DbPoisonError,
+    EnvPoisonError,
     DbsFull,
     DbsIllegalOpen,
     DbNotFoundError,
@@ -34,7 +34,7 @@ impl fmt::Display for ErrorImpl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ErrorImpl::KeyValuePairNotFound => write!(fmt, "KeyValuePairNotFound (safe mode)"),
-            ErrorImpl::DbPoisonError => write!(fmt, "DbPoisonError (safe mode)"),
+            ErrorImpl::EnvPoisonError => write!(fmt, "EnvPoisonError (safe mode)"),
             ErrorImpl::DbsFull => write!(fmt, "DbsFull (safe mode)"),
             ErrorImpl::DbsIllegalOpen => write!(fmt, "DbIllegalOpen (safe mode)"),
             ErrorImpl::DbNotFoundError => write!(fmt, "DbNotFoundError (safe mode)"),
