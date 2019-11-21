@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use super::{
     snapshot::Snapshot,
-    DatabaseId,
+    DatabaseImpl,
     EnvironmentImpl,
     ErrorImpl,
     RoCursorImpl,
@@ -29,13 +29,13 @@ use crate::backend::traits::{
 #[derive(Debug)]
 pub struct RoTransactionImpl<'t> {
     env: &'t EnvironmentImpl,
-    snapshots: HashMap<DatabaseId, Snapshot>,
+    snapshots: HashMap<DatabaseImpl, Snapshot>,
     idx: Arc<()>,
 }
 
 impl<'t> RoTransactionImpl<'t> {
     pub(crate) fn new(env: &'t EnvironmentImpl, idx: Arc<()>) -> Result<RoTransactionImpl<'t>, ErrorImpl> {
-        let snapshots = env.dbs()?.iter().map(|(id, db)| (id, db.snapshot())).collect();
+        let snapshots = env.dbs()?.iter().map(|(id, db)| (DatabaseImpl(id), db.snapshot())).collect();
         Ok(RoTransactionImpl {
             env,
             snapshots,
@@ -46,7 +46,7 @@ impl<'t> RoTransactionImpl<'t> {
 
 impl<'t> BackendRoTransaction for RoTransactionImpl<'t> {
     type Error = ErrorImpl;
-    type Database = DatabaseId;
+    type Database = DatabaseImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {
         let snapshot = self.snapshots.get(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
@@ -70,13 +70,13 @@ impl<'t> BackendRoCursorTransaction<'t> for RoTransactionImpl<'t> {
 #[derive(Debug)]
 pub struct RwTransactionImpl<'t> {
     env: &'t EnvironmentImpl,
-    snapshots: HashMap<DatabaseId, Snapshot>,
+    snapshots: HashMap<DatabaseImpl, Snapshot>,
     idx: Arc<()>,
 }
 
 impl<'t> RwTransactionImpl<'t> {
     pub(crate) fn new(env: &'t EnvironmentImpl, idx: Arc<()>) -> Result<RwTransactionImpl<'t>, ErrorImpl> {
-        let snapshots = env.dbs()?.iter().map(|(id, db)| (id, db.snapshot())).collect();
+        let snapshots = env.dbs()?.iter().map(|(id, db)| (DatabaseImpl(id), db.snapshot())).collect();
         Ok(RwTransactionImpl {
             env,
             snapshots,
@@ -87,7 +87,7 @@ impl<'t> RwTransactionImpl<'t> {
 
 impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
     type Error = ErrorImpl;
-    type Database = DatabaseId;
+    type Database = DatabaseImpl;
     type Flags = WriteFlagsImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {
@@ -142,7 +142,7 @@ impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
         let mut dbs = self.env.dbs_mut()?;
 
         for (id, snapshot) in self.snapshots {
-            let db = dbs.get_mut(id).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+            let db = dbs.get_mut(id.0).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
             db.replace(snapshot);
         }
 

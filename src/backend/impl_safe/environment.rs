@@ -26,9 +26,9 @@ use id_arena::Arena;
 use log::warn;
 
 use super::{
-    database::DatabaseImpl,
+    database::Database,
     DatabaseFlagsImpl,
-    DatabaseId,
+    DatabaseImpl,
     EnvironmentFlagsImpl,
     ErrorImpl,
     InfoImpl,
@@ -43,8 +43,8 @@ use crate::backend::traits::{
 
 const DEFAULT_DB_FILENAME: &str = "data.safe.bin";
 
-type DatabaseArena = Arena<DatabaseImpl>;
-type DatabaseNameMap = HashMap<Option<String>, DatabaseId>;
+type DatabaseArena = Arena<Database>;
+type DatabaseNameMap = HashMap<Option<String>, DatabaseImpl>;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct EnvironmentBuilderImpl {
@@ -112,7 +112,7 @@ impl EnvironmentImpl {
     fn serialize(&self) -> Result<Vec<u8>, ErrorImpl> {
         let arena = self.arena.read().map_err(|_| ErrorImpl::DbPoisonError)?;
         let dbs = self.dbs.read().map_err(|_| ErrorImpl::DbPoisonError)?;
-        let data: HashMap<_, _> = dbs.iter().map(|(name, id)| (name, &arena[*id])).collect();
+        let data: HashMap<_, _> = dbs.iter().map(|(name, id)| (name, &arena[id.0])).collect();
         Ok(bincode::serialize(&data)?)
     }
 
@@ -121,7 +121,7 @@ impl EnvironmentImpl {
         let mut dbs = HashMap::new();
         let data: HashMap<_, _> = bincode::deserialize(&bytes)?;
         for (name, db) in data {
-            dbs.insert(name, arena.alloc(db));
+            dbs.insert(name, DatabaseImpl(arena.alloc(db)));
         }
         Ok((arena, dbs))
     }
@@ -189,7 +189,7 @@ impl EnvironmentImpl {
 
 impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type Error = ErrorImpl;
-    type Database = DatabaseId;
+    type Database = DatabaseImpl;
     type Flags = DatabaseFlagsImpl;
     type Stat = StatImpl;
     type Info = InfoImpl;
@@ -218,7 +218,7 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         if dbs.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs {
             return Err(ErrorImpl::DbsFull);
         }
-        let id = dbs.entry(key).or_insert_with(|| arena.alloc(DatabaseImpl::new(Some(flags), None)));
+        let id = dbs.entry(key).or_insert_with(|| DatabaseImpl(arena.alloc(Database::new(Some(flags), None))));
         Ok(*id)
     }
 
