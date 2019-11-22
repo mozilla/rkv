@@ -748,7 +748,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "new failed: DatabaseInvalid")]
+    #[should_panic(expected = "new failed: FileInvalid")]
     fn test_open_a_broken_store() {
         let root = Builder::new().prefix("test_open_a_missing_store").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
@@ -1793,7 +1793,7 @@ mod tests_safe {
     }
 
     #[test]
-    #[should_panic(expected = "new failed: DatabaseInvalid")]
+    #[should_panic(expected = "new failed: FileInvalid")]
     fn test_open_a_broken_store_safe() {
         let root = Builder::new().prefix("test_open_a_missing_store_safe").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");

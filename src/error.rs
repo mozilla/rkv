@@ -58,11 +58,11 @@ pub enum StoreError {
     #[fail(display = "database corrupted")]
     DatabaseCorrupted,
 
-    #[fail(display = "database invalid")]
-    DatabaseInvalid,
-
     #[fail(display = "key/value pair not found")]
     KeyValuePairNotFound,
+
+    #[fail(display = "file is not a valid database")]
+    FileInvalid,
 
     #[fail(display = "I/O error: {:?}", _0)]
     IoError(io::Error),
