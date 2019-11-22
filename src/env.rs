@@ -409,7 +409,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "opened: LmdbError(DbsFull)")]
+    #[should_panic(expected = "opened: DbsFull")]
     fn test_open_with_capacity() {
         let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
         println!("Root path: {:?}", root.path());
@@ -441,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "wrote: LmdbError(MapFull)")]
+    #[should_panic(expected = "wrote: MapFull")]
     fn test_exceed_map_size() {
         let root = Builder::new().prefix("test_exceed_map_size").tempdir().expect("tempdir");
         println!("Root path: {:?}", root.path());
@@ -459,7 +459,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "wrote: LmdbError(BadValSize)")]
+    #[should_panic(expected = "wrote: KeyValuePairBadSize")]
     fn test_exceed_key_size_limit() {
         let root = Builder::new().prefix("test_exceed_key_size_limit").tempdir().expect("tempdir");
         println!("Root path: {:?}", root.path());
@@ -1530,7 +1530,7 @@ mod tests_safe {
     }
 
     #[test]
-    #[should_panic(expected = "opened: SafeModeError(DbsFull)")]
+    #[should_panic(expected = "opened: DbsFull")]
     fn test_open_with_capacity_safe() {
         let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
         println!("Root path: {:?}", root.path());

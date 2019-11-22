@@ -61,8 +61,20 @@ pub enum StoreError {
     #[fail(display = "key/value pair not found")]
     KeyValuePairNotFound,
 
+    #[fail(display = "unsupported size of key/DB name/data")]
+    KeyValuePairBadSize,
+
     #[fail(display = "file is not a valid database")]
     FileInvalid,
+
+    #[fail(display = "environment mapsize reached")]
+    MapFull,
+
+    #[fail(display = "environment maxdbs reached")]
+    DbsFull,
+
+    #[fail(display = "environment maxreaders reached")]
+    ReadersFull,
 
     #[fail(display = "I/O error: {:?}", _0)]
     IoError(io::Error),
