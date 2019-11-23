@@ -1826,6 +1826,27 @@ mod tests_safe {
     }
 
     #[test]
+    fn test_create_fail_with_badrslot_safe() {
+        let root = Builder::new().prefix("test_create_fail_with_badrslot_safe").tempdir().expect("tempdir");
+        fs::create_dir_all(root.path()).expect("dir created");
+
+        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+
+        // First create the store
+        let _sk = k.open_single("sk", StoreOptions::create()).expect("opened");
+
+        // Open a reader on this store
+        let _reader = k.read().expect("reader");
+
+        // Open the same store for read while the reader is in progress will panic
+        let store = k.open_single("sk", StoreOptions::create());
+        match store {
+            Err(StoreError::OpenAttemptedDuringTransaction(_thread_id)) => (),
+            _ => panic!("should panic"),
+        }
+    }
+
+    #[test]
     fn test_read_before_write_num_safe() {
         let root = Builder::new().prefix("test_read_before_write_num_safe").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
