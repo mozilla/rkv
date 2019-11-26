@@ -11,7 +11,7 @@ This master branch only supports the LMDB backend. We're looking into supporting
 
 ## ⚠️ Warning ⚠️
 
-The LMDB backend is currently unstable and crash-prone. We're attempting to fix these crashes in bugs [538539](https://bugzilla.mozilla.org/show_bug.cgi?id=1538539), [1538541](https://bugzilla.mozilla.org/show_bug.cgi?id=1538541) and [1550174](https://bugzilla.mozilla.org/show_bug.cgi?id=1550174).
+The LMDB backend is currently unstable and crash-prone. We're attempting to fix these crashes in bugs [1538539](https://bugzilla.mozilla.org/show_bug.cgi?id=1538539), [1538541](https://bugzilla.mozilla.org/show_bug.cgi?id=1538541) and [1550174](https://bugzilla.mozilla.org/show_bug.cgi?id=1550174).
 
 To use rkv in production/release environments at Mozilla, you may do so with the "SafeMode" backend, for example:
 
