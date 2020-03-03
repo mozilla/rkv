@@ -1,6 +1,6 @@
 [package]
 name = "rkv"
-version = "0.10.2"
+version = "0.10.3"
 authors = ["Richard Newman <rnewman@twinql.com>", "Nan Jiang <najiang@mozilla.com>", "Myk Melez <myk@mykzilla.org>", "Victor Porof <vporof@mozilla.com>"]
 edition = "2018"
 license = "Apache-2.0"
