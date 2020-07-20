@@ -8,6 +8,7 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 #![cfg(feature = "db-int-key")]
+#![allow(clippy::many_single_char_names)]
 
 use std::fs;
 

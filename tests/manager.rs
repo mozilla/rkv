@@ -23,6 +23,7 @@ use rkv::Rkv;
 
 /// Test that a manager can be created with simple type inference.
 #[test]
+#[allow(clippy::let_underscore_lock)]
 fn test_simple() {
     type Manager = rkv::Manager<LmdbEnvironment>;
 
@@ -31,6 +32,7 @@ fn test_simple() {
 
 /// Test that a manager can be created with simple type inference.
 #[test]
+#[allow(clippy::let_underscore_lock)]
 fn test_simple_safe() {
     type Manager = rkv::Manager<SafeModeEnvironment>;
 

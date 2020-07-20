@@ -78,7 +78,7 @@ fn main() {
     // of the pairs (assuming maximum key and value sizes).
     builder.set_map_size((511 + 65535) * num_pairs * 2);
     let rkv = Rkv::from_builder(Path::new(&path), builder).expect("Rkv");
-    let store = rkv.open_single(database.as_ref().map(|x| x.as_str()), StoreOptions::create()).expect("opened");
+    let store = rkv.open_single(database.as_deref(), StoreOptions::create()).expect("opened");
     let mut writer = rkv.write().expect("writer");
 
     // Generate random values for the number of keys and key/value lengths.

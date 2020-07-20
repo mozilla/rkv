@@ -221,8 +221,6 @@ impl<'v> From<&'v OwnedValue> for Value<'v> {
 
 #[cfg(test)]
 mod tests {
-    use ordered_float::OrderedFloat;
-
     use super::*;
 
     #[test]
