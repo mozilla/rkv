@@ -70,7 +70,7 @@ fn test_open_fails() {
     assert!(!nope.exists());
 
     let pb = nope.to_path_buf();
-    match Rkv::new::<Lmdb>(nope.as_path()).err() {
+    match Rkv::new::<Lmdb>(nope.as_path(), false).err() {
         Some(StoreError::DirectoryDoesNotExistError(p)) => {
             assert_eq!(pb, p);
         },
@@ -85,7 +85,7 @@ fn test_open() {
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     check_rkv(&k);
 }
 
@@ -99,7 +99,7 @@ fn test_open_from_builder() {
     let mut builder = Rkv::environment_builder::<Lmdb>();
     builder.set_max_dbs(2);
 
-    let k = Rkv::from_builder(root.path(), builder).expect("rkv");
+    let k = Rkv::from_builder(root.path(), false, builder).expect("rkv");
     check_rkv(&k);
 }
 
@@ -111,7 +111,7 @@ fn test_open_with_capacity() {
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
 
-    let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
+    let k = Rkv::with_capacity::<Lmdb>(root.path(), false, 1).expect("rkv");
     check_rkv(&k);
 
     // This panics with "opened: LmdbError(DbsFull)" because we specified
@@ -143,7 +143,7 @@ fn test_exceed_map_size() {
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("test", StoreOptions::create()).expect("opened");
 
     // Writing a large enough value should cause LMDB to fail on MapFull.
@@ -161,7 +161,7 @@ fn test_exceed_key_size_limit() {
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("test", StoreOptions::create()).expect("opened");
 
     let key = "k".repeat(512);
@@ -181,7 +181,7 @@ fn test_increase_map_size() {
     // which ensures that there's enough space for the value and metadata.
     builder.set_map_size(get_larger_than_default_map_size_value() + 100 * 1024 /* 100KiB */);
     builder.set_max_dbs(2);
-    let k = Rkv::from_builder(root.path(), builder).unwrap();
+    let k = Rkv::from_builder(root.path(), false, builder).unwrap();
     let sk = k.open_single("test", StoreOptions::create()).expect("opened");
     let val = "x".repeat(get_larger_than_default_map_size_value());
 
@@ -198,7 +198,7 @@ fn test_round_trip_and_transactions() {
     let root = Builder::new().prefix("test_round_trip_and_transactions").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     {
@@ -301,7 +301,7 @@ fn test_single_store_clear() {
     let root = Builder::new().prefix("test_single_store_clear").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     {
@@ -331,7 +331,7 @@ fn test_single_store_delete_nonexistent() {
     let root = Builder::new().prefix("test_single_store_delete_nonexistent").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -344,7 +344,7 @@ fn test_multi_put_get_del() {
     let root = Builder::new().prefix("test_multi_put_get_del").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
 
     let mut writer = k.write().unwrap();
@@ -382,7 +382,7 @@ fn test_multiple_store_clear() {
     let root = Builder::new().prefix("test_multiple_store_clear").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let multistore = k.open_multi("multistore", StoreOptions::create()).expect("opened");
 
     {
@@ -415,7 +415,7 @@ fn test_open_store_for_read() {
     let root = Builder::new().prefix("test_open_store_for_read").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
 
     // First create the store, and start a write transaction on it.
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
@@ -438,7 +438,7 @@ fn test_open_a_missing_store() {
     let root = Builder::new().prefix("test_open_a_missing_store").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let _sk = k.open_single("sk", StoreOptions::default()).expect("open a missing store");
 }
 
@@ -451,7 +451,7 @@ fn test_open_a_broken_store() {
     let dbfile = root.path().join("data.mdb");
     fs::write(dbfile, "bogus").expect("dbfile created");
 
-    let _ = Rkv::new::<Lmdb>(root.path()).expect("new failed");
+    let _ = Rkv::new::<Lmdb>(root.path(), false).expect("new failed");
 }
 
 #[test]
@@ -459,7 +459,7 @@ fn test_open_fail_with_badrslot() {
     let root = Builder::new().prefix("test_open_fail_with_badrslot").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
 
     // First create the store
     let _sk = k.open_single("sk", StoreOptions::create()).expect("opened");
@@ -480,7 +480,7 @@ fn test_read_before_write_num() {
     let root = Builder::new().prefix("test_read_before_write_num").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     // Test reading a number, modifying it, and then writing it back.
@@ -510,7 +510,7 @@ fn test_read_before_write_str() {
     let root = Builder::new().prefix("test_read_before_write_str").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     // Test reading a string, modifying it, and then writing it back.
@@ -540,7 +540,7 @@ fn test_concurrent_read_transactions_prohibited() {
     let root = Builder::new().prefix("test_concurrent_reads_prohibited").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let _first = k.read().expect("reader");
     let second = k.read();
 
@@ -562,7 +562,7 @@ fn test_isolation() {
     let root = Builder::new().prefix("test_isolation").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let s = k.open_single("s", StoreOptions::create()).expect("opened");
 
     // Add one field.
@@ -605,7 +605,7 @@ fn test_blob() {
     let root = Builder::new().prefix("test_round_trip_blob").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -647,7 +647,7 @@ fn test_sync() {
     builder.set_max_dbs(1);
     builder.set_flags(EnvironmentFlags::NO_SYNC);
     {
-        let k = Rkv::from_builder(root.path(), builder).expect("new succeeded");
+        let k = Rkv::from_builder(root.path(), false, builder).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         {
             let mut writer = k.write().expect("writer");
@@ -656,7 +656,7 @@ fn test_sync() {
             k.sync(true).expect("synced");
         }
     }
-    let k = Rkv::from_builder(root.path(), builder).expect("new succeeded");
+    let k = Rkv::from_builder(root.path(), false, builder).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
     let reader = k.read().expect("reader");
     assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
@@ -668,7 +668,7 @@ fn test_stat() {
     let root = Builder::new().prefix("test_stat").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     for i in 0..5 {
         let sk = k.open_integer(&format!("sk{}", i)[..], StoreOptions::create()).expect("opened");
         {
@@ -688,7 +688,7 @@ fn test_info() {
     let root = Builder::new().prefix("test_info").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -719,7 +719,7 @@ fn test_load_ratio() {
     let root = Builder::new().prefix("test_load_ratio").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -749,7 +749,7 @@ fn test_set_map_size() {
     let root = Builder::new().prefix("test_size_map_size").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     assert_eq!(k.info().expect("info").map_size(), DEFAULT_SIZE);
@@ -769,7 +769,7 @@ fn test_iter() {
     let root = Builder::new().prefix("test_iter").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     // An iterator over an empty store returns no values.
@@ -843,7 +843,7 @@ fn test_iter() {
 fn test_iter_from_key_greater_than_existing() {
     let root = Builder::new().prefix("test_iter_from_key_greater_than_existing").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -863,7 +863,7 @@ fn test_multiple_store_read_write() {
     let root = Builder::new().prefix("test_multiple_store_read_write").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let s1 = k.open_single("store_1", StoreOptions::create()).expect("opened");
     let s2 = k.open_single("store_2", StoreOptions::create()).expect("opened");
     let s3 = k.open_single("store_3", StoreOptions::create()).expect("opened");
@@ -903,7 +903,7 @@ fn test_multiple_store_iter() {
     let root = Builder::new().prefix("test_multiple_store_iter").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let s1 = k.open_single("store_1", StoreOptions::create()).expect("opened");
     let s2 = k.open_single("store_2", StoreOptions::create()).expect("opened");
 
@@ -1016,7 +1016,7 @@ fn test_store_multiple_thread() {
     let root = Builder::new().prefix("test_multiple_thread").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let rkv_arc = Arc::new(RwLock::new(Rkv::new::<Lmdb>(root.path()).expect("new succeeded")));
+    let rkv_arc = Arc::new(RwLock::new(Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded")));
     let store = rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened");
 
     let num_threads = 10;
@@ -1069,7 +1069,7 @@ fn test_store_multiple_thread() {
 #[test]
 fn test_use_value_as_key() {
     let root = Builder::new().prefix("test_use_value_as_key").tempdir().expect("tempdir");
-    let rkv = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let rkv = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let store = rkv.open_single("store", StoreOptions::create()).expect("opened");
 
     {

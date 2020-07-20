@@ -68,32 +68,38 @@ impl<E> Manager<E> {
     }
 
     /// Return the open env at `path`, or create it by calling `f`.
-    pub fn get_or_create<'p, F, P>(&mut self, path: P, f: F) -> Result<SharedRkv<E>>
+    pub fn get_or_create<'p, F, P>(&mut self, path: P, make_dir: bool, f: F) -> Result<SharedRkv<E>>
     where
-        F: FnOnce(&Path) -> Result<Rkv<E>>,
+        F: FnOnce(&Path, bool) -> Result<Rkv<E>>,
         P: Into<&'p Path>,
     {
         let canonical = canonicalize_path(path)?;
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
-                let k = Arc::new(RwLock::new(f(e.key().as_path())?));
+                let k = Arc::new(RwLock::new(f(e.key().as_path(), make_dir)?));
                 e.insert(k).clone()
             },
         })
     }
 
     /// Return the open env at `path` with `capacity`, or create it by calling `f`.
-    pub fn get_or_create_with_capacity<'p, F, P>(&mut self, path: P, capacity: c_uint, f: F) -> Result<SharedRkv<E>>
+    pub fn get_or_create_with_capacity<'p, F, P>(
+        &mut self,
+        path: P,
+        make_dir: bool,
+        capacity: c_uint,
+        f: F,
+    ) -> Result<SharedRkv<E>>
     where
-        F: FnOnce(&Path, c_uint) -> Result<Rkv<E>>,
+        F: FnOnce(&Path, bool, c_uint) -> Result<Rkv<E>>,
         P: Into<&'p Path>,
     {
         let canonical = canonicalize_path(path)?;
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
-                let k = Arc::new(RwLock::new(f(e.key().as_path(), capacity)?));
+                let k = Arc::new(RwLock::new(f(e.key().as_path(), make_dir, capacity)?));
                 e.insert(k).clone()
             },
         })
@@ -131,7 +137,7 @@ mod tests {
         let root1 = Builder::new().prefix("test_mutate_managed_rkv_1").tempdir().expect("tempdir");
         fs::create_dir_all(root1.path()).expect("dir created");
         let path1 = root1.path();
-        let arc = manager.get_or_create(path1, Rkv::new::<Lmdb>).expect("created");
+        let arc = manager.get_or_create(path1, false, Rkv::new::<Lmdb>).expect("created");
 
         // Arc<RwLock<>> has interior mutability, so we can replace arc's Rkv instance with a new
         // instance that has a different path.
@@ -140,7 +146,7 @@ mod tests {
         let path2 = root2.path();
         {
             let mut rkv = arc.write().expect("guard");
-            let rkv2 = Rkv::new::<Lmdb>(path2).expect("Rkv");
+            let rkv2 = Rkv::new::<Lmdb>(path2, false).expect("Rkv");
             *rkv = rkv2;
         }
 
@@ -151,7 +157,7 @@ mod tests {
 
         // Meanwhile, a new Arc for path2 has a different pointer, even though its Rkv's path is
         // the same as arc's current path.
-        let path2_arc = manager.get_or_create(path2, Rkv::new::<Lmdb>).expect("success");
+        let path2_arc = manager.get_or_create(path2, false, Rkv::new::<Lmdb>).expect("success");
         assert!(!Arc::ptr_eq(&path2_arc, &arc));
     }
 }

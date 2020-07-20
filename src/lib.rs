@@ -56,17 +56,15 @@
 //! //   * a data file containing the key/value stores
 //! //   * a lock file containing metadata about current transactions
 //! //
-//! // In this example, we use the `tempfile` crate to create the directory.
+//! // In this example, we use the `tempfile` crate to find a usable directory.
 //! //
 //! let root = Builder::new().prefix("simple-db").tempdir().unwrap();
-//! fs::create_dir_all(root.path()).unwrap();
-//! let path = root.path();
 //!
 //! // The `Manager` enforces that each process opens the same environment at most once by
 //! // caching a handle to each environment that it opens. Use it to retrieve the handle
 //! // to an opened environment—or create one if it hasn't already been opened:
 //! let mut manager = Manager::<LmdbEnvironment>::singleton().write().unwrap();
-//! let created_arc = manager.get_or_create(path, Rkv::new::<Lmdb>).unwrap();
+//! let created_arc = manager.get_or_create(root.path(), true, Rkv::new::<Lmdb>).unwrap();
 //! let env = created_arc.read().unwrap();
 //!
 //! // Then you can use the environment handle to get a handle to a datastore:

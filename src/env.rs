@@ -32,6 +32,7 @@ use crate::{
         SafeModeError,
     },
     error::StoreError,
+    helpers::ensure_dir,
     readwrite::{
         Reader,
         Writer,
@@ -76,37 +77,33 @@ where
 
     /// Return a new Rkv environment that supports up to `DEFAULT_MAX_DBS` open databases.
     #[allow(clippy::new_ret_no_self)]
-    pub fn new<B>(path: &Path) -> Result<Rkv<E>, StoreError>
+    pub fn new<B>(path: &Path, make_dir: bool) -> Result<Rkv<E>, StoreError>
     where
         B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
-        Rkv::with_capacity::<B>(path, DEFAULT_MAX_DBS)
+        Rkv::with_capacity::<B>(path, make_dir, DEFAULT_MAX_DBS)
     }
 
     /// Return a new Rkv environment that supports the specified number of open databases.
-    pub fn with_capacity<B>(path: &Path, max_dbs: c_uint) -> Result<Rkv<E>, StoreError>
+    pub fn with_capacity<B>(path: &Path, make_dir: bool, max_dbs: c_uint) -> Result<Rkv<E>, StoreError>
     where
         B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
-        if !path.is_dir() {
-            return Err(StoreError::DirectoryDoesNotExistError(path.into()));
-        }
+        ensure_dir(path, make_dir)?;
 
         let mut builder = B::new();
         builder.set_max_dbs(max_dbs);
 
         // Future: set flags, maximum size, etc. here if necessary.
-        Rkv::from_builder(path, builder)
+        Rkv::from_builder(path, make_dir, builder)
     }
 
     /// Return a new Rkv environment from the provided builder.
-    pub fn from_builder<B>(path: &Path, builder: B) -> Result<Rkv<E>, StoreError>
+    pub fn from_builder<B>(path: &Path, make_dir: bool, builder: B) -> Result<Rkv<E>, StoreError>
     where
         B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
-        if !path.is_dir() {
-            return Err(StoreError::DirectoryDoesNotExistError(path.into()));
-        }
+        ensure_dir(path, make_dir)?;
 
         Ok(Rkv {
             path: path.into(),

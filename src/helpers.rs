@@ -9,6 +9,7 @@
 // specific language governing permissions and limitations under the License.
 
 use std::{
+    fs,
     io,
     path::{
         Path,
@@ -45,4 +46,19 @@ where
     } else {
         canonical
     })
+}
+
+pub(crate) fn ensure_dir<'p, P>(path: P, create_if_doesnt_exist: bool) -> Result<(), StoreError>
+where
+    P: Into<&'p Path>,
+{
+    let path = path.into();
+
+    if !path.is_dir() {
+        if !create_if_doesnt_exist {
+            return Err(StoreError::DirectoryDoesNotExistError(path.into()));
+        }
+        fs::create_dir_all(path)?;
+    }
+    Ok(())
 }

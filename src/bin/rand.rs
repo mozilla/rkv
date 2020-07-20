@@ -79,7 +79,7 @@ fn main() {
     // We currently do this by allocating twice the maximum possible size
     // of the pairs (assuming maximum key and value sizes).
     builder.set_map_size((511 + 65535) * num_pairs * 2);
-    let rkv = Rkv::from_builder(Path::new(&path), builder).expect("Rkv");
+    let rkv = Rkv::from_builder(Path::new(&path), false, builder).expect("Rkv");
     let store = rkv.open_single(database.as_deref(), StoreOptions::create()).expect("opened");
     let mut writer = rkv.write().expect("writer");
 

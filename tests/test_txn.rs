@@ -48,7 +48,7 @@ type MultiStore = rkv::MultiStore<LmdbDatabase>;
 fn read_many() {
     let root = Builder::new().prefix("test_txns").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
     let samplestore = k.open_single("s", StoreOptions::create()).expect("open");
     let datestore = k.open_multi("m", StoreOptions::create()).expect("open");
     let valuestore = k.open_multi("m", StoreOptions::create()).expect("open");

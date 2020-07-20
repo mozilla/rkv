@@ -52,7 +52,7 @@ fn test_simple_2() {
     fs::create_dir_all(root.path()).expect("dir created");
 
     let mut manager = Manager::singleton().write().unwrap();
-    let _ = manager.get_or_create(root.path(), Rkv::new::<Lmdb>).unwrap();
+    let _ = manager.get_or_create(root.path(), false, Rkv::new::<Lmdb>).unwrap();
 }
 
 /// Test that a shared Rkv instance can be created with simple type inference.
@@ -64,7 +64,7 @@ fn test_simple_safe_2() {
     fs::create_dir_all(root.path()).expect("dir created");
 
     let mut manager = Manager::singleton().write().unwrap();
-    let _ = manager.get_or_create(root.path(), Rkv::new::<SafeMode>).unwrap();
+    let _ = manager.get_or_create(root.path(), false, Rkv::new::<SafeMode>).unwrap();
 }
 
 /// Test that the manager will return the same Rkv instance each time for each path.
@@ -78,7 +78,7 @@ fn test_same() {
     let p = root.path();
     assert!(Manager::singleton().read().unwrap().get(p).expect("success").is_none());
 
-    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new::<Lmdb>).expect("created");
+    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, false, Rkv::new::<Lmdb>).expect("created");
     let fetched_arc = Manager::singleton().read().unwrap().get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }
@@ -94,7 +94,8 @@ fn test_same_safe() {
     let p = root.path();
     assert!(Manager::singleton().read().unwrap().get(p).expect("success").is_none());
 
-    let created_arc = Manager::singleton().write().unwrap().get_or_create(p, Rkv::new::<SafeMode>).expect("created");
+    let created_arc =
+        Manager::singleton().write().unwrap().get_or_create(p, false, Rkv::new::<SafeMode>).expect("created");
     let fetched_arc = Manager::singleton().read().unwrap().get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }
@@ -112,7 +113,7 @@ fn test_same_with_capacity() {
     let p = root.path();
     assert!(manager.get(p).expect("success").is_none());
 
-    let created_arc = manager.get_or_create_with_capacity(p, 10, Rkv::with_capacity::<Lmdb>).expect("created");
+    let created_arc = manager.get_or_create_with_capacity(p, false, 10, Rkv::with_capacity::<Lmdb>).expect("created");
     let fetched_arc = manager.get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }
@@ -130,7 +131,8 @@ fn test_same_with_capacity_safe() {
     let p = root.path();
     assert!(manager.get(p).expect("success").is_none());
 
-    let created_arc = manager.get_or_create_with_capacity(p, 10, Rkv::with_capacity::<SafeMode>).expect("created");
+    let created_arc =
+        manager.get_or_create_with_capacity(p, false, 10, Rkv::with_capacity::<SafeMode>).expect("created");
     let fetched_arc = manager.get(p).expect("success").expect("existed");
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }

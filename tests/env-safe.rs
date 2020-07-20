@@ -64,7 +64,7 @@ fn test_open_fails_safe() {
     assert!(!nope.exists());
 
     let pb = nope.to_path_buf();
-    match Rkv::new::<SafeMode>(nope.as_path()).err() {
+    match Rkv::new::<SafeMode>(nope.as_path(), false).err() {
         Some(StoreError::DirectoryDoesNotExistError(p)) => {
             assert_eq!(pb, p);
         },
@@ -79,7 +79,7 @@ fn test_open_safe() {
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     check_rkv(&k);
 }
 
@@ -93,7 +93,7 @@ fn test_open_from_builder_safe() {
     let mut builder = Rkv::environment_builder::<SafeMode>();
     builder.set_max_dbs(2);
 
-    let k = Rkv::from_builder(root.path(), builder).expect("rkv");
+    let k = Rkv::from_builder(root.path(), false, builder).expect("rkv");
     check_rkv(&k);
 }
 
@@ -105,7 +105,7 @@ fn test_open_with_capacity_safe() {
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
 
-    let k = Rkv::with_capacity::<SafeMode>(root.path(), 1).expect("rkv");
+    let k = Rkv::with_capacity::<SafeMode>(root.path(), false, 1).expect("rkv");
     check_rkv(&k);
 
     let _zzz = k.open_single("zzz", StoreOptions::create()).expect("opened");
@@ -116,7 +116,7 @@ fn test_round_trip_and_transactions_safe() {
     let root = Builder::new().prefix("test_round_trip_and_transactions_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     {
@@ -219,7 +219,7 @@ fn test_single_store_clear_safe() {
     let root = Builder::new().prefix("test_single_store_clear_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     {
@@ -249,7 +249,7 @@ fn test_single_store_delete_nonexistent_safe() {
     let root = Builder::new().prefix("test_single_store_delete_nonexistent_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -262,7 +262,7 @@ fn test_multi_put_get_del_safe() {
     let root = Builder::new().prefix("test_multi_put_get_del_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let multistore = k.open_multi("multistore", StoreOptions::create()).unwrap();
 
     let mut writer = k.write().unwrap();
@@ -300,7 +300,7 @@ fn test_multiple_store_clear_safe() {
     let root = Builder::new().prefix("test_multiple_store_clear_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let multistore = k.open_multi("multistore", StoreOptions::create()).expect("opened");
 
     {
@@ -333,7 +333,7 @@ fn test_open_store_for_read_safe() {
     let root = Builder::new().prefix("test_open_store_for_read_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
 
     // First create the store, and start a write transaction on it.
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
@@ -356,7 +356,7 @@ fn test_open_a_missing_store_safe() {
     let root = Builder::new().prefix("test_open_a_missing_store_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let _sk = k.open_single("sk", StoreOptions::default()).expect("open a missing store");
 }
 
@@ -369,7 +369,7 @@ fn test_open_a_broken_store_safe() {
     let dbfile = root.path().join("data.safe.bin");
     fs::write(dbfile, "bogus").expect("dbfile created");
 
-    let _ = Rkv::new::<SafeMode>(root.path()).expect("new failed");
+    let _ = Rkv::new::<SafeMode>(root.path(), false).expect("new failed");
 }
 
 #[test]
@@ -377,7 +377,7 @@ fn test_open_fail_with_badrslot_safe() {
     let root = Builder::new().prefix("test_open_fail_with_badrslot_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
 
     // First create the store
     let _sk = k.open_single("sk", StoreOptions::create()).expect("opened");
@@ -398,7 +398,7 @@ fn test_create_fail_with_badrslot_safe() {
     let root = Builder::new().prefix("test_create_fail_with_badrslot_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
 
     // First create the store
     let _sk = k.open_single("sk", StoreOptions::create()).expect("opened");
@@ -419,7 +419,7 @@ fn test_read_before_write_num_safe() {
     let root = Builder::new().prefix("test_read_before_write_num_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     // Test reading a number, modifying it, and then writing it back.
@@ -449,7 +449,7 @@ fn test_read_before_write_str_safe() {
     let root = Builder::new().prefix("test_read_before_write_str_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     // Test reading a string, modifying it, and then writing it back.
@@ -482,7 +482,7 @@ fn test_isolation_safe() {
     let root = Builder::new().prefix("test_isolation_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let s = k.open_single("s", StoreOptions::create()).expect("opened");
 
     // Add one field.
@@ -525,7 +525,7 @@ fn test_blob_safe() {
     let root = Builder::new().prefix("test_round_trip_blob_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -566,7 +566,7 @@ fn test_sync_safe() {
     let mut builder = Rkv::environment_builder::<SafeMode>();
     builder.set_max_dbs(1);
     {
-        let k = Rkv::from_builder(root.path(), builder).expect("new succeeded");
+        let k = Rkv::from_builder(root.path(), false, builder).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
         {
             let mut writer = k.write().expect("writer");
@@ -575,7 +575,7 @@ fn test_sync_safe() {
             k.sync(true).expect("synced");
         }
     }
-    let k = Rkv::from_builder(root.path(), builder).expect("new succeeded");
+    let k = Rkv::from_builder(root.path(), false, builder).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
     let reader = k.read().expect("reader");
     assert_eq!(sk.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
@@ -586,7 +586,7 @@ fn test_iter_safe() {
     let root = Builder::new().prefix("test_iter_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     // An iterator over an empty store returns no values.
@@ -661,7 +661,7 @@ fn test_iter_from_key_greater_than_existing_safe() {
     let root = Builder::new().prefix("test_iter_from_key_greater_than_existing_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
     let mut writer = k.write().expect("writer");
@@ -681,7 +681,7 @@ fn test_multiple_store_read_write_safe() {
     let root = Builder::new().prefix("test_multiple_store_read_write_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let s1 = k.open_single("store_1", StoreOptions::create()).expect("opened");
     let s2 = k.open_single("store_2", StoreOptions::create()).expect("opened");
     let s3 = k.open_single("store_3", StoreOptions::create()).expect("opened");
@@ -721,7 +721,7 @@ fn test_multiple_store_iter_safe() {
     let root = Builder::new().prefix("test_multiple_store_iter_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let s1 = k.open_single("store_1", StoreOptions::create()).expect("opened");
     let s2 = k.open_single("store_2", StoreOptions::create()).expect("opened");
 
@@ -834,7 +834,7 @@ fn test_store_multiple_thread_safe() {
     let root = Builder::new().prefix("test_multiple_thread_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let rkv_arc = Arc::new(RwLock::new(Rkv::new::<SafeMode>(root.path()).expect("new succeeded")));
+    let rkv_arc = Arc::new(RwLock::new(Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded")));
     let store = rkv_arc.read().unwrap().open_single("test", StoreOptions::create()).expect("opened");
 
     let num_threads = 10;
@@ -887,7 +887,7 @@ fn test_store_multiple_thread_safe() {
 #[test]
 fn test_use_value_as_key_safe() {
     let root = Builder::new().prefix("test_use_value_as_key_safe").tempdir().expect("tempdir");
-    let rkv = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    let rkv = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
     let store = rkv.open_single("store", StoreOptions::create()).expect("opened");
 
     {

@@ -29,7 +29,7 @@ fn test_open_safe_same_dir_as_lmdb() {
 
     // Create database of type A and save to disk.
     {
-        let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
@@ -44,7 +44,7 @@ fn test_open_safe_same_dir_as_lmdb() {
     }
     // Verify that database of type A was written to disk.
     {
-        let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
@@ -54,12 +54,12 @@ fn test_open_safe_same_dir_as_lmdb() {
     }
     // Create database of type B and verify that it is empty.
     {
-        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
         let _ = k.open_single("sk", StoreOptions::default()).expect_err("not opened");
     }
     // Verify that database of type A wasn't changed.
     {
-        let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
@@ -69,7 +69,7 @@ fn test_open_safe_same_dir_as_lmdb() {
     }
     // Create database of type B and save to disk (type A exists at the same path).
     {
-        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
@@ -84,7 +84,7 @@ fn test_open_safe_same_dir_as_lmdb() {
     }
     // Verify that database of type B was written to disk.
     {
-        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
@@ -94,7 +94,7 @@ fn test_open_safe_same_dir_as_lmdb() {
     }
     // Verify that database of type A still wasn't changed.
     {
-        let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
@@ -111,7 +111,7 @@ fn test_open_lmdb_same_dir_as_safe() {
 
     // Create database of type A and save to disk.
     {
-        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
@@ -126,7 +126,7 @@ fn test_open_lmdb_same_dir_as_safe() {
     }
     // Verify that database of type A was written to disk.
     {
-        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
@@ -136,12 +136,12 @@ fn test_open_lmdb_same_dir_as_safe() {
     }
     // Create database of type B and verify that it is empty.
     {
-        let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
         let _ = k.open_single("sk", StoreOptions::default()).expect_err("not opened");
     }
     // Verify that database of type A wasn't changed.
     {
-        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
@@ -151,7 +151,7 @@ fn test_open_lmdb_same_dir_as_safe() {
     }
     // Create database of type B and save to disk (type A exists at the same path).
     {
-        let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::create()).expect("opened");
 
         let mut writer = k.write().expect("writer");
@@ -166,7 +166,7 @@ fn test_open_lmdb_same_dir_as_safe() {
     }
     // Verify that database of type B was written to disk.
     {
-        let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<Lmdb>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
@@ -176,7 +176,7 @@ fn test_open_lmdb_same_dir_as_safe() {
     }
     // Verify that database of type A still wasn't changed.
     {
-        let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<SafeMode>(root.path(), false).expect("new succeeded");
         let sk = k.open_single("sk", StoreOptions::default()).expect("opened");
 
         let reader = k.read().expect("reader");
