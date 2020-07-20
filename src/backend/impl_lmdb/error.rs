@@ -10,8 +10,10 @@
 
 use std::fmt;
 
-use crate::backend::traits::BackendError;
-use crate::error::StoreError;
+use crate::{
+    backend::traits::BackendError,
+    error::StoreError,
+};
 
 #[derive(Debug)]
 pub struct ErrorImpl(pub(crate) lmdb::Error);

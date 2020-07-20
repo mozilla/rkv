@@ -8,10 +8,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::os::raw::c_uint;
-use std::path::{
-    Path,
-    PathBuf,
+use std::{
+    os::raw::c_uint,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 #[cfg(any(feature = "db-dup-sort", feature = "db-int-key"))]
@@ -19,22 +21,26 @@ use crate::backend::{
     BackendDatabaseFlags,
     DatabaseFlags,
 };
-use crate::backend::{
-    BackendEnvironment,
-    BackendEnvironmentBuilder,
-    BackendInfo,
-    BackendRoCursorTransaction,
-    BackendRwCursorTransaction,
-    BackendStat,
-    SafeModeError,
+use crate::{
+    backend::{
+        BackendEnvironment,
+        BackendEnvironmentBuilder,
+        BackendInfo,
+        BackendRoCursorTransaction,
+        BackendRwCursorTransaction,
+        BackendStat,
+        SafeModeError,
+    },
+    error::StoreError,
+    readwrite::{
+        Reader,
+        Writer,
+    },
+    store::{
+        single::SingleStore,
+        Options as StoreOptions,
+    },
 };
-use crate::error::StoreError;
-use crate::readwrite::{
-    Reader,
-    Writer,
-};
-use crate::store::single::SingleStore;
-use crate::store::Options as StoreOptions;
 
 #[cfg(feature = "db-dup-sort")]
 use crate::store::multi::MultiStore;
@@ -49,7 +55,7 @@ use crate::store::integermulti::MultiIntegerStore;
 
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
-/// Wrapper around an `Environment` (e.g. an LMDB environment).
+/// Wrapper around an `Environment` (e.g. such as an `LMDB` or `SafeMode` environment).
 #[derive(Debug)]
 pub struct Rkv<E> {
     path: PathBuf,
@@ -104,9 +110,11 @@ where
 
         Ok(Rkv {
             path: path.into(),
-            env: builder.open(path).map_err(|e| match e.into() {
-                StoreError::OtherError(2) => StoreError::DirectoryDoesNotExistError(path.into()),
-                e => e,
+            env: builder.open(path).map_err(|e| {
+                match e.into() {
+                    StoreError::OtherError(2) => StoreError::DirectoryDoesNotExistError(path.into()),
+                    e => e,
+                }
             })?,
         })
     }
@@ -118,8 +126,8 @@ where
     E: BackendEnvironment<'e>,
 {
     /// Create or Open an existing database in (&[u8] -> Single Value) mode.
-    /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false.
+    /// Note: that create=true cannot be called concurrently with other operations so if
+    /// you are sure that the database exists, call this with create=false.
     pub fn open_single<'s, T>(
         &self,
         name: T,
@@ -132,8 +140,8 @@ where
     }
 
     /// Create or Open an existing database in (Integer -> Single Value) mode.
-    /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false.
+    /// Note: that create=true cannot be called concurrently with other operations so if
+    /// you are sure that the database exists, call this with create=false.
     #[cfg(feature = "db-int-key")]
     pub fn open_integer<'s, T, K>(
         &self,
@@ -149,8 +157,8 @@ where
     }
 
     /// Create or Open an existing database in (&[u8] -> Multiple Values) mode.
-    /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false.
+    /// Note: that create=true cannot be called concurrently with other operations so if
+    /// you are sure that the database exists, call this with create=false.
     #[cfg(feature = "db-dup-sort")]
     pub fn open_multi<'s, T>(
         &self,
@@ -165,8 +173,8 @@ where
     }
 
     /// Create or Open an existing database in (Integer -> Multiple Values) mode.
-    /// Note: that create=true cannot be called concurrently with other operations
-    /// so if you are sure that the database exists, call this with create=false.
+    /// Note: that create=true cannot be called concurrently with other operations so if
+    /// you are sure that the database exists, call this with create=false.
     #[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
     pub fn open_multi_integer<'s, T, K>(
         &self,
@@ -187,16 +195,20 @@ where
         T: Into<Option<&'s str>>,
     {
         if opts.create {
-            self.env.create_db(name.into(), opts.flags).map_err(|e| match e.into() {
-                StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
-                StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
-                e => e,
+            self.env.create_db(name.into(), opts.flags).map_err(|e| {
+                match e.into() {
+                    StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
+                    StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
+                    e => e,
+                }
             })
         } else {
-            self.env.open_db(name.into()).map_err(|e| match e.into() {
-                StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
-                StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
-                e => e,
+            self.env.open_db(name.into()).map_err(|e| {
+                match e.into() {
+                    StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
+                    StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
+                    e => e,
+                }
             })
         }
     }
@@ -207,9 +219,9 @@ impl<'e, E> Rkv<E>
 where
     E: BackendEnvironment<'e>,
 {
-    /// Create a read transaction.  There can be multiple concurrent readers
-    /// for an environment, up to the maximum specified by LMDB (default 126),
-    /// and you can open readers while a write transaction is active.
+    /// Create a read transaction.  There can be multiple concurrent readers for an
+    /// environment, up to the maximum specified by LMDB (default 126), and you can open
+    /// readers while a write transaction is active.
     pub fn read<T>(&'e self) -> Result<Reader<T>, StoreError>
     where
         E: BackendEnvironment<'e, RoTransaction = T>,
@@ -218,9 +230,9 @@ where
         Ok(Reader::new(self.env.begin_ro_txn().map_err(|e| e.into())?))
     }
 
-    /// Create a write transaction.  There can be only one write transaction
-    /// active at any given time, so trying to create a second one will block
-    /// until the first is committed or aborted.
+    /// Create a write transaction.  There can be only one write transaction active at any
+    /// given time, so trying to create a second one will block until the first is
+    /// committed or aborted.
     pub fn write<T>(&'e self) -> Result<Writer<T>, StoreError>
     where
         E: BackendEnvironment<'e, RwTransaction = T>,
@@ -235,18 +247,18 @@ impl<'e, E> Rkv<E>
 where
     E: BackendEnvironment<'e>,
 {
-    /// Flush the data buffers to disk. This call is only useful, when the environment
-    /// was open with either `NO_SYNC`, `NO_META_SYNC` or `MAP_ASYNC` (see below).
-    /// The call is not valid if the environment was opened with `READ_ONLY`.
+    /// Flush the data buffers to disk. This call is only useful, when the environment was
+    /// open with either `NO_SYNC`, `NO_META_SYNC` or `MAP_ASYNC` (see below). The call is
+    /// not valid if the environment was opened with `READ_ONLY`.
     ///
-    /// Data is always written to disk when `transaction.commit()` is called,
-    /// but the operating system may keep it buffered.
-    /// LMDB always flushes the OS buffers upon commit as well,
-    /// unless the environment was opened with `NO_SYNC` or in part `NO_META_SYNC`.
+    /// Data is always written to disk when `transaction.commit()` is called, but the
+    /// operating system may keep it buffered. LMDB always flushes the OS buffers upon
+    /// commit as well, unless the environment was opened with `NO_SYNC` or in part
+    /// `NO_META_SYNC`.
     ///
-    /// `force`: if true, force a synchronous flush.
-    /// Otherwise if the environment has the `NO_SYNC` flag set the flushes will be omitted,
-    /// and with `MAP_ASYNC` they will be asynchronous.
+    /// `force`: if true, force a synchronous flush. Otherwise if the environment has the
+    /// `NO_SYNC` flag set the flushes will be omitted, and with `MAP_ASYNC` they will
+    /// be asynchronous.
     pub fn sync(&self, force: bool) -> Result<(), StoreError> {
         self.env.sync(force).map_err(|e| e.into())
     }
@@ -295,23 +307,23 @@ where
 
     /// Sets the size of the memory map to use for the environment.
     ///
-    /// This can be used to resize the map when the environment is already open.
-    /// You can also use `Rkv::environment_builder()` to set the map size during
-    /// the `Rkv` initialization.
+    /// This can be used to resize the map when the environment is already open. You can
+    /// also use `Rkv::environment_builder()` to set the map size during the `Rkv`
+    /// initialization.
     ///
     /// Note:
     ///
-    /// * No active transactions allowed when performing resizing in this process.
-    ///   It's up to the consumer to enforce that.
+    /// * No active transactions allowed when performing resizing in this process. It's up
+    ///   to the consumer to enforce that.
     ///
-    /// * The size should be a multiple of the OS page size. Any attempt to set
-    ///   a size smaller than the space already consumed by the environment will
-    ///   be silently changed to the current size of the used space.
+    /// * The size should be a multiple of the OS page size. Any attempt to set a size
+    ///   smaller than the space already consumed by the environment will be silently
+    ///   changed to the current size of the used space.
     ///
-    /// * In the multi-process case, once a process resizes the map, other
-    ///   processes need to either re-open the environment, or call set_map_size
-    ///   with size 0 to update the environment. Otherwise, new transaction creation
-    ///   will fail with `LmdbError::MapResized`.
+    /// * In the multi-process case, once a process resizes the map, other processes need
+    ///   to either re-open the environment, or call set_map_size with size 0 to update
+    ///   the environment. Otherwise, new transaction creation will fail with
+    ///   `LmdbError::MapResized`.
     pub fn set_map_size(&self, size: usize) -> Result<(), StoreError> {
         self.env.set_map_size(size).map_err(Into::into)
     }

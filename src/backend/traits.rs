@@ -8,18 +8,22 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::fmt::{
-    Debug,
-    Display,
+use std::{
+    fmt::{
+        Debug,
+        Display,
+    },
+    path::Path,
 };
-use std::path::Path;
 
-use crate::backend::common::{
-    DatabaseFlags,
-    EnvironmentFlags,
-    WriteFlags,
+use crate::{
+    backend::common::{
+        DatabaseFlags,
+        EnvironmentFlags,
+        WriteFlags,
+    },
+    error::StoreError,
 };
-use crate::error::StoreError;
 
 pub trait BackendError: Debug + Display + Into<StoreError> {}
 

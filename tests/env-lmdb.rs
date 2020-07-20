@@ -12,13 +12,15 @@
 // deprecates `clippy::cyclomatic_complexity`.
 #![allow(clippy::complexity)]
 
-use std::fs;
-use std::str;
-use std::sync::{
-    Arc,
-    RwLock,
+use std::{
+    fs,
+    str,
+    sync::{
+        Arc,
+        RwLock,
+    },
+    thread,
 };
-use std::thread;
 
 use byteorder::{
     ByteOrder,
@@ -26,16 +28,16 @@ use byteorder::{
 };
 use tempfile::Builder;
 
-use rkv::backend::{
-    BackendEnvironmentBuilder,
-    BackendInfo,
-    BackendStat,
-    Lmdb,
-    LmdbDatabase,
-    LmdbEnvironment,
-    LmdbRwTransaction,
-};
 use rkv::{
+    backend::{
+        BackendEnvironmentBuilder,
+        BackendInfo,
+        BackendStat,
+        Lmdb,
+        LmdbDatabase,
+        LmdbEnvironment,
+        LmdbRwTransaction,
+    },
     EnvironmentFlags,
     Rkv,
     SingleStore,

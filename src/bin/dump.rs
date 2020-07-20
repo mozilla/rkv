@@ -8,12 +8,16 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::env::args;
-use std::io;
-use std::path::Path;
+use std::{
+    env::args,
+    io,
+    path::Path,
+};
 
-use rkv::migrate::Migrator;
-use rkv::MigrateError;
+use rkv::{
+    migrate::Migrator,
+    MigrateError,
+};
 
 fn main() -> Result<(), MigrateError> {
     let mut cli_args = args();

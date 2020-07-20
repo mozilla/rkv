@@ -8,41 +8,45 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::collections::btree_map::Entry;
-use std::collections::BTreeMap;
-use std::os::raw::c_uint;
-use std::path::{
-    Path,
-    PathBuf,
-};
-use std::result;
-use std::sync::{
-    Arc,
-    RwLock,
+use std::{
+    collections::{
+        btree_map::Entry,
+        BTreeMap,
+    },
+    os::raw::c_uint,
+    path::{
+        Path,
+        PathBuf,
+    },
+    result,
+    sync::{
+        Arc,
+        RwLock,
+    },
 };
 
 use lazy_static::lazy_static;
 
-use crate::backend::{
-    LmdbEnvironment,
-    SafeModeEnvironment,
+use crate::{
+    backend::{
+        LmdbEnvironment,
+        SafeModeEnvironment,
+    },
+    error::StoreError,
+    helpers::canonicalize_path,
+    Rkv,
 };
-use crate::error::StoreError;
-use crate::helpers::canonicalize_path;
-use crate::Rkv;
 
 type Result<T> = result::Result<T, StoreError>;
 type SharedRkv<E> = Arc<RwLock<Rkv<E>>>;
 
 lazy_static! {
-    /// A process is only permitted to have one open handle to each Rkv environment.
-    /// This manager exists to enforce that constraint: don't open environments directly.
     static ref MANAGER_LMDB: RwLock<Manager<LmdbEnvironment>> = RwLock::new(Manager::new());
     static ref MANAGER_SAFE_MODE: RwLock<Manager<SafeModeEnvironment>> = RwLock::new(Manager::new());
 }
 
-/// A process is only permitted to have one open handle to each Rkv environment.
-/// This manager exists to enforce that constraint: don't open environments directly.
+/// A process is only permitted to have one open handle to each Rkv environment. This
+/// manager exists to enforce that constraint: don't open environments directly.
 pub struct Manager<E> {
     environments: BTreeMap<PathBuf, SharedRkv<E>>,
 }
@@ -79,8 +83,7 @@ impl<E> Manager<E> {
         })
     }
 
-    /// Return the open env at `path` with capacity `capacity`,
-    /// or create it by calling `f`.
+    /// Return the open env at `path` with `capacity`, or create it by calling `f`.
     pub fn get_or_create_with_capacity<'p, F, P>(&mut self, path: P, capacity: c_uint, f: F) -> Result<SharedRkv<E>>
     where
         F: FnOnce(&Path, c_uint) -> Result<Rkv<E>>,
@@ -111,11 +114,12 @@ impl Manager<SafeModeEnvironment> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use tempfile::Builder;
-
     use super::*;
     use crate::*;
+
+    use std::fs;
+
+    use tempfile::Builder;
 
     use backend::Lmdb;
 
@@ -129,8 +133,8 @@ mod tests {
         let path1 = root1.path();
         let arc = manager.get_or_create(path1, Rkv::new::<Lmdb>).expect("created");
 
-        // Arc<RwLock<>> has interior mutability, so we can replace arc's Rkv
-        // instance with a new instance that has a different path.
+        // Arc<RwLock<>> has interior mutability, so we can replace arc's Rkv instance with a new
+        // instance that has a different path.
         let root2 = Builder::new().prefix("test_mutate_managed_rkv_2").tempdir().expect("tempdir");
         fs::create_dir_all(root2.path()).expect("dir created");
         let path2 = root2.path();
@@ -140,14 +144,13 @@ mod tests {
             *rkv = rkv2;
         }
 
-        // arc now has a different internal Rkv with path2, but it's still
-        // mapped to path1 in manager, so its pointer is equal to a new Arc
-        // for path1.
+        // Arc now has a different internal Rkv with path2, but it's still mapped to path1 in
+        // manager, so its pointer is equal to a new Arc for path1.
         let path1_arc = manager.get(path1).expect("success").expect("existed");
         assert!(Arc::ptr_eq(&path1_arc, &arc));
 
-        // Meanwhile, a new Arc for path2 has a different pointer, even though
-        // its Rkv's path is the same as arc's current path.
+        // Meanwhile, a new Arc for path2 has a different pointer, even though its Rkv's path is
+        // the same as arc's current path.
         let path2_arc = manager.get_or_create(path2, Rkv::new::<Lmdb>).expect("success");
         assert!(!Arc::ptr_eq(&path2_arc, &arc));
     }

@@ -11,14 +11,14 @@ use std::fs;
 
 use tempfile::Builder;
 
-use rkv::backend::{
-    BackendStat,
-    Lmdb,
-    LmdbDatabase,
-    LmdbEnvironment,
-    LmdbRwTransaction,
-};
 use rkv::{
+    backend::{
+        BackendStat,
+        Lmdb,
+        LmdbDatabase,
+        LmdbEnvironment,
+        LmdbRwTransaction,
+    },
     Manager,
     Rkv,
     StoreOptions,

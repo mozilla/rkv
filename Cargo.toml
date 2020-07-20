@@ -1,23 +1,28 @@
 [package]
-name = "rkv"
-version = "0.11.1"
-authors = ["Richard Newman <rnewman@twinql.com>", "Nan Jiang <najiang@mozilla.com>", "Myk Melez <myk@mykzilla.org>", "Victor Porof <vporof@mozilla.com>"]
-edition = "2018"
-license = "Apache-2.0"
-description = "a simple, humane, typed Rust interface to LMDB"
-documentation = "https://docs.rs/rkv"
-homepage = "https://github.com/mozilla/rkv"
-repository = "https://github.com/mozilla/rkv"
-readme = "README.md"
-keywords = ["lmdb", "database", "storage"]
+authors = [
+  "Richard Newman <rnewman@twinql.com>",
+  "Nan Jiang <najiang@mozilla.com>",
+  "Myk Melez <myk@mykzilla.org>",
+  "Victor Porof <vporof@mozilla.com>",
+]
 categories = ["database"]
+description = "A simple, humane, typed key-value storage solution"
+documentation = "https://docs.rs/rkv"
+edition = "2018"
 exclude = ["/tests/envs/*"]
+homepage = "https://github.com/mozilla/rkv"
+keywords = ["lmdb", "database", "storage"]
+license = "Apache-2.0"
+name = "rkv"
+readme = "README.md"
+repository = "https://github.com/mozilla/rkv"
+version = "0.11.1"
 
 [features]
-default = ["db-dup-sort", "db-int-key"]
 backtrace = ["failure/backtrace", "failure/std"]
 db-dup-sort = []
 db-int-key = []
+default = ["db-dup-sort", "db-int-key"]
 with-asan = ["lmdb-rkv/with-asan"]
 with-fuzzer = ["lmdb-rkv/with-fuzzer"]
 with-fuzzer-no-link = ["lmdb-rkv/with-fuzzer-no-link"]
@@ -32,7 +37,7 @@ lazy_static = "1.0"
 lmdb-rkv = "0.14"
 log = "0.4"
 ordered-float = "1.0"
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = {version = "1.0", features = ["derive", "rc"]}
 serde_derive = "1.0"
 url = "2.0"
 uuid = "0.8"
@@ -40,9 +45,9 @@ uuid = "0.8"
 # Get rid of failure's dependency on backtrace. Eventually
 # backtrace will move into Rust core, but we don't need it here.
 [dependencies.failure]
-version = "0.1"
 default_features = false
 features = ["derive"]
+version = "0.1"
 
 [dev-dependencies]
 byteorder = "1"

@@ -8,16 +8,20 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::io;
-use std::path::{
-    Path,
-    PathBuf,
+use std::{
+    io,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use url::Url;
 
-use crate::error::StoreError;
-use crate::value::Value;
+use crate::{
+    error::StoreError,
+    value::Value,
+};
 
 pub(crate) fn read_transform(value: Result<&[u8], StoreError>) -> Result<Option<Value>, StoreError> {
     match value {

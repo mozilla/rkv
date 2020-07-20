@@ -8,13 +8,17 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::fmt;
-use std::io;
+use std::{
+    fmt,
+    io,
+};
 
 use bincode::Error as BincodeError;
 
-use crate::backend::traits::BackendError;
-use crate::error::StoreError;
+use crate::{
+    backend::traits::BackendError,
+    error::StoreError,
+};
 
 #[derive(Debug)]
 pub enum ErrorImpl {

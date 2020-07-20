@@ -15,8 +15,8 @@ use std::fs;
 use serde_derive::Serialize;
 use tempfile::Builder;
 
-use rkv::backend::Lmdb;
 use rkv::{
+    backend::Lmdb,
     PrimitiveInt,
     Rkv,
     StoreOptions,

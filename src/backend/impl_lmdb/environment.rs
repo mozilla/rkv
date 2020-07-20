@@ -29,8 +29,8 @@ use crate::backend::traits::{
 pub struct EnvironmentBuilderImpl(lmdb::EnvironmentBuilder);
 
 impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
-    type Error = ErrorImpl;
     type Environment = EnvironmentImpl;
+    type Error = ErrorImpl;
     type Flags = EnvironmentFlagsImpl;
 
     fn new() -> EnvironmentBuilderImpl {
@@ -69,13 +69,13 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
 pub struct EnvironmentImpl(lmdb::Environment);
 
 impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
-    type Error = ErrorImpl;
     type Database = DatabaseImpl;
+    type Error = ErrorImpl;
     type Flags = DatabaseFlagsImpl;
-    type Stat = StatImpl;
     type Info = InfoImpl;
     type RoTransaction = RoTransactionImpl<'e>;
     type RwTransaction = RwTransactionImpl<'e>;
+    type Stat = StatImpl;
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
         self.0.open_db(name).map(DatabaseImpl).map_err(ErrorImpl)

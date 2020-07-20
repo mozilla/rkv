@@ -14,17 +14,19 @@
 //! the number of key/value pairs to create via the `-n <number>` flag
 //! (for which the default value is 50).
 
-use std::env::args;
-use std::fs;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
-
-use rkv::backend::{
-    BackendEnvironmentBuilder,
-    Lmdb,
+use std::{
+    env::args,
+    fs,
+    fs::File,
+    io::Read,
+    path::Path,
 };
+
 use rkv::{
+    backend::{
+        BackendEnvironmentBuilder,
+        Lmdb,
+    },
     Rkv,
     StoreOptions,
     Value,

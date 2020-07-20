@@ -27,8 +27,8 @@ use crate::backend::traits::{
 pub struct RoTransactionImpl<'t>(pub(crate) lmdb::RoTransaction<'t>);
 
 impl<'t> BackendRoTransaction for RoTransactionImpl<'t> {
-    type Error = ErrorImpl;
     type Database = DatabaseImpl;
+    type Error = ErrorImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {
         self.0.get(db.0, &key).map_err(ErrorImpl)
@@ -51,8 +51,8 @@ impl<'t> BackendRoCursorTransaction<'t> for RoTransactionImpl<'t> {
 pub struct RwTransactionImpl<'t>(pub(crate) lmdb::RwTransaction<'t>);
 
 impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
-    type Error = ErrorImpl;
     type Database = DatabaseImpl;
+    type Error = ErrorImpl;
     type Flags = WriteFlagsImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {

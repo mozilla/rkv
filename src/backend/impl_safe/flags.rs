@@ -14,16 +14,18 @@ use serde_derive::{
     Serialize,
 };
 
-use crate::backend::common::{
-    DatabaseFlags,
-    EnvironmentFlags,
-    WriteFlags,
-};
-use crate::backend::traits::{
-    BackendDatabaseFlags,
-    BackendEnvironmentFlags,
-    BackendFlags,
-    BackendWriteFlags,
+use crate::backend::{
+    common::{
+        DatabaseFlags,
+        EnvironmentFlags,
+        WriteFlags,
+    },
+    traits::{
+        BackendDatabaseFlags,
+        BackendEnvironmentFlags,
+        BackendFlags,
+        BackendWriteFlags,
+    },
 };
 
 bitflags! {

@@ -8,18 +8,20 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::fs;
-use std::path::{
-    Path,
-    PathBuf,
-};
-use std::sync::Arc;
-use std::sync::{
-    RwLock,
-    RwLockReadGuard,
-    RwLockWriteGuard,
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    fs,
+    path::{
+        Path,
+        PathBuf,
+    },
+    sync::{
+        Arc,
+        RwLock,
+        RwLockReadGuard,
+        RwLockWriteGuard,
+    },
 };
 
 use id_arena::Arena;
@@ -55,8 +57,8 @@ pub struct EnvironmentBuilderImpl {
 }
 
 impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
-    type Error = ErrorImpl;
     type Environment = EnvironmentImpl;
+    type Error = ErrorImpl;
     type Flags = EnvironmentFlagsImpl;
 
     fn new() -> EnvironmentBuilderImpl {
@@ -188,13 +190,13 @@ impl EnvironmentImpl {
 }
 
 impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
-    type Error = ErrorImpl;
     type Database = DatabaseImpl;
+    type Error = ErrorImpl;
     type Flags = DatabaseFlagsImpl;
-    type Stat = StatImpl;
     type Info = InfoImpl;
     type RoTransaction = RoTransactionImpl<'e>;
     type RwTransaction = RwTransactionImpl<'e>;
+    type Stat = StatImpl;
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
         if Arc::strong_count(&self.ro_txns) > 1 {

@@ -8,16 +8,18 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use crate::backend::common::{
-    DatabaseFlags,
-    EnvironmentFlags,
-    WriteFlags,
-};
-use crate::backend::traits::{
-    BackendDatabaseFlags,
-    BackendEnvironmentFlags,
-    BackendFlags,
-    BackendWriteFlags,
+use crate::backend::{
+    common::{
+        DatabaseFlags,
+        EnvironmentFlags,
+        WriteFlags,
+    },
+    traits::{
+        BackendDatabaseFlags,
+        BackendEnvironmentFlags,
+        BackendFlags,
+        BackendWriteFlags,
+    },
 };
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Default)]
