@@ -209,7 +209,7 @@ mod manager;
 mod readwrite;
 
 pub mod backend;
-pub mod migrate;
+pub mod migrator;
 pub mod store;
 pub mod value;
 
@@ -221,7 +221,6 @@ pub use backend::{
 pub use env::Rkv;
 pub use error::{
     DataError,
-    MigrateError,
     StoreError,
 };
 pub use manager::Manager;

@@ -44,7 +44,7 @@
 //! new environment in a temporary directory:
 //!
 //! ```
-//! use rkv::migrate::Migrator;
+//! use rkv::migrator::LmdbArchMigrator as Migrator;
 //! use std::path::Path;
 //! use tempfile::tempdir;
 //! let mut migrator = Migrator::new(Path::new("tests/envs/ref_env_32")).unwrap();
@@ -89,7 +89,7 @@ use lmdb::{
     WriteFlags,
 };
 
-pub use crate::error::MigrateError;
+pub use super::arch_migrator_error::MigrateError;
 
 const PAGESIZE: u16 = 4096;
 
