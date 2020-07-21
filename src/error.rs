@@ -98,9 +98,6 @@ pub enum StoreError {
 
     #[fail(display = "attempted to open DB during transaction in thread {:?}", _0)]
     OpenAttemptedDuringTransaction(ThreadId),
-
-    #[fail(display = "other backing store error: {}", _0)]
-    OtherError(i32),
 }
 
 impl StoreError {

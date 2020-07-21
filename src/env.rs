@@ -100,12 +100,7 @@ where
     {
         Ok(Rkv {
             path: path.into(),
-            env: builder.open(path).map_err(|e| {
-                match e.into() {
-                    StoreError::OtherError(2) => StoreError::DirectoryDoesNotExistError(path.into()),
-                    e => e,
-                }
-            })?,
+            env: builder.open(path).map_err(|e| e.into())?,
         })
     }
 }
