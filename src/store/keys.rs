@@ -8,34 +8,39 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod keys;
-pub mod single;
+mod encodables;
+mod primitives;
 
-#[cfg(feature = "db-dup-sort")]
-pub mod multi;
+use std::marker::PhantomData;
 
-#[cfg(feature = "db-int-key")]
-pub mod integer;
+use crate::error::DataError;
 
-#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
-pub mod integermulti;
+pub use encodables::*;
+pub use primitives::*;
 
-use crate::backend::BackendDatabaseFlags;
-
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
+pub(crate) struct Key<K> {
+    bytes: Vec<u8>,
+    phantom: PhantomData<K>,
 }
 
-impl<F> Options<F>
+impl<K> AsRef<[u8]> for Key<K>
 where
-    F: BackendDatabaseFlags,
+    K: EncodableKey,
 {
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
+    fn as_ref(&self) -> &[u8] {
+        self.bytes.as_ref()
+    }
+}
+
+impl<K> Key<K>
+where
+    K: EncodableKey,
+{
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new(k: &K) -> Result<Key<K>, DataError> {
+        Ok(Key {
+            bytes: k.to_bytes()?,
+            phantom: PhantomData,
+        })
     }
 }

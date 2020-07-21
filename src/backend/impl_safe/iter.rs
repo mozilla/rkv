@@ -8,34 +8,17 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod keys;
-pub mod single;
+use super::ErrorImpl;
+use crate::backend::traits::BackendIter;
 
-#[cfg(feature = "db-dup-sort")]
-pub mod multi;
+// FIXME: Use generics instead.
+pub struct IterImpl<'i>(pub(crate) Box<dyn Iterator<Item = (&'i [u8], &'i [u8])> + 'i>);
 
-#[cfg(feature = "db-int-key")]
-pub mod integer;
+impl<'i> BackendIter<'i> for IterImpl<'i> {
+    type Error = ErrorImpl;
 
-#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
-pub mod integermulti;
-
-use crate::backend::BackendDatabaseFlags;
-
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
-
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
+    #[allow(clippy::type_complexity)]
+    fn next(&mut self) -> Option<Result<(&'i [u8], &'i [u8]), Self::Error>> {
+        self.0.next().map(Ok)
     }
 }

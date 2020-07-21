@@ -7,35 +7,37 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+#![allow(non_camel_case_types)]
 
-pub mod keys;
-pub mod single;
-
-#[cfg(feature = "db-dup-sort")]
-pub mod multi;
-
-#[cfg(feature = "db-int-key")]
-pub mod integer;
-
-#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
-pub mod integermulti;
-
-use crate::backend::BackendDatabaseFlags;
-
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
+pub enum EnvironmentFlags {
+    FIXED_MAP,
+    NO_SUB_DIR,
+    WRITE_MAP,
+    READ_ONLY,
+    NO_META_SYNC,
+    NO_SYNC,
+    MAP_ASYNC,
+    NO_TLS,
+    NO_LOCK,
+    NO_READAHEAD,
+    NO_MEM_INIT,
 }
 
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
-    }
+pub enum DatabaseFlags {
+    REVERSE_KEY,
+    #[cfg(feature = "db-dup-sort")]
+    DUP_SORT,
+    #[cfg(feature = "db-int-key")]
+    INTEGER_KEY,
+    DUP_FIXED,
+    INTEGER_DUP,
+    REVERSE_DUP,
+}
+
+pub enum WriteFlags {
+    NO_OVERWRITE,
+    NO_DUP_DATA,
+    CURRENT,
+    APPEND,
+    APPEND_DUP,
 }

@@ -8,34 +8,20 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod keys;
-pub mod single;
+use bincode::serialize;
+use serde::Serialize;
 
-#[cfg(feature = "db-dup-sort")]
-pub mod multi;
+use crate::error::DataError;
 
-#[cfg(feature = "db-int-key")]
-pub mod integer;
-
-#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
-pub mod integermulti;
-
-use crate::backend::BackendDatabaseFlags;
-
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
+pub trait EncodableKey {
+    fn to_bytes(&self) -> Result<Vec<u8>, DataError>;
 }
 
-impl<F> Options<F>
+impl<T> EncodableKey for T
 where
-    F: BackendDatabaseFlags,
+    T: Serialize,
 {
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
+    fn to_bytes(&self) -> Result<Vec<u8>, DataError> {
+        serialize(self).map_err(|e| e.into())
     }
 }

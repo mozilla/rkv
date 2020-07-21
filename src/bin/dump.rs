@@ -8,16 +8,15 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-extern crate rkv;
-
-use rkv::{
-    error::MigrateError,
-    migrate::Migrator,
-};
 use std::{
     env::args,
     io,
     path::Path,
+};
+
+use rkv::{
+    migrate::Migrator,
+    MigrateError,
 };
 
 fn main() -> Result<(), MigrateError> {
@@ -49,7 +48,7 @@ fn main() -> Result<(), MigrateError> {
 
     let env_path = env_path.ok_or("must provide a path to the LMDB environment")?;
     let mut migrator: Migrator = Migrator::new(Path::new(&env_path))?;
-    migrator.dump(db_name.as_ref().map(String::as_str), io::stdout()).unwrap();
+    migrator.dump(db_name.as_deref(), io::stdout()).unwrap();
 
     Ok(())
 }

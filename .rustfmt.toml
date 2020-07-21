@@ -1,4 +1,9 @@
+comment_width = 90
+force_multiline_blocks = true
 imports_layout = "Vertical"
-max_width = 120
 match_block_trailing_comma = true
+max_width = 120
+merge_imports = true
+reorder_impl_items = true
 use_small_heuristics = "Off"
+wrap_comments = true

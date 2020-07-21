@@ -8,34 +8,32 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod keys;
-pub mod single;
+use crate::backend::traits::BackendStat;
 
-#[cfg(feature = "db-dup-sort")]
-pub mod multi;
+pub struct StatImpl(pub(crate) lmdb::Stat);
 
-#[cfg(feature = "db-int-key")]
-pub mod integer;
+impl BackendStat for StatImpl {
+    fn page_size(&self) -> usize {
+        self.0.page_size() as usize
+    }
 
-#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
-pub mod integermulti;
+    fn depth(&self) -> usize {
+        self.0.depth() as usize
+    }
 
-use crate::backend::BackendDatabaseFlags;
+    fn branch_pages(&self) -> usize {
+        self.0.branch_pages()
+    }
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
+    fn leaf_pages(&self) -> usize {
+        self.0.leaf_pages()
+    }
 
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
+    fn overflow_pages(&self) -> usize {
+        self.0.overflow_pages()
+    }
+
+    fn entries(&self) -> usize {
+        self.0.entries()
     }
 }

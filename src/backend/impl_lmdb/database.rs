@@ -8,34 +8,9 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-pub mod keys;
-pub mod single;
+use crate::backend::traits::BackendDatabase;
 
-#[cfg(feature = "db-dup-sort")]
-pub mod multi;
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct DatabaseImpl(pub(crate) lmdb::Database);
 
-#[cfg(feature = "db-int-key")]
-pub mod integer;
-
-#[cfg(all(feature = "db-dup-sort", feature = "db-int-key"))]
-pub mod integermulti;
-
-use crate::backend::BackendDatabaseFlags;
-
-#[derive(Default, Debug, Copy, Clone)]
-pub struct Options<F> {
-    pub create: bool,
-    pub flags: F,
-}
-
-impl<F> Options<F>
-where
-    F: BackendDatabaseFlags,
-{
-    pub fn create() -> Options<F> {
-        Options {
-            create: true,
-            flags: F::empty(),
-        }
-    }
-}
+impl BackendDatabase for DatabaseImpl {}
