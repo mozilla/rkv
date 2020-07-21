@@ -88,9 +88,10 @@ impl Into<lmdb::DatabaseFlags> for DatabaseFlags {
             DatabaseFlags::REVERSE_KEY => lmdb::DatabaseFlags::REVERSE_KEY,
             #[cfg(feature = "db-dup-sort")]
             DatabaseFlags::DUP_SORT => lmdb::DatabaseFlags::DUP_SORT,
+            #[cfg(feature = "db-dup-sort")]
+            DatabaseFlags::DUP_FIXED => lmdb::DatabaseFlags::DUP_FIXED,
             #[cfg(feature = "db-int-key")]
             DatabaseFlags::INTEGER_KEY => lmdb::DatabaseFlags::INTEGER_KEY,
-            DatabaseFlags::DUP_FIXED => lmdb::DatabaseFlags::DUP_FIXED,
             DatabaseFlags::INTEGER_DUP => lmdb::DatabaseFlags::INTEGER_DUP,
             DatabaseFlags::REVERSE_DUP => lmdb::DatabaseFlags::REVERSE_DUP,
         }
