@@ -102,6 +102,8 @@ pub trait BackendEnvironment<'e>: Debug {
     type RoTransaction: BackendRoCursorTransaction<'e, Database = Self::Database>;
     type RwTransaction: BackendRwCursorTransaction<'e, Database = Self::Database>;
 
+    fn get_dbs(&self) -> Result<Vec<Option<String>>, Self::Error>;
+
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error>;
 
     fn create_db(&self, name: Option<&str>, flags: Self::Flags) -> Result<Self::Database, Self::Error>;

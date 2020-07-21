@@ -211,6 +211,11 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type RwTransaction = RwTransactionImpl<'e>;
     type Stat = StatImpl;
 
+    fn get_dbs(&self) -> Result<Vec<Option<String>>, Self::Error> {
+        let dbs = self.dbs.read().map_err(|_| ErrorImpl::EnvPoisonError)?;
+        Ok(dbs.keys().map(|key| key.to_owned()).collect())
+    }
+
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
         if Arc::strong_count(&self.ro_txns) > 1 {
             return Err(ErrorImpl::DbsIllegalOpen);

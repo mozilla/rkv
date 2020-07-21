@@ -29,12 +29,16 @@ use crate::backend::traits::{
     BackendEnvironment,
     BackendEnvironmentBuilder,
     BackendInfo,
+    BackendIter,
+    BackendRoCursor,
+    BackendRoCursorTransaction,
     BackendStat,
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct EnvironmentBuilderImpl {
     builder: lmdb::EnvironmentBuilder,
+    envtype: EnvironmentType,
     make_dir: bool,
 }
 
@@ -46,6 +50,7 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
     fn new() -> EnvironmentBuilderImpl {
         EnvironmentBuilderImpl {
             builder: lmdb::Environment::new(),
+            envtype: EnvironmentType::SingleDatabase,
             make_dir: false,
         }
     }
@@ -65,6 +70,9 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
 
     fn set_max_dbs(&mut self, max_dbs: u32) -> &mut Self {
         self.builder.set_max_dbs(max_dbs);
+        if max_dbs > 0 {
+            self.envtype = EnvironmentType::MultipleNamedDatabases
+        }
         self
     }
 
@@ -85,12 +93,18 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             }
             fs::create_dir_all(path).map_err(ErrorImpl::IoError)?;
         }
-        self.builder.open(path).map(EnvironmentImpl).map_err(ErrorImpl::LmdbError)
+        self.builder.open(path).map(|env| EnvironmentImpl(env, self.envtype)).map_err(ErrorImpl::LmdbError)
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+enum EnvironmentType {
+    SingleDatabase,
+    MultipleNamedDatabases,
+}
+
 #[derive(Debug)]
-pub struct EnvironmentImpl(lmdb::Environment);
+pub struct EnvironmentImpl(lmdb::Environment, EnvironmentType);
 
 impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type Database = DatabaseImpl;
@@ -100,6 +114,23 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type RoTransaction = RoTransactionImpl<'e>;
     type RwTransaction = RwTransactionImpl<'e>;
     type Stat = StatImpl;
+
+    fn get_dbs(&self) -> Result<Vec<Option<String>>, Self::Error> {
+        if self.1 == EnvironmentType::SingleDatabase {
+            return Ok(vec![None]);
+        }
+        let db = self.0.open_db(None).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)?;
+        let reader = self.begin_ro_txn()?;
+        let cursor = reader.open_ro_cursor(&db)?;
+        let mut iter = cursor.into_iter();
+        let mut store = vec![];
+        while let Some(result) = iter.next() {
+            let (key, _) = result?;
+            let name = String::from_utf8(key.to_owned()).map_err(|_| ErrorImpl::LmdbError(lmdb::Error::Corrupted))?;
+            store.push(Some(name));
+        }
+        Ok(store)
+    }
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
         self.0.open_db(name).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)

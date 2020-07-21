@@ -186,6 +186,54 @@ fn test_open_with_capacity_safe_2() {
 }
 
 #[test]
+fn test_list_dbs_safe_1() {
+    let root = Builder::new().prefix("test_list_dbs_safe").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<SafeMode>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    let mut dbs = k.get_dbs().unwrap();
+    dbs.sort();
+    assert_eq!(dbs, vec![None, Some("s".to_owned())]);
+}
+
+#[test]
+fn test_list_dbs_safe_2() {
+    let root = Builder::new().prefix("test_list_dbs_safe").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<SafeMode>(root.path(), 2).expect("rkv");
+    check_rkv(&k);
+
+    let _ = k.open_single("zzz", StoreOptions::create()).expect("opened");
+
+    let mut dbs = k.get_dbs().unwrap();
+    dbs.sort();
+    assert_eq!(dbs, vec![None, Some("s".to_owned()), Some("zzz".to_owned())]);
+}
+
+#[test]
+fn test_list_dbs_safe_3() {
+    let root = Builder::new().prefix("test_list_dbs_safe").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<SafeMode>(root.path(), 0).expect("rkv");
+
+    let _ = k.open_single(None, StoreOptions::create()).expect("opened");
+
+    let mut dbs = k.get_dbs().unwrap();
+    dbs.sort();
+    assert_eq!(dbs, vec![None]);
+}
+
+#[test]
 fn test_round_trip_and_transactions_safe() {
     let root = Builder::new().prefix("test_round_trip_and_transactions_safe").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");

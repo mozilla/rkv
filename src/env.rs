@@ -110,6 +110,11 @@ impl<'e, E> Rkv<E>
 where
     E: BackendEnvironment<'e>,
 {
+    /// Return all created databases.
+    pub fn get_dbs(&self) -> Result<Vec<Option<String>>, StoreError> {
+        self.env.get_dbs().map_err(|e| e.into())
+    }
+
     /// Create or Open an existing database in (&[u8] -> Single Value) mode.
     /// Note: that create=true cannot be called concurrently with other operations so if
     /// you are sure that the database exists, call this with create=false.
