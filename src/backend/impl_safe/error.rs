@@ -51,10 +51,10 @@ impl fmt::Display for ErrorImpl {
 
 impl Into<StoreError> for ErrorImpl {
     fn into(self) -> StoreError {
-        // The `StoreError::KeyValuePairBadSize` error is unused, because this
-        // backend supports keys and values of arbitrary sizes.
-        // The `StoreError::MapFull` and `StoreError::ReadersFull` are
-        // unimplemented yet, but they should be in the future.
+        // The `StoreError::KeyValuePairBadSize` error is unused, because this backend
+        // supports keys and values of arbitrary sizes.
+        // The `StoreError::MapFull` and `StoreError::ReadersFull` are unimplemented yet,
+        // but they should be in the future.
         match self {
             ErrorImpl::KeyValuePairNotFound => StoreError::KeyValuePairNotFound,
             ErrorImpl::BincodeError(_) => StoreError::FileInvalid,

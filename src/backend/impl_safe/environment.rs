@@ -249,8 +249,13 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         unimplemented!()
     }
 
+    fn load_ratio(&self) -> Result<Option<f32>, Self::Error> {
+        warn!("`load_ratio()` is irrelevant for this storage backend.");
+        Ok(None)
+    }
+
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error> {
-        warn!("Ignoring `set_map_size({})`", size);
+        warn!("`set_map_size({})` is ignored by this storage backend.", size);
         Ok(())
     }
 }

@@ -116,6 +116,8 @@ pub trait BackendEnvironment<'e>: Debug {
 
     fn freelist(&self) -> Result<usize, Self::Error>;
 
+    fn load_ratio(&self) -> Result<Option<f32>, Self::Error>;
+
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error>;
 }
 
