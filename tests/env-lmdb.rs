@@ -753,14 +753,14 @@ fn test_load_ratio() {
     let mut writer = k.write().expect("writer");
     sk.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
     writer.commit().expect("commited");
-    let ratio = k.load_ratio().expect("ratio");
+    let ratio = k.load_ratio().expect("ratio").unwrap();
     assert!(ratio > 0.0_f32 && ratio < 1.0_f32);
 
     // Put data to database should increase the load ratio.
     let mut writer = k.write().expect("writer");
     sk.put(&mut writer, "bar", &Value::Str(&"more-than-4KB".repeat(1000))).expect("wrote");
     writer.commit().expect("commited");
-    let new_ratio = k.load_ratio().expect("ratio");
+    let new_ratio = k.load_ratio().expect("ratio").unwrap();
     assert!(new_ratio > ratio);
 
     // Clear the database so that all the used pages should go to freelist, hence the ratio
@@ -768,7 +768,7 @@ fn test_load_ratio() {
     let mut writer = k.write().expect("writer");
     sk.clear(&mut writer).expect("clear");
     writer.commit().expect("commited");
-    let after_clear_ratio = k.load_ratio().expect("ratio");
+    let after_clear_ratio = k.load_ratio().expect("ratio").unwrap();
     assert!(after_clear_ratio < new_ratio);
 }
 
