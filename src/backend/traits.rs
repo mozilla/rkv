@@ -88,6 +88,8 @@ pub trait BackendEnvironmentBuilder<'b>: Debug + Eq + PartialEq + Copy + Clone {
 
     fn set_map_size(&mut self, size: usize) -> &mut Self;
 
+    fn set_make_dir_if_needed(&mut self, make_dir: bool) -> &mut Self;
+
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error>;
 }
 

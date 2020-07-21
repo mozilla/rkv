@@ -14,6 +14,7 @@
 
 use std::{
     fs,
+    path::Path,
     str,
     sync::{
         Arc,
@@ -100,6 +101,33 @@ fn test_open_from_builder() {
     builder.set_max_dbs(2);
 
     let k = Rkv::from_builder(root.path(), builder).expect("rkv");
+    check_rkv(&k);
+}
+
+#[test]
+fn test_open_from_builder_with_dir_1() {
+    let root = Builder::new().prefix("test_open_from_builder").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+
+    let mut builder = Rkv::environment_builder::<Lmdb>();
+    builder.set_max_dbs(2);
+    builder.set_make_dir_if_needed(true);
+
+    let k = Rkv::from_builder(root.path(), builder).expect("rkv");
+    check_rkv(&k);
+}
+
+#[test]
+#[should_panic(expected = "rkv: DirectoryDoesNotExistError(\"bogus\")")]
+fn test_open_from_builder_with_dir_2() {
+    let root = Path::new("bogus");
+    println!("Root path: {:?}", root);
+    assert!(!root.is_dir());
+
+    let mut builder = Rkv::environment_builder::<Lmdb>();
+    builder.set_max_dbs(2);
+
+    let k = Rkv::from_builder(root, builder).expect("rkv");
     check_rkv(&k);
 }
 

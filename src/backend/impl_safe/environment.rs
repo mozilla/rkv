@@ -54,6 +54,7 @@ pub struct EnvironmentBuilderImpl {
     max_readers: Option<usize>,
     max_dbs: Option<usize>,
     map_size: Option<usize>,
+    make_dir: bool,
 }
 
 impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
@@ -67,6 +68,7 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             max_readers: None,
             max_dbs: None,
             map_size: None,
+            make_dir: false,
         }
     }
 
@@ -93,7 +95,18 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
         self
     }
 
+    fn set_make_dir_if_needed(&mut self, make_dir: bool) -> &mut Self {
+        self.make_dir = make_dir;
+        self
+    }
+
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error> {
+        if !path.is_dir() {
+            if !self.make_dir {
+                return Err(ErrorImpl::DirectoryDoesNotExistError(path.into()));
+            }
+            fs::create_dir_all(path)?;
+        }
         let mut env = EnvironmentImpl::new(path, self.flags, self.max_readers, self.max_dbs, self.map_size)?;
         env.read_from_disk()?;
         Ok(env)

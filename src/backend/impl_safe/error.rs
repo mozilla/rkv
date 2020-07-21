@@ -11,6 +11,7 @@
 use std::{
     fmt,
     io,
+    path::PathBuf,
 };
 
 use bincode::Error as BincodeError;
@@ -28,6 +29,7 @@ pub enum ErrorImpl {
     DbsIllegalOpen,
     DbNotFoundError,
     DbIsForeignError,
+    DirectoryDoesNotExistError(PathBuf),
     IoError(io::Error),
     BincodeError(BincodeError),
 }
@@ -43,6 +45,7 @@ impl fmt::Display for ErrorImpl {
             ErrorImpl::DbsIllegalOpen => write!(fmt, "DbIllegalOpen (safe mode)"),
             ErrorImpl::DbNotFoundError => write!(fmt, "DbNotFoundError (safe mode)"),
             ErrorImpl::DbIsForeignError => write!(fmt, "DbIsForeignError (safe mode)"),
+            ErrorImpl::DirectoryDoesNotExistError(_) => write!(fmt, "DirectoryDoesNotExistError (safe mode)"),
             ErrorImpl::IoError(e) => e.fmt(fmt),
             ErrorImpl::BincodeError(e) => e.fmt(fmt),
         }
@@ -59,6 +62,8 @@ impl Into<StoreError> for ErrorImpl {
             ErrorImpl::KeyValuePairNotFound => StoreError::KeyValuePairNotFound,
             ErrorImpl::BincodeError(_) => StoreError::FileInvalid,
             ErrorImpl::DbsFull => StoreError::DbsFull,
+            ErrorImpl::DirectoryDoesNotExistError(path) => StoreError::DirectoryDoesNotExistError(path),
+            ErrorImpl::IoError(error) => StoreError::IoError(error),
             _ => StoreError::SafeModeError(self),
         }
     }

@@ -88,10 +88,6 @@ where
     where
         B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
-        if !path.is_dir() {
-            return Err(StoreError::DirectoryDoesNotExistError(path.into()));
-        }
-
         let mut builder = B::new();
         builder.set_max_dbs(max_dbs);
 
@@ -104,10 +100,6 @@ where
     where
         B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
-        if !path.is_dir() {
-            return Err(StoreError::DirectoryDoesNotExistError(path.into()));
-        }
-
         Ok(Rkv {
             path: path.into(),
             env: builder.open(path).map_err(|e| {
