@@ -83,6 +83,9 @@ pub enum StoreError {
     #[fail(display = "directory does not exist or not a directory: {:?}", _0)]
     DirectoryDoesNotExistError(PathBuf),
 
+    #[fail(display = "environment does not exist in directory: {:?}", _0)]
+    EnvironmentDoesNotExistError(PathBuf),
+
     #[fail(display = "data error: {:?}", _0)]
     DataError(DataError),
 
@@ -118,5 +121,23 @@ impl From<DataError> for StoreError {
 impl From<io::Error> for StoreError {
     fn from(e: io::Error) -> StoreError {
         StoreError::IoError(e)
+    }
+}
+
+#[derive(Debug, Fail)]
+pub enum MigrateError {
+    #[fail(display = "store error: {}", _0)]
+    StoreError(StoreError),
+
+    #[fail(display = "source is empty")]
+    SourceEmpty,
+
+    #[fail(display = "destination is not empty")]
+    DestinationNotEmpty,
+}
+
+impl From<StoreError> for MigrateError {
+    fn from(e: StoreError) -> MigrateError {
+        MigrateError::StoreError(e)
     }
 }

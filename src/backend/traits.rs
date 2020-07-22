@@ -90,6 +90,8 @@ pub trait BackendEnvironmentBuilder<'b>: Debug + Eq + PartialEq + Copy + Clone {
 
     fn set_make_dir_if_needed(&mut self, make_dir: bool) -> &mut Self;
 
+    fn set_check_if_env_exists(&mut self, check_env: bool) -> &mut Self;
+
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error>;
 }
 

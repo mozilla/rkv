@@ -221,6 +221,7 @@ pub use backend::{
 pub use env::Rkv;
 pub use error::{
     DataError,
+    MigrateError,
     StoreError,
 };
 pub use manager::Manager;

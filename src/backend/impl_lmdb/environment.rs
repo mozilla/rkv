@@ -40,6 +40,7 @@ pub struct EnvironmentBuilderImpl {
     builder: lmdb::EnvironmentBuilder,
     envtype: EnvironmentType,
     make_dir: bool,
+    check_env_exists: bool,
 }
 
 impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
@@ -52,6 +53,7 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             builder: lmdb::Environment::new(),
             envtype: EnvironmentType::SingleDatabase,
             make_dir: false,
+            check_env_exists: false,
         }
     }
 
@@ -86,7 +88,15 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
         self
     }
 
+    fn set_check_if_env_exists(&mut self, check_env_exists: bool) -> &mut Self {
+        self.check_env_exists = check_env_exists;
+        self
+    }
+
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error> {
+        if self.check_env_exists && !path.join("data.mdb").exists() {
+            return Err(ErrorImpl::EnvironmentDoesNotExistError(path.into()));
+        }
         if !path.is_dir() {
             if !self.make_dir {
                 return Err(ErrorImpl::DirectoryDoesNotExistError(path.into()));
