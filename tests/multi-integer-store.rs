@@ -42,7 +42,7 @@ fn test_multi_integer_keys() {
                 .get(&writer, $key)
                 .expect("read")
                 .map(|result| result.expect("ok"))
-                .map(|(_, v)| v.expect("multi read"))
+                .map(|(_, v)| v)
                 .collect::<Vec<Value>>();
             assert_eq!(vals, vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]);
             writer.commit().expect("committed");
@@ -52,7 +52,7 @@ fn test_multi_integer_keys() {
                 .get(&reader, $key)
                 .expect("read")
                 .map(|result| result.expect("ok"))
-                .map(|(_, v)| v.expect("multi read"))
+                .map(|(_, v)| v)
                 .collect::<Vec<Value>>();
             assert_eq!(vals, vec![Value::Str("hello1"), Value::Str("hello2"), Value::Str("hello3")]);
         }};

@@ -48,7 +48,10 @@ where
         K: AsRef<[u8]>,
     {
         let bytes = self.0.get(db, k.as_ref()).map_err(|e| e.into());
-        read_transform(bytes)
+        match read_transform(bytes).map(Some) {
+            Err(StoreError::KeyValuePairNotFound) => Ok(None),
+            result => result,
+        }
     }
 
     fn open_ro_cursor(&'r self, db: &T::Database) -> Result<T::RoCursor, StoreError> {
@@ -83,7 +86,10 @@ where
         K: AsRef<[u8]>,
     {
         let bytes = self.0.get(db, k.as_ref()).map_err(|e| e.into());
-        read_transform(bytes)
+        match read_transform(bytes).map(Some) {
+            Err(StoreError::KeyValuePairNotFound) => Ok(None),
+            result => result,
+        }
     }
 
     fn open_ro_cursor(&'r self, db: &T::Database) -> Result<T::RoCursor, StoreError> {

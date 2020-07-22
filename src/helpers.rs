@@ -23,10 +23,9 @@ use crate::{
     value::Value,
 };
 
-pub(crate) fn read_transform(value: Result<&[u8], StoreError>) -> Result<Option<Value>, StoreError> {
+pub(crate) fn read_transform(value: Result<&[u8], StoreError>) -> Result<Value, StoreError> {
     match value {
-        Ok(bytes) => Value::from_tagged_slice(bytes).map(Some).map_err(StoreError::DataError),
-        Err(StoreError::KeyValuePairNotFound) => Ok(None),
+        Ok(bytes) => Value::from_tagged_slice(bytes).map_err(StoreError::DataError),
         Err(e) => Err(e),
     }
 }

@@ -219,8 +219,8 @@ mod tests {
             s.put(&mut writer, 1, &Value::Str("hello1!")).expect("write");
 
             let mut iter = s.get(&writer, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-            assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+            assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
     }
@@ -240,8 +240,8 @@ mod tests {
             s.put(&mut writer, 1, &Value::Str("hello1!")).expect("write");
             {
                 let mut iter = s.get(&writer, 1).expect("read");
-                assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-                assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+                assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+                assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
                 assert!(iter.next().is_none());
             }
             writer.commit().expect("committed");
@@ -254,7 +254,7 @@ mod tests {
 
             let reader = k.read().expect("reader");
             let mut iter = s.get(&reader, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
 
@@ -265,7 +265,7 @@ mod tests {
 
             let reader = k.read().expect("reader");
             let mut iter = s.get(&reader, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
 
@@ -305,8 +305,8 @@ mod tests {
             s.put(&mut writer, 2, &Value::Str("hello!")).expect("write");
             {
                 let mut iter = s.get(&writer, 1).expect("read");
-                assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-                assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+                assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+                assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
                 assert!(iter.next().is_none());
             }
             writer.commit().expect("committed");
@@ -318,8 +318,8 @@ mod tests {
 
             let reader = k.read().expect("reader");
             let mut iter = s.get(&reader, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-            assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+            assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
     }
@@ -436,8 +436,8 @@ mod tests_safe {
             s.put(&mut writer, 1, &Value::Str("hello1!")).expect("write");
 
             let mut iter = s.get(&writer, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-            assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+            assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
     }
@@ -457,8 +457,8 @@ mod tests_safe {
             s.put(&mut writer, 1, &Value::Str("hello1!")).expect("write");
             {
                 let mut iter = s.get(&writer, 1).expect("read");
-                assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-                assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+                assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+                assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
                 assert!(iter.next().is_none());
             }
             writer.commit().expect("committed");
@@ -471,7 +471,7 @@ mod tests_safe {
 
             let reader = k.read().expect("reader");
             let mut iter = s.get(&reader, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
 
@@ -482,7 +482,7 @@ mod tests_safe {
 
             let reader = k.read().expect("reader");
             let mut iter = s.get(&reader, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
 
@@ -522,8 +522,8 @@ mod tests_safe {
             s.put(&mut writer, 2, &Value::Str("hello!")).expect("write");
             {
                 let mut iter = s.get(&writer, 1).expect("read");
-                assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-                assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+                assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+                assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
                 assert!(iter.next().is_none());
             }
             writer.commit().expect("committed");
@@ -535,8 +535,8 @@ mod tests_safe {
 
             let reader = k.read().expect("reader");
             let mut iter = s.get(&reader, 1).expect("read");
-            assert_eq!(iter.next().expect("first").expect("ok").1, Some(Value::Str("hello!")));
-            assert_eq!(iter.next().expect("second").expect("ok").1, Some(Value::Str("hello1!")));
+            assert_eq!(iter.next().expect("first").expect("ok").1, Value::Str("hello!"));
+            assert_eq!(iter.next().expect("second").expect("ok").1, Value::Str("hello1!"));
             assert!(iter.next().is_none());
         }
     }
