@@ -25,10 +25,8 @@ use crate::{
     backend::{
         BackendEnvironment,
         BackendEnvironmentBuilder,
-        BackendInfo,
         BackendRoCursorTransaction,
         BackendRwCursorTransaction,
-        BackendStat,
         SafeModeError,
     },
     error::StoreError,
@@ -282,19 +280,10 @@ where
 
     /// Retrieve the load ratio (# of used pages / total pages) about this environment.
     ///
-    /// With the formular: (last_page_no - freelist_pages) / total_pages
-    pub fn load_ratio(&self) -> Result<f32, StoreError> {
-        let stat = self.stat()?;
-        let info = self.info()?;
-        let freelist = self.env.freelist().map_err(|e| e.into())?;
-
-        let last_pgno = info.last_pgno() + 1; // pgno is 0 based.
-        let total_pgs = info.map_size() / stat.page_size();
-        if freelist > last_pgno {
-            return Err(StoreError::DatabaseCorrupted);
-        }
-        let used_pgs = last_pgno - freelist;
-        Ok(used_pgs as f32 / total_pgs as f32)
+    /// With the formular: (last_page_no - freelist_pages) / total_pages.
+    /// A value of `None` means that the backend doesn't ever need to be resized.
+    pub fn load_ratio(&self) -> Result<Option<f32>, StoreError> {
+        self.env.load_ratio().map_err(|e| e.into())
     }
 
     /// Sets the size of the memory map to use for the environment.

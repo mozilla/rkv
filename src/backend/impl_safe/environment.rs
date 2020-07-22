@@ -230,7 +230,7 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         let key = name.map(String::from);
         let mut dbs = self.dbs.write().map_err(|_| ErrorImpl::EnvPoisonError)?;
         let mut arena = self.arena.write().map_err(|_| ErrorImpl::EnvPoisonError)?;
-        if dbs.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs {
+        if dbs.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs && name != None {
             return Err(ErrorImpl::DbsFull);
         }
         let id = dbs.entry(key).or_insert_with(|| DatabaseImpl(arena.alloc(Database::new(Some(flags), None))));
@@ -262,8 +262,13 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         unimplemented!()
     }
 
+    fn load_ratio(&self) -> Result<Option<f32>, Self::Error> {
+        warn!("`load_ratio()` is irrelevant for this storage backend.");
+        Ok(None)
+    }
+
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error> {
-        warn!("Ignoring `set_map_size({})`", size);
+        warn!("`set_map_size({})` is ignored by this storage backend.", size);
         Ok(())
     }
 }

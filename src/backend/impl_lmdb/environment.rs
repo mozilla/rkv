@@ -13,6 +13,8 @@ use std::{
     path::Path,
 };
 
+use lmdb::Error as LmdbError;
+
 use super::{
     DatabaseFlagsImpl,
     DatabaseImpl,
@@ -26,6 +28,8 @@ use super::{
 use crate::backend::traits::{
     BackendEnvironment,
     BackendEnvironmentBuilder,
+    BackendInfo,
+    BackendStat,
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -127,6 +131,20 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
 
     fn freelist(&self) -> Result<usize, Self::Error> {
         self.0.freelist().map_err(ErrorImpl::LmdbError)
+    }
+
+    fn load_ratio(&self) -> Result<Option<f32>, Self::Error> {
+        let stat = self.stat()?;
+        let info = self.info()?;
+        let freelist = self.freelist()?;
+
+        let last_pgno = info.last_pgno() + 1; // pgno is 0 based.
+        let total_pgs = info.map_size() / stat.page_size();
+        if freelist > last_pgno {
+            return Err(ErrorImpl::LmdbError(LmdbError::Corrupted));
+        }
+        let used_pgs = last_pgno - freelist;
+        Ok(Some(used_pgs as f32 / total_pgs as f32))
     }
 
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error> {

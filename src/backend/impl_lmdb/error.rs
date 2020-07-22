@@ -41,6 +41,7 @@ impl fmt::Display for ErrorImpl {
 impl Into<StoreError> for ErrorImpl {
     fn into(self) -> StoreError {
         match self {
+            ErrorImpl::LmdbError(lmdb::Error::Corrupted) => StoreError::DatabaseCorrupted,
             ErrorImpl::LmdbError(lmdb::Error::NotFound) => StoreError::KeyValuePairNotFound,
             ErrorImpl::LmdbError(lmdb::Error::BadValSize) => StoreError::KeyValuePairBadSize,
             ErrorImpl::LmdbError(lmdb::Error::Invalid) => StoreError::FileInvalid,
