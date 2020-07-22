@@ -14,6 +14,7 @@
 
 use std::{
     fs,
+    path::Path,
     str,
     sync::{
         Arc,
@@ -104,9 +105,36 @@ fn test_open_from_builder() {
 }
 
 #[test]
+fn test_open_from_builder_with_dir_1() {
+    let root = Builder::new().prefix("test_open_from_builder").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+
+    let mut builder = Rkv::environment_builder::<Lmdb>();
+    builder.set_max_dbs(2);
+    builder.set_make_dir_if_needed(true);
+
+    let k = Rkv::from_builder(root.path(), builder).expect("rkv");
+    check_rkv(&k);
+}
+
+#[test]
+#[should_panic(expected = "rkv: DirectoryDoesNotExistError(\"bogus\")")]
+fn test_open_from_builder_with_dir_2() {
+    let root = Path::new("bogus");
+    println!("Root path: {:?}", root);
+    assert!(!root.is_dir());
+
+    let mut builder = Rkv::environment_builder::<Lmdb>();
+    builder.set_max_dbs(2);
+
+    let k = Rkv::from_builder(root, builder).expect("rkv");
+    check_rkv(&k);
+}
+
+#[test]
 #[should_panic(expected = "opened: DbsFull")]
-fn test_open_with_capacity() {
-    let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+fn test_create_with_capacity_1() {
+    let root = Builder::new().prefix("test_create_with_capacity").tempdir().expect("tempdir");
     println!("Root path: {:?}", root.path());
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
@@ -120,6 +148,50 @@ fn test_open_with_capacity() {
     // This should really return an error rather than panicking, per
     // <https://github.com/mozilla/lmdb-rs/issues/6>.
     let _zzz = k.open_single("zzz", StoreOptions::create()).expect("opened");
+}
+
+#[test]
+fn test_create_with_capacity_2() {
+    let root = Builder::new().prefix("test_create_with_capacity").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    // This doesn't panic with because even though we specified a capacity of one (database),
+    // and check_rkv already opened one, the default database doesn't count against the
+    // limit). This should really return an error rather than panicking, per
+    // <https://github.com/mozilla/lmdb-rs/issues/6>.
+    let _zzz = k.open_single(None, StoreOptions::create()).expect("opened");
+}
+
+#[test]
+#[should_panic(expected = "opened: DbsFull")]
+fn test_open_with_capacity_1() {
+    let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    let _zzz = k.open_single("zzz", StoreOptions::default()).expect("opened");
+}
+
+#[test]
+fn test_open_with_capacity_2() {
+    let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    let _zzz = k.open_single(None, StoreOptions::default()).expect("opened");
 }
 
 fn get_larger_than_default_map_size_value() -> usize {
@@ -725,14 +797,14 @@ fn test_load_ratio() {
     let mut writer = k.write().expect("writer");
     sk.put(&mut writer, "foo", &Value::Str("bar")).expect("wrote");
     writer.commit().expect("commited");
-    let ratio = k.load_ratio().expect("ratio");
+    let ratio = k.load_ratio().expect("ratio").unwrap();
     assert!(ratio > 0.0_f32 && ratio < 1.0_f32);
 
     // Put data to database should increase the load ratio.
     let mut writer = k.write().expect("writer");
     sk.put(&mut writer, "bar", &Value::Str(&"more-than-4KB".repeat(1000))).expect("wrote");
     writer.commit().expect("commited");
-    let new_ratio = k.load_ratio().expect("ratio");
+    let new_ratio = k.load_ratio().expect("ratio").unwrap();
     assert!(new_ratio > ratio);
 
     // Clear the database so that all the used pages should go to freelist, hence the ratio
@@ -740,7 +812,7 @@ fn test_load_ratio() {
     let mut writer = k.write().expect("writer");
     sk.clear(&mut writer).expect("clear");
     writer.commit().expect("commited");
-    let after_clear_ratio = k.load_ratio().expect("ratio");
+    let after_clear_ratio = k.load_ratio().expect("ratio").unwrap();
     assert!(after_clear_ratio < new_ratio);
 }
 

@@ -88,6 +88,8 @@ pub trait BackendEnvironmentBuilder<'b>: Debug + Eq + PartialEq + Copy + Clone {
 
     fn set_map_size(&mut self, size: usize) -> &mut Self;
 
+    fn set_make_dir_if_needed(&mut self, make_dir: bool) -> &mut Self;
+
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error>;
 }
 
@@ -115,6 +117,8 @@ pub trait BackendEnvironment<'e>: Debug {
     fn info(&self) -> Result<Self::Info, Self::Error>;
 
     fn freelist(&self) -> Result<usize, Self::Error>;
+
+    fn load_ratio(&self) -> Result<Option<f32>, Self::Error>;
 
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error>;
 }

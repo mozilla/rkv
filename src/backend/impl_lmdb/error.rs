@@ -8,7 +8,11 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::fmt;
+use std::{
+    fmt,
+    io,
+    path::PathBuf,
+};
 
 use crate::{
     backend::traits::BackendError,
@@ -16,26 +20,37 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct ErrorImpl(pub(crate) lmdb::Error);
+pub enum ErrorImpl {
+    LmdbError(lmdb::Error),
+    DirectoryDoesNotExistError(PathBuf),
+    IoError(io::Error),
+}
 
 impl BackendError for ErrorImpl {}
 
 impl fmt::Display for ErrorImpl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(fmt)
+        match self {
+            ErrorImpl::LmdbError(e) => e.fmt(fmt),
+            ErrorImpl::DirectoryDoesNotExistError(_) => write!(fmt, "DirectoryDoesNotExistError"),
+            ErrorImpl::IoError(e) => e.fmt(fmt),
+        }
     }
 }
 
 impl Into<StoreError> for ErrorImpl {
     fn into(self) -> StoreError {
-        match self.0 {
-            lmdb::Error::NotFound => StoreError::KeyValuePairNotFound,
-            lmdb::Error::BadValSize => StoreError::KeyValuePairBadSize,
-            lmdb::Error::Invalid => StoreError::FileInvalid,
-            lmdb::Error::MapFull => StoreError::MapFull,
-            lmdb::Error::DbsFull => StoreError::DbsFull,
-            lmdb::Error::ReadersFull => StoreError::ReadersFull,
-            _ => StoreError::LmdbError(self.0),
+        match self {
+            ErrorImpl::LmdbError(lmdb::Error::Corrupted) => StoreError::DatabaseCorrupted,
+            ErrorImpl::LmdbError(lmdb::Error::NotFound) => StoreError::KeyValuePairNotFound,
+            ErrorImpl::LmdbError(lmdb::Error::BadValSize) => StoreError::KeyValuePairBadSize,
+            ErrorImpl::LmdbError(lmdb::Error::Invalid) => StoreError::FileInvalid,
+            ErrorImpl::LmdbError(lmdb::Error::MapFull) => StoreError::MapFull,
+            ErrorImpl::LmdbError(lmdb::Error::DbsFull) => StoreError::DbsFull,
+            ErrorImpl::LmdbError(lmdb::Error::ReadersFull) => StoreError::ReadersFull,
+            ErrorImpl::LmdbError(error) => StoreError::LmdbError(error),
+            ErrorImpl::DirectoryDoesNotExistError(path) => StoreError::DirectoryDoesNotExistError(path),
+            ErrorImpl::IoError(error) => StoreError::IoError(error),
         }
     }
 }
