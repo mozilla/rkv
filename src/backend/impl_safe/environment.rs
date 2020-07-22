@@ -230,7 +230,7 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         let key = name.map(String::from);
         let mut dbs = self.dbs.write().map_err(|_| ErrorImpl::EnvPoisonError)?;
         let mut arena = self.arena.write().map_err(|_| ErrorImpl::EnvPoisonError)?;
-        if dbs.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs {
+        if dbs.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs && name != None {
             return Err(ErrorImpl::DbsFull);
         }
         let id = dbs.entry(key).or_insert_with(|| DatabaseImpl(arena.alloc(Database::new(Some(flags), None))));

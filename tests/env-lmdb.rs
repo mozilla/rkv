@@ -133,8 +133,8 @@ fn test_open_from_builder_with_dir_2() {
 
 #[test]
 #[should_panic(expected = "opened: DbsFull")]
-fn test_open_with_capacity() {
-    let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+fn test_create_with_capacity_1() {
+    let root = Builder::new().prefix("test_create_with_capacity").tempdir().expect("tempdir");
     println!("Root path: {:?}", root.path());
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
@@ -148,6 +148,50 @@ fn test_open_with_capacity() {
     // This should really return an error rather than panicking, per
     // <https://github.com/mozilla/lmdb-rs/issues/6>.
     let _zzz = k.open_single("zzz", StoreOptions::create()).expect("opened");
+}
+
+#[test]
+fn test_create_with_capacity_2() {
+    let root = Builder::new().prefix("test_create_with_capacity").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    // This doesn't panic with because even though we specified a capacity of one (database),
+    // and check_rkv already opened one, the default database doesn't count against the
+    // limit). This should really return an error rather than panicking, per
+    // <https://github.com/mozilla/lmdb-rs/issues/6>.
+    let _zzz = k.open_single(None, StoreOptions::create()).expect("opened");
+}
+
+#[test]
+#[should_panic(expected = "opened: DbsFull")]
+fn test_open_with_capacity_1() {
+    let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    let _zzz = k.open_single("zzz", StoreOptions::default()).expect("opened");
+}
+
+#[test]
+fn test_open_with_capacity_2() {
+    let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    let _zzz = k.open_single(None, StoreOptions::default()).expect("opened");
 }
 
 fn get_larger_than_default_map_size_value() -> usize {

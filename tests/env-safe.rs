@@ -127,8 +127,8 @@ fn test_open_from_builder_with_dir_safe_2() {
 
 #[test]
 #[should_panic(expected = "opened: DbsFull")]
-fn test_open_with_capacity_safe() {
-    let root = Builder::new().prefix("test_open_with_capacity").tempdir().expect("tempdir");
+fn test_create_with_capacity_safe_1() {
+    let root = Builder::new().prefix("test_create_with_capacity_safe").tempdir().expect("tempdir");
     println!("Root path: {:?}", root.path());
     fs::create_dir_all(root.path()).expect("dir created");
     assert!(root.path().is_dir());
@@ -136,7 +136,53 @@ fn test_open_with_capacity_safe() {
     let k = Rkv::with_capacity::<SafeMode>(root.path(), 1).expect("rkv");
     check_rkv(&k);
 
+    // This panics with "opened: DbsFull" because we specified a capacity of one (database),
+    // and check_rkv already opened one (plus the default database, which doesn't count
+    // against the limit). This should really return an error rather than panicking.
     let _zzz = k.open_single("zzz", StoreOptions::create()).expect("opened");
+}
+
+#[test]
+fn test_create_with_capacity_safe_2() {
+    let root = Builder::new().prefix("test_create_with_capacity_safe").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<SafeMode>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    // This doesn't panic with because even though we specified a capacity of one (database),
+    // and check_rkv already opened one, the default database doesn't count against the
+    // limit). This should really return an error rather than panicking.
+    let _zzz = k.open_single(None, StoreOptions::create()).expect("opened");
+}
+
+#[test]
+#[should_panic(expected = "opened: SafeModeError(DbNotFoundError)")]
+fn test_open_with_capacity_safe_1() {
+    let root = Builder::new().prefix("test_open_with_capacity_safe").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<SafeMode>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    let _zzz = k.open_single("zzz", StoreOptions::default()).expect("opened");
+}
+
+#[test]
+fn test_open_with_capacity_safe_2() {
+    let root = Builder::new().prefix("test_open_with_capacity_safe").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    let k = Rkv::with_capacity::<SafeMode>(root.path(), 1).expect("rkv");
+    check_rkv(&k);
+
+    let _zzz = k.open_single(None, StoreOptions::default()).expect("opened");
 }
 
 #[test]
