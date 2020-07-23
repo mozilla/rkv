@@ -12,6 +12,7 @@ use std::{
     io,
     path::PathBuf,
     str,
+    sync,
     thread,
     thread::ThreadId,
 };
@@ -56,6 +57,9 @@ impl From<Box<bincode::ErrorKind>> for DataError {
 
 #[derive(Debug, Fail)]
 pub enum StoreError {
+    #[fail(display = "manager poisoned")]
+    ManagerPoisonError,
+
     #[fail(display = "database corrupted")]
     DatabaseCorrupted,
 
@@ -124,10 +128,19 @@ impl From<io::Error> for StoreError {
     }
 }
 
+impl<T> From<sync::PoisonError<T>> for StoreError {
+    fn from(_: sync::PoisonError<T>) -> StoreError {
+        StoreError::ManagerPoisonError
+    }
+}
+
 #[derive(Debug, Fail)]
 pub enum MigrateError {
     #[fail(display = "store error: {}", _0)]
     StoreError(StoreError),
+
+    #[fail(display = "manager poisoned")]
+    ManagerPoisonError,
 
     #[fail(display = "source is empty")]
     SourceEmpty,
@@ -139,5 +152,11 @@ pub enum MigrateError {
 impl From<StoreError> for MigrateError {
     fn from(e: StoreError) -> MigrateError {
         MigrateError::StoreError(e)
+    }
+}
+
+impl<T> From<sync::PoisonError<T>> for MigrateError {
+    fn from(_: sync::PoisonError<T>) -> MigrateError {
+        MigrateError::ManagerPoisonError
     }
 }

@@ -286,4 +286,10 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         warn!("`set_map_size({})` is ignored by this storage backend.", size);
         Ok(())
     }
+
+    fn get_files_on_disk(&self) -> Vec<PathBuf> {
+        let mut db_filename = self.path.clone();
+        db_filename.push(DEFAULT_DB_FILENAME);
+        return vec![db_filename];
+    }
 }

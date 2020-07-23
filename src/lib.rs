@@ -225,6 +225,7 @@ pub use error::{
     StoreError,
 };
 pub use manager::Manager;
+pub use migrator::Migrator;
 pub use readwrite::{
     Readable,
     Reader,

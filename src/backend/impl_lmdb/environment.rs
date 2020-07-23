@@ -10,7 +10,10 @@
 
 use std::{
     fs,
-    path::Path,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use lmdb::Error as LmdbError;
@@ -103,18 +106,39 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             }
             fs::create_dir_all(path).map_err(ErrorImpl::IoError)?;
         }
-        self.builder.open(path).map(|env| EnvironmentImpl(env, self.envtype)).map_err(ErrorImpl::LmdbError)
+        self.builder
+            .open(path)
+            .map_err(ErrorImpl::LmdbError)
+            .and_then(|lmdbenv| EnvironmentImpl::new(path, lmdbenv, self.envtype))
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-enum EnvironmentType {
+pub enum EnvironmentType {
     SingleDatabase,
     MultipleNamedDatabases,
 }
 
 #[derive(Debug)]
-pub struct EnvironmentImpl(lmdb::Environment, EnvironmentType);
+pub struct EnvironmentImpl {
+    path: PathBuf,
+    lmdbenv: lmdb::Environment,
+    envtype: EnvironmentType,
+}
+
+impl EnvironmentImpl {
+    pub(crate) fn new(
+        path: &Path,
+        lmdbenv: lmdb::Environment,
+        envtype: EnvironmentType,
+    ) -> Result<EnvironmentImpl, ErrorImpl> {
+        Ok(EnvironmentImpl {
+            path: path.to_path_buf(),
+            lmdbenv,
+            envtype,
+        })
+    }
+}
 
 impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type Database = DatabaseImpl;
@@ -126,10 +150,10 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type Stat = StatImpl;
 
     fn get_dbs(&self) -> Result<Vec<Option<String>>, Self::Error> {
-        if self.1 == EnvironmentType::SingleDatabase {
+        if self.envtype == EnvironmentType::SingleDatabase {
             return Ok(vec![None]);
         }
-        let db = self.0.open_db(None).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)?;
+        let db = self.lmdbenv.open_db(None).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)?;
         let reader = self.begin_ro_txn()?;
         let cursor = reader.open_ro_cursor(&db)?;
         let mut iter = cursor.into_iter();
@@ -143,35 +167,35 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     }
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
-        self.0.open_db(name).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.open_db(name).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)
     }
 
     fn create_db(&self, name: Option<&str>, flags: Self::Flags) -> Result<Self::Database, Self::Error> {
-        self.0.create_db(name, flags.0).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.create_db(name, flags.0).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)
     }
 
     fn begin_ro_txn(&'e self) -> Result<Self::RoTransaction, Self::Error> {
-        self.0.begin_ro_txn().map(RoTransactionImpl).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.begin_ro_txn().map(RoTransactionImpl).map_err(ErrorImpl::LmdbError)
     }
 
     fn begin_rw_txn(&'e self) -> Result<Self::RwTransaction, Self::Error> {
-        self.0.begin_rw_txn().map(RwTransactionImpl).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.begin_rw_txn().map(RwTransactionImpl).map_err(ErrorImpl::LmdbError)
     }
 
     fn sync(&self, force: bool) -> Result<(), Self::Error> {
-        self.0.sync(force).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.sync(force).map_err(ErrorImpl::LmdbError)
     }
 
     fn stat(&self) -> Result<Self::Stat, Self::Error> {
-        self.0.stat().map(StatImpl).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.stat().map(StatImpl).map_err(ErrorImpl::LmdbError)
     }
 
     fn info(&self) -> Result<Self::Info, Self::Error> {
-        self.0.info().map(InfoImpl).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.info().map(InfoImpl).map_err(ErrorImpl::LmdbError)
     }
 
     fn freelist(&self) -> Result<usize, Self::Error> {
-        self.0.freelist().map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.freelist().map_err(ErrorImpl::LmdbError)
     }
 
     fn load_ratio(&self) -> Result<Option<f32>, Self::Error> {
@@ -189,6 +213,14 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     }
 
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error> {
-        self.0.set_map_size(size).map_err(ErrorImpl::LmdbError)
+        self.lmdbenv.set_map_size(size).map_err(ErrorImpl::LmdbError)
+    }
+
+    fn get_files_on_disk(&self) -> Vec<PathBuf> {
+        let mut db_filename = self.path.clone();
+        let mut lock_filename = self.path.clone();
+        db_filename.push("data.mdb");
+        lock_filename.push("lock.mdb");
+        return vec![db_filename, lock_filename];
     }
 }

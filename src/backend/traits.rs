@@ -13,7 +13,10 @@ use std::{
         Debug,
         Display,
     },
-    path::Path,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use crate::{
@@ -125,6 +128,8 @@ pub trait BackendEnvironment<'e>: Debug {
     fn load_ratio(&self) -> Result<Option<f32>, Self::Error>;
 
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error>;
+
+    fn get_files_on_disk(&self) -> Vec<PathBuf>;
 }
 
 pub trait BackendRoTransaction: Debug {

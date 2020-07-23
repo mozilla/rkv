@@ -29,6 +29,8 @@ use lazy_static::lazy_static;
 
 use crate::{
     backend::{
+        BackendEnvironment,
+        BackendEnvironmentBuilder,
         LmdbEnvironment,
         SafeModeEnvironment,
     },
@@ -51,7 +53,10 @@ pub struct Manager<E> {
     environments: BTreeMap<PathBuf, SharedRkv<E>>,
 }
 
-impl<E> Manager<E> {
+impl<'e, E> Manager<E>
+where
+    E: BackendEnvironment<'e>,
+{
     fn new() -> Manager<E> {
         Manager {
             environments: Default::default(),
@@ -97,6 +102,44 @@ impl<E> Manager<E> {
                 e.insert(k).clone()
             },
         })
+    }
+
+    /// Return a new Rkv environment from the builder, or create it by calling `f`.
+    pub fn get_or_create_from_builder<'p, F, P, B>(&mut self, path: P, builder: B, f: F) -> Result<SharedRkv<E>>
+    where
+        F: FnOnce(&Path, B) -> Result<Rkv<E>>,
+        P: Into<&'p Path>,
+        B: BackendEnvironmentBuilder<'e, Environment = E>,
+    {
+        let canonical = canonicalize_path(path)?;
+        Ok(match self.environments.entry(canonical) {
+            Entry::Occupied(e) => e.get().clone(),
+            Entry::Vacant(e) => {
+                let k = Arc::new(RwLock::new(f(e.key().as_path(), builder)?));
+                e.insert(k).clone()
+            },
+        })
+    }
+
+    /// Tries to close the specified environment and delete all its files from disk.
+    /// Doesn't delete the folder used when opening the environment.
+    /// This will only work if there's no other users of this environment.
+    pub fn try_close_and_delete<'p, P>(&mut self, path: P) -> Result<()>
+    where
+        P: Into<&'p Path>,
+    {
+        let canonical = canonicalize_path(path)?;
+        match self.environments.entry(canonical) {
+            Entry::Vacant(_) => {}, // noop
+            Entry::Occupied(e) => {
+                if Arc::strong_count(e.get()) == 1 {
+                    if let Ok(env) = Arc::try_unwrap(e.remove()) {
+                        env.into_inner()?.close_and_delete()?;
+                    }
+                }
+            },
+        }
+        Ok(())
     }
 }
 
