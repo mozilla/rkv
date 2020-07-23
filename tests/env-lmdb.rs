@@ -142,11 +142,9 @@ fn test_create_with_capacity_1() {
     let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
     check_rkv(&k);
 
-    // This panics with "opened: LmdbError(DbsFull)" because we specified
-    // a capacity of one (database), and check_rkv already opened one
-    // (plus the default database, which doesn't count against the limit).
-    // This should really return an error rather than panicking, per
-    // <https://github.com/mozilla/lmdb-rs/issues/6>.
+    // This errors with "opened: DbsFull" because we specified a capacity of one (database),
+    // and check_rkv already opened one (plus the default database, which doesn't count
+    // against the limit).
     let _zzz = k.open_single("zzz", StoreOptions::create()).expect("opened");
 }
 
@@ -160,10 +158,9 @@ fn test_create_with_capacity_2() {
     let k = Rkv::with_capacity::<Lmdb>(root.path(), 1).expect("rkv");
     check_rkv(&k);
 
-    // This doesn't panic with because even though we specified a capacity of one (database),
-    // and check_rkv already opened one, the default database doesn't count against the
-    // limit). This should really return an error rather than panicking, per
-    // <https://github.com/mozilla/lmdb-rs/issues/6>.
+    // This doesn't error with "opened: DbsFull" with because even though we specified a
+    // capacity of one (database), and check_rkv already opened one, the default database
+    // doesn't count against the limit.
     let _zzz = k.open_single(None, StoreOptions::create()).expect("opened");
 }
 
