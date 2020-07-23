@@ -14,7 +14,6 @@ use tempfile::Builder;
 
 use rkv::{
     backend::{
-        BackendEnvironmentBuilder,
         Lmdb,
         SafeMode,
     },
@@ -182,16 +181,6 @@ fn test_migrator_round_trip() {
 }
 
 #[test]
-#[should_panic(expected = "new succeeded: EnvironmentDoesNotExistError")]
-fn test_migrator_lmdb_to_safe_0() {
-    let mut builder = Lmdb::new();
-    builder.set_check_if_env_exists(true);
-
-    let root = Builder::new().prefix("test_migrate_lmdb_to_safe").tempdir().expect("tempdir");
-    let _ = Rkv::from_builder::<Lmdb>(root.path(), builder).expect("new succeeded");
-}
-
-#[test]
 #[should_panic(expected = "migrated: SourceEmpty")]
 fn test_migrator_lmdb_to_safe_1() {
     let root = Builder::new().prefix("test_migrate_lmdb_to_safe").tempdir().expect("tempdir");
@@ -230,16 +219,6 @@ fn test_migrator_lmdb_to_safe_3() {
     assert_eq!(store.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
     assert_eq!(store.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
     assert_eq!(store.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
-}
-
-#[test]
-#[should_panic(expected = "new succeeded: EnvironmentDoesNotExistError")]
-fn test_migrator_safe_to_lmdb_0() {
-    let mut builder = SafeMode::new();
-    builder.set_check_if_env_exists(true);
-
-    let root = Builder::new().prefix("test_migrate_safe_to_lmdb").tempdir().expect("tempdir");
-    let _ = Rkv::from_builder::<SafeMode>(root.path(), builder).expect("new succeeded");
 }
 
 #[test]

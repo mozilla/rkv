@@ -87,9 +87,6 @@ pub enum StoreError {
     #[fail(display = "directory does not exist or not a directory: {:?}", _0)]
     DirectoryDoesNotExistError(PathBuf),
 
-    #[fail(display = "environment does not exist in directory: {:?}", _0)]
-    EnvironmentDoesNotExistError(PathBuf),
-
     #[fail(display = "data error: {:?}", _0)]
     DataError(DataError),
 

@@ -96,16 +96,12 @@ macro_rules! fn_migrator {
             D: std::ops::Deref<Target = Rkv<$dst_env>>,
         {
             use crate::backend::*;
+
             let mut manager = crate::Manager::<$src_env>::singleton().write()?;
             let mut builder = Rkv::<$src_env>::environment_builder::<$builder>();
             builder.set_max_dbs(crate::env::DEFAULT_MAX_DBS);
-            builder.set_check_if_env_exists(true);
             builder = build(builder);
-
-            let src_env = match manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>) {
-                Err(crate::StoreError::EnvironmentDoesNotExistError(_)) => return Ok(()),
-                result => result,
-            }?;
+            let src_env = manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>)?;
 
             match Migrator::$migrate(src_env.read()?, dst_env) {
                 Err(crate::MigrateError::SourceEmpty) => return Ok(()),
