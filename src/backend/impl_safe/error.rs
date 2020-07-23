@@ -30,6 +30,7 @@ pub enum ErrorImpl {
     DbNotFoundError,
     DbIsForeignError,
     DirectoryDoesNotExistError(PathBuf),
+    EnvironmentDoesNotExistError(PathBuf),
     IoError(io::Error),
     BincodeError(BincodeError),
 }
@@ -46,6 +47,7 @@ impl fmt::Display for ErrorImpl {
             ErrorImpl::DbNotFoundError => write!(fmt, "DbNotFoundError (safe mode)"),
             ErrorImpl::DbIsForeignError => write!(fmt, "DbIsForeignError (safe mode)"),
             ErrorImpl::DirectoryDoesNotExistError(_) => write!(fmt, "DirectoryDoesNotExistError (safe mode)"),
+            ErrorImpl::EnvironmentDoesNotExistError(_) => write!(fmt, "EnvironmentDoesNotExistError (safe mode)"),
             ErrorImpl::IoError(e) => e.fmt(fmt),
             ErrorImpl::BincodeError(e) => e.fmt(fmt),
         }
@@ -63,6 +65,7 @@ impl Into<StoreError> for ErrorImpl {
             ErrorImpl::BincodeError(_) => StoreError::FileInvalid,
             ErrorImpl::DbsFull => StoreError::DbsFull,
             ErrorImpl::DirectoryDoesNotExistError(path) => StoreError::DirectoryDoesNotExistError(path),
+            ErrorImpl::EnvironmentDoesNotExistError(path) => StoreError::EnvironmentDoesNotExistError(path),
             ErrorImpl::IoError(error) => StoreError::IoError(error),
             _ => StoreError::SafeModeError(self),
         }

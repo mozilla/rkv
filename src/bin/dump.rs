@@ -14,12 +14,12 @@ use std::{
     path::Path,
 };
 
-use rkv::{
-    migrate::Migrator,
-    MigrateError,
+use rkv::migrator::{
+    LmdbArchMigrateError,
+    LmdbArchMigrator,
 };
 
-fn main() -> Result<(), MigrateError> {
+fn main() -> Result<(), LmdbArchMigrateError> {
     let mut cli_args = args();
     let mut db_name = None;
     let mut env_path = None;
@@ -47,7 +47,7 @@ fn main() -> Result<(), MigrateError> {
     }
 
     let env_path = env_path.ok_or("must provide a path to the LMDB environment")?;
-    let mut migrator: Migrator = Migrator::new(Path::new(&env_path))?;
+    let mut migrator = LmdbArchMigrator::new(Path::new(&env_path))?;
     migrator.dump(db_name.as_deref(), io::stdout()).unwrap();
 
     Ok(())

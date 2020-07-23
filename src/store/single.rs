@@ -128,7 +128,7 @@ impl<'i, I> Iterator for Iter<'i, I>
 where
     I: BackendIter<'i>,
 {
-    type Item = Result<(&'i [u8], Option<Value<'i>>), StoreError>;
+    type Item = Result<(&'i [u8], Value<'i>), StoreError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {

@@ -209,7 +209,7 @@ mod manager;
 mod readwrite;
 
 pub mod backend;
-pub mod migrate;
+pub mod migrator;
 pub mod store;
 pub mod value;
 

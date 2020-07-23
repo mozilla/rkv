@@ -55,6 +55,7 @@ pub struct EnvironmentBuilderImpl {
     max_dbs: Option<usize>,
     map_size: Option<usize>,
     make_dir: bool,
+    check_env_exists: bool,
 }
 
 impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
@@ -69,6 +70,7 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             max_dbs: None,
             map_size: None,
             make_dir: false,
+            check_env_exists: false,
         }
     }
 
@@ -100,7 +102,15 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
         self
     }
 
+    fn set_check_if_env_exists(&mut self, check_env_exists: bool) -> &mut Self {
+        self.check_env_exists = check_env_exists;
+        self
+    }
+
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error> {
+        if self.check_env_exists && !path.join(DEFAULT_DB_FILENAME).exists() {
+            return Err(ErrorImpl::EnvironmentDoesNotExistError(path.into()));
+        }
         if !path.is_dir() {
             if !self.make_dir {
                 return Err(ErrorImpl::DirectoryDoesNotExistError(path.into()));
@@ -210,6 +220,11 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type RoTransaction = RoTransactionImpl<'e>;
     type RwTransaction = RwTransactionImpl<'e>;
     type Stat = StatImpl;
+
+    fn get_dbs(&self) -> Result<Vec<Option<String>>, Self::Error> {
+        let dbs = self.dbs.read().map_err(|_| ErrorImpl::EnvPoisonError)?;
+        Ok(dbs.keys().map(|key| key.to_owned()).collect())
+    }
 
     fn open_db(&self, name: Option<&str>) -> Result<Self::Database, Self::Error> {
         if Arc::strong_count(&self.ro_txns) > 1 {

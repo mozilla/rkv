@@ -23,6 +23,7 @@ use crate::{
 pub enum ErrorImpl {
     LmdbError(lmdb::Error),
     DirectoryDoesNotExistError(PathBuf),
+    EnvironmentDoesNotExistError(PathBuf),
     IoError(io::Error),
 }
 
@@ -33,6 +34,7 @@ impl fmt::Display for ErrorImpl {
         match self {
             ErrorImpl::LmdbError(e) => e.fmt(fmt),
             ErrorImpl::DirectoryDoesNotExistError(_) => write!(fmt, "DirectoryDoesNotExistError"),
+            ErrorImpl::EnvironmentDoesNotExistError(_) => write!(fmt, "EnvironmentDoesNotExistError"),
             ErrorImpl::IoError(e) => e.fmt(fmt),
         }
     }
@@ -50,6 +52,7 @@ impl Into<StoreError> for ErrorImpl {
             ErrorImpl::LmdbError(lmdb::Error::ReadersFull) => StoreError::ReadersFull,
             ErrorImpl::LmdbError(error) => StoreError::LmdbError(error),
             ErrorImpl::DirectoryDoesNotExistError(path) => StoreError::DirectoryDoesNotExistError(path),
+            ErrorImpl::EnvironmentDoesNotExistError(path) => StoreError::EnvironmentDoesNotExistError(path),
             ErrorImpl::IoError(error) => StoreError::IoError(error),
         }
     }

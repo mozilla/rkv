@@ -99,7 +99,7 @@ where
         .expect("get iterator")
         .map(|id| {
             match id.expect("field") {
-                (_, Some(Value::U64(id))) => id,
+                (_, Value::U64(id)) => id,
                 _ => panic!("getting value in iter"),
             }
         })

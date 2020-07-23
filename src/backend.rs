@@ -17,6 +17,9 @@ pub use common::*;
 pub use traits::*;
 
 pub use impl_lmdb::{
+    ArchMigrateError as LmdbArchMigrateError,
+    ArchMigrateResult as LmdbArchMigrateResult,
+    ArchMigrator as LmdbArchMigrator,
     DatabaseFlagsImpl as LmdbDatabaseFlags,
     DatabaseImpl as LmdbDatabase,
     EnvironmentBuilderImpl as Lmdb,
