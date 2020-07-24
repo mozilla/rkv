@@ -8,7 +8,10 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::fs;
+use std::{
+    fs,
+    path::Path,
+};
 
 use tempfile::Builder;
 
@@ -178,6 +181,44 @@ fn test_migrator_round_trip() {
         assert!(lockmdb.exists());
         assert!(!safebin.exists());
     }
+}
+
+#[test]
+fn test_migrator_no_dir_1() {
+    let root = Builder::new().prefix("test_migrator_no_dir").tempdir().expect("tempdir");
+    fs::create_dir_all(root.path()).expect("dir created");
+
+    let dst_env = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    Migrator::auto_migrate_lmdb_to_safe_mode(Path::new("bogus"), |builder| builder, &dst_env).expect("migrated");
+
+    let mut datamdb = root.path().to_path_buf();
+    let mut lockmdb = root.path().to_path_buf();
+    let mut safebin = root.path().to_path_buf();
+    datamdb.push("data.mdb");
+    lockmdb.push("lock.mdb");
+    safebin.push("data.safe.bin");
+    assert!(!datamdb.exists());
+    assert!(!lockmdb.exists());
+    assert!(!safebin.exists()); // safe mode doesn't write an empty db to disk
+}
+
+#[test]
+fn test_migrator_no_dir_2() {
+    let root = Builder::new().prefix("test_migrator_no_dir").tempdir().expect("tempdir");
+    fs::create_dir_all(root.path()).expect("dir created");
+
+    let dst_env = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    Migrator::auto_migrate_safe_mode_to_lmdb(Path::new("bogus"), |builder| builder, &dst_env).expect("migrated");
+
+    let mut datamdb = root.path().to_path_buf();
+    let mut lockmdb = root.path().to_path_buf();
+    let mut safebin = root.path().to_path_buf();
+    datamdb.push("data.mdb");
+    lockmdb.push("lock.mdb");
+    safebin.push("data.safe.bin");
+    assert!(datamdb.exists()); // lmdb writes an empty db to disk
+    assert!(lockmdb.exists());
+    assert!(!safebin.exists());
 }
 
 #[test]
