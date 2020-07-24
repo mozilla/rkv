@@ -278,6 +278,8 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     }
 
     fn get_files_on_disk(&self) -> Vec<PathBuf> {
+        // Technically NO_SUB_DIR and NO_LOCK should change this output, but
+        // they're both currently unimplemented with this storage backend.
         let mut db_filename = self.path.clone();
         db_filename.push(DEFAULT_DB_FILENAME);
         return vec![db_filename];

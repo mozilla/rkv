@@ -41,7 +41,9 @@ use crate::backend::traits::{
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct EnvironmentBuilderImpl {
     builder: lmdb::EnvironmentBuilder,
-    envtype: EnvironmentType,
+    env_path_type: EnvironmentPathType,
+    env_lock_type: EnvironmentLockType,
+    env_db_type: EnvironmentDefaultDbType,
     make_dir: bool,
 }
 
@@ -53,7 +55,9 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
     fn new() -> EnvironmentBuilderImpl {
         EnvironmentBuilderImpl {
             builder: lmdb::Environment::new(),
-            envtype: EnvironmentType::SingleDatabase,
+            env_path_type: EnvironmentPathType::SubDir,
+            env_lock_type: EnvironmentLockType::Lockfile,
+            env_db_type: EnvironmentDefaultDbType::SingleDatabase,
             make_dir: false,
         }
     }
@@ -62,7 +66,14 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
     where
         T: Into<Self::Flags>,
     {
-        self.builder.set_flags(flags.into().0);
+        let flags = flags.into();
+        if flags.0 == lmdb::EnvironmentFlags::NO_SUB_DIR {
+            self.env_path_type = EnvironmentPathType::NoSubDir;
+        }
+        if flags.0 == lmdb::EnvironmentFlags::NO_LOCK {
+            self.env_lock_type = EnvironmentLockType::NoLockfile;
+        }
+        self.builder.set_flags(flags.0);
         self
     }
 
@@ -72,10 +83,10 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
     }
 
     fn set_max_dbs(&mut self, max_dbs: u32) -> &mut Self {
-        self.builder.set_max_dbs(max_dbs);
         if max_dbs > 0 {
-            self.envtype = EnvironmentType::MultipleNamedDatabases
+            self.env_db_type = EnvironmentDefaultDbType::MultipleNamedDatabases
         }
+        self.builder.set_max_dbs(max_dbs);
         self
     }
 
@@ -96,15 +107,26 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             }
             fs::create_dir_all(path).map_err(ErrorImpl::IoError)?;
         }
-        self.builder
-            .open(path)
-            .map_err(ErrorImpl::LmdbError)
-            .and_then(|lmdbenv| EnvironmentImpl::new(path, lmdbenv, self.envtype))
+        self.builder.open(path).map_err(ErrorImpl::LmdbError).and_then(|lmdbenv| {
+            EnvironmentImpl::new(path, self.env_path_type, self.env_lock_type, self.env_db_type, lmdbenv)
+        })
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum EnvironmentType {
+pub enum EnvironmentPathType {
+    SubDir,
+    NoSubDir,
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum EnvironmentLockType {
+    Lockfile,
+    NoLockfile,
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum EnvironmentDefaultDbType {
     SingleDatabase,
     MultipleNamedDatabases,
 }
@@ -112,20 +134,26 @@ pub enum EnvironmentType {
 #[derive(Debug)]
 pub struct EnvironmentImpl {
     path: PathBuf,
+    env_path_type: EnvironmentPathType,
+    env_lock_type: EnvironmentLockType,
+    env_db_type: EnvironmentDefaultDbType,
     lmdbenv: lmdb::Environment,
-    envtype: EnvironmentType,
 }
 
 impl EnvironmentImpl {
     pub(crate) fn new(
         path: &Path,
+        env_path_type: EnvironmentPathType,
+        env_lock_type: EnvironmentLockType,
+        env_db_type: EnvironmentDefaultDbType,
         lmdbenv: lmdb::Environment,
-        envtype: EnvironmentType,
     ) -> Result<EnvironmentImpl, ErrorImpl> {
         Ok(EnvironmentImpl {
             path: path.to_path_buf(),
+            env_path_type,
+            env_lock_type,
+            env_db_type,
             lmdbenv,
-            envtype,
         })
     }
 }
@@ -140,7 +168,7 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     type Stat = StatImpl;
 
     fn get_dbs(&self) -> Result<Vec<Option<String>>, Self::Error> {
-        if self.envtype == EnvironmentType::SingleDatabase {
+        if self.env_db_type == EnvironmentDefaultDbType::SingleDatabase {
             return Ok(vec![None]);
         }
         let db = self.lmdbenv.open_db(None).map(DatabaseImpl).map_err(ErrorImpl::LmdbError)?;
@@ -207,10 +235,25 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     }
 
     fn get_files_on_disk(&self) -> Vec<PathBuf> {
+        let mut store = vec![];
+
+        if self.env_path_type == EnvironmentPathType::NoSubDir {
+            // The option NO_SUB_DIR could change the default directory layout; therefore this should
+            // probably return the path used to create environment, along with the custom lockfile
+            // when available.
+            unimplemented!();
+        }
+
         let mut db_filename = self.path.clone();
-        let mut lock_filename = self.path.clone();
         db_filename.push("data.mdb");
-        lock_filename.push("lock.mdb");
-        return vec![db_filename, lock_filename];
+        store.push(db_filename);
+
+        if self.env_lock_type == EnvironmentLockType::Lockfile {
+            let mut lock_filename = self.path.clone();
+            lock_filename.push("lock.mdb");
+            store.push(lock_filename);
+        }
+
+        store
     }
 }
