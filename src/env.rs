@@ -9,6 +9,7 @@
 // specific language governing permissions and limitations under the License.
 
 use std::{
+    fs,
     os::raw::c_uint,
     path::{
         Path,
@@ -307,5 +308,19 @@ where
     ///   `LmdbError::MapResized`.
     pub fn set_map_size(&self, size: usize) -> Result<(), StoreError> {
         self.env.set_map_size(size).map_err(Into::into)
+    }
+
+    /// Closes this environment and deletes all its files from disk. Doesn't delete the
+    /// folder used when opening the environment.
+    pub fn close_and_delete(self) -> Result<(), StoreError> {
+        let files = self.env.get_files_on_disk();
+        self.sync(true)?;
+        drop(self);
+
+        for file in files {
+            fs::remove_file(file)?;
+        }
+
+        Ok(())
     }
 }

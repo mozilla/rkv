@@ -12,6 +12,7 @@ use std::{
     io,
     path::PathBuf,
     str,
+    sync,
     thread,
     thread::ThreadId,
 };
@@ -56,6 +57,9 @@ impl From<Box<bincode::ErrorKind>> for DataError {
 
 #[derive(Debug, Fail)]
 pub enum StoreError {
+    #[fail(display = "manager poisoned")]
+    ManagerPoisonError,
+
     #[fail(display = "database corrupted")]
     DatabaseCorrupted,
 
@@ -80,11 +84,8 @@ pub enum StoreError {
     #[fail(display = "I/O error: {:?}", _0)]
     IoError(io::Error),
 
-    #[fail(display = "directory does not exist or not a directory: {:?}", _0)]
-    DirectoryDoesNotExistError(PathBuf),
-
-    #[fail(display = "environment does not exist in directory: {:?}", _0)]
-    EnvironmentDoesNotExistError(PathBuf),
+    #[fail(display = "environment path does not exist or not the right type: {:?}", _0)]
+    UnsuitableEnvironmentPath(PathBuf),
 
     #[fail(display = "data error: {:?}", _0)]
     DataError(DataError),
@@ -124,10 +125,19 @@ impl From<io::Error> for StoreError {
     }
 }
 
+impl<T> From<sync::PoisonError<T>> for StoreError {
+    fn from(_: sync::PoisonError<T>) -> StoreError {
+        StoreError::ManagerPoisonError
+    }
+}
+
 #[derive(Debug, Fail)]
 pub enum MigrateError {
     #[fail(display = "store error: {}", _0)]
     StoreError(StoreError),
+
+    #[fail(display = "manager poisoned")]
+    ManagerPoisonError,
 
     #[fail(display = "source is empty")]
     SourceEmpty,
@@ -139,5 +149,11 @@ pub enum MigrateError {
 impl From<StoreError> for MigrateError {
     fn from(e: StoreError) -> MigrateError {
         MigrateError::StoreError(e)
+    }
+}
+
+impl<T> From<sync::PoisonError<T>> for MigrateError {
+    fn from(_: sync::PoisonError<T>) -> MigrateError {
+        MigrateError::ManagerPoisonError
     }
 }

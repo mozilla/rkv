@@ -47,8 +47,9 @@ pub use crate::backend::{
 };
 
 // FIXME: should parametrize this instead.
+
 macro_rules! fn_migrator {
-    ($name:tt, $src:ty, $dst:ty) => {
+    ($name:tt, $src_env:ty, $dst_env:ty) => {
         /// Migrate all data in all of databases from the source environment to the destination
         /// environment. This includes all key/value pairs in the main database that aren't
         /// metadata about subdatabases and all key/value pairs in all subdatabases.
@@ -57,7 +58,11 @@ macro_rules! fn_migrator {
         /// the given environments.
         ///
         /// The destination environment should be empty of data, otherwise an error is returned.
-        pub fn $name(src_env: &Rkv<$src>, dst_env: &Rkv<$dst>) -> Result<(), MigrateError> {
+        pub fn $name<S, D>(src_env: S, dst_env: D) -> Result<(), MigrateError>
+        where
+            S: std::ops::Deref<Target = Rkv<$src_env>>,
+            D: std::ops::Deref<Target = Rkv<$dst_env>>,
+        {
             let src_dbs = src_env.get_dbs().unwrap();
             if src_dbs.is_empty() {
                 return Err(MigrateError::SourceEmpty);
@@ -80,12 +85,54 @@ macro_rules! fn_migrator {
             Ok(())
         }
     };
+
+    ($migrate:tt, $name:tt, $builder:tt, $src_env:ty, $dst_env:ty) => {
+        /// Same as the other migration methods, but automatically attempts to open the source
+        /// environment, ignores it if it doesn't exist or if it's empty, and finally attempts to
+        /// delete all of its supporting files.
+        pub fn $name<F, D>(path: &std::path::Path, build: F, dst_env: D) -> Result<(), MigrateError>
+        where
+            F: FnOnce(crate::backend::$builder) -> crate::backend::$builder,
+            D: std::ops::Deref<Target = Rkv<$dst_env>>,
+        {
+            use crate::backend::*;
+
+            let mut manager = crate::Manager::<$src_env>::singleton().write()?;
+            let mut builder = Rkv::<$src_env>::environment_builder::<$builder>();
+            builder.set_max_dbs(crate::env::DEFAULT_MAX_DBS);
+            builder = build(builder);
+            let src_env = manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>)?;
+
+            match Migrator::$migrate(src_env.read()?, dst_env) {
+                Err(crate::MigrateError::SourceEmpty) => return Ok(()),
+                result => result,
+            }?;
+
+            drop(src_env);
+            manager.try_close_and_delete(path)?;
+
+            Ok(())
+        }
+    };
+}
+
+macro_rules! fns_migrator {
+    ($src:tt, $dst:tt) => {
+        paste::item! {
+            fns_migrator!([<migrate_ $src _to_ $dst>], $src, $dst);
+            fns_migrator!([<migrate_ $dst _to_ $src>], $dst, $src);
+        }
+    };
+    ($name:tt, $src:tt, $dst:tt) => {
+        paste::item! {
+            fn_migrator!($name, [<$src:camel Environment>], [<$dst:camel Environment>]);
+            fn_migrator!($name, [<auto_ $name>], [<$src:camel>], [<$src:camel Environment>], [<$dst:camel Environment>]);
+        }
+    };
 }
 
 pub struct Migrator;
 
 impl Migrator {
-    fn_migrator!(migrate_lmdb_to_safe_mode, LmdbEnvironment, SafeModeEnvironment);
-
-    fn_migrator!(migrate_safe_mode_to_lmdb, SafeModeEnvironment, LmdbEnvironment);
+    fns_migrator!(lmdb, safe_mode);
 }

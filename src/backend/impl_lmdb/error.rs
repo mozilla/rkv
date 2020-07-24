@@ -22,8 +22,7 @@ use crate::{
 #[derive(Debug)]
 pub enum ErrorImpl {
     LmdbError(lmdb::Error),
-    DirectoryDoesNotExistError(PathBuf),
-    EnvironmentDoesNotExistError(PathBuf),
+    UnsuitableEnvironmentPath(PathBuf),
     IoError(io::Error),
 }
 
@@ -33,8 +32,7 @@ impl fmt::Display for ErrorImpl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ErrorImpl::LmdbError(e) => e.fmt(fmt),
-            ErrorImpl::DirectoryDoesNotExistError(_) => write!(fmt, "DirectoryDoesNotExistError"),
-            ErrorImpl::EnvironmentDoesNotExistError(_) => write!(fmt, "EnvironmentDoesNotExistError"),
+            ErrorImpl::UnsuitableEnvironmentPath(_) => write!(fmt, "UnsuitableEnvironmentPath"),
             ErrorImpl::IoError(e) => e.fmt(fmt),
         }
     }
@@ -51,9 +49,14 @@ impl Into<StoreError> for ErrorImpl {
             ErrorImpl::LmdbError(lmdb::Error::DbsFull) => StoreError::DbsFull,
             ErrorImpl::LmdbError(lmdb::Error::ReadersFull) => StoreError::ReadersFull,
             ErrorImpl::LmdbError(error) => StoreError::LmdbError(error),
-            ErrorImpl::DirectoryDoesNotExistError(path) => StoreError::DirectoryDoesNotExistError(path),
-            ErrorImpl::EnvironmentDoesNotExistError(path) => StoreError::EnvironmentDoesNotExistError(path),
+            ErrorImpl::UnsuitableEnvironmentPath(path) => StoreError::UnsuitableEnvironmentPath(path),
             ErrorImpl::IoError(error) => StoreError::IoError(error),
         }
+    }
+}
+
+impl From<io::Error> for ErrorImpl {
+    fn from(e: io::Error) -> ErrorImpl {
+        ErrorImpl::IoError(e)
     }
 }

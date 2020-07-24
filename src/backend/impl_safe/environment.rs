@@ -55,7 +55,6 @@ pub struct EnvironmentBuilderImpl {
     max_dbs: Option<usize>,
     map_size: Option<usize>,
     make_dir: bool,
-    check_env_exists: bool,
 }
 
 impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
@@ -70,7 +69,6 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             max_dbs: None,
             map_size: None,
             make_dir: false,
-            check_env_exists: false,
         }
     }
 
@@ -102,18 +100,12 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
         self
     }
 
-    fn set_check_if_env_exists(&mut self, check_env_exists: bool) -> &mut Self {
-        self.check_env_exists = check_env_exists;
-        self
-    }
-
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error> {
-        if self.check_env_exists && !path.join(DEFAULT_DB_FILENAME).exists() {
-            return Err(ErrorImpl::EnvironmentDoesNotExistError(path.into()));
-        }
+        // Technically NO_SUB_DIR should change these checks here, but they're both currently
+        // unimplemented with this storage backend.
         if !path.is_dir() {
             if !self.make_dir {
-                return Err(ErrorImpl::DirectoryDoesNotExistError(path.into()));
+                return Err(ErrorImpl::UnsuitableEnvironmentPath(path.into()));
             }
             fs::create_dir_all(path)?;
         }
@@ -285,5 +277,13 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
     fn set_map_size(&self, size: usize) -> Result<(), Self::Error> {
         warn!("`set_map_size({})` is ignored by this storage backend.", size);
         Ok(())
+    }
+
+    fn get_files_on_disk(&self) -> Vec<PathBuf> {
+        // Technically NO_SUB_DIR and NO_LOCK should change this output, but
+        // they're both currently unimplemented with this storage backend.
+        let mut db_filename = self.path.clone();
+        db_filename.push(DEFAULT_DB_FILENAME);
+        return vec![db_filename];
     }
 }
