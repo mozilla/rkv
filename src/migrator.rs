@@ -101,7 +101,12 @@ macro_rules! fn_migrator {
             let mut builder = Rkv::<$src_env>::environment_builder::<$builder>();
             builder.set_max_dbs(crate::env::DEFAULT_MAX_DBS);
             builder = build(builder);
-            let src_env = manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>)?;
+
+            let src_env = match manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>) {
+                Err(crate::StoreError::IoError(ref e)) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+                Err(crate::StoreError::UnsuitableEnvironmentPath(_)) => return Ok(()),
+                result => result,
+            }?;
 
             match Migrator::$migrate(src_env.read()?, dst_env) {
                 Err(crate::MigrateError::SourceEmpty) => return Ok(()),
