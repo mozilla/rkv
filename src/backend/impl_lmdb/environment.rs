@@ -101,12 +101,22 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
     }
 
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error> {
-        if !path.is_dir() {
-            if !self.make_dir {
-                return Err(ErrorImpl::DirectoryDoesNotExistError(path.into()));
-            }
-            fs::create_dir_all(path).map_err(ErrorImpl::IoError)?;
+        match self.env_path_type {
+            EnvironmentPathType::NoSubDir => {
+                if !path.is_file() {
+                    return Err(ErrorImpl::UnsuitableEnvironmentPath(path.into()));
+                }
+            },
+            EnvironmentPathType::SubDir => {
+                if !path.is_dir() {
+                    if !self.make_dir {
+                        return Err(ErrorImpl::UnsuitableEnvironmentPath(path.into()));
+                    }
+                    fs::create_dir_all(path)?;
+                }
+            },
         }
+
         self.builder.open(path).map_err(ErrorImpl::LmdbError).and_then(|lmdbenv| {
             EnvironmentImpl::new(path, self.env_path_type, self.env_lock_type, self.env_db_type, lmdbenv)
         })

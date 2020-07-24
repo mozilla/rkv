@@ -101,9 +101,11 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
     }
 
     fn open(&self, path: &Path) -> Result<Self::Environment, Self::Error> {
+        // Technically NO_SUB_DIR should change these checks here, but they're both currently
+        // unimplemented with this storage backend.
         if !path.is_dir() {
             if !self.make_dir {
-                return Err(ErrorImpl::DirectoryDoesNotExistError(path.into()));
+                return Err(ErrorImpl::UnsuitableEnvironmentPath(path.into()));
             }
             fs::create_dir_all(path)?;
         }

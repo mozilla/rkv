@@ -84,8 +84,8 @@ pub enum StoreError {
     #[fail(display = "I/O error: {:?}", _0)]
     IoError(io::Error),
 
-    #[fail(display = "directory does not exist or not a directory: {:?}", _0)]
-    DirectoryDoesNotExistError(PathBuf),
+    #[fail(display = "environment path does not exist or not the right type: {:?}", _0)]
+    UnsuitableEnvironmentPath(PathBuf),
 
     #[fail(display = "data error: {:?}", _0)]
     DataError(DataError),

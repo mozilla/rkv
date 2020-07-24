@@ -72,7 +72,7 @@ fn test_open_fails() {
 
     let pb = nope.to_path_buf();
     match Rkv::new::<Lmdb>(nope.as_path()).err() {
-        Some(StoreError::DirectoryDoesNotExistError(p)) => {
+        Some(StoreError::UnsuitableEnvironmentPath(p)) => {
             assert_eq!(pb, p);
         },
         _ => panic!("expected error"),
@@ -105,6 +105,61 @@ fn test_open_from_builder() {
 }
 
 #[test]
+fn test_open_from_builder_with_no_subdir_1() {
+    let root = Builder::new().prefix("test_open_from_builder").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    {
+        let mut builder = Rkv::environment_builder::<Lmdb>();
+        builder.set_max_dbs(2);
+
+        let k = Rkv::from_builder(root.path(), builder).expect("rkv");
+        check_rkv(&k);
+    }
+    {
+        let mut builder = Rkv::environment_builder::<Lmdb>();
+        builder.set_flags(EnvironmentFlags::NO_SUB_DIR);
+        builder.set_max_dbs(2);
+
+        let mut datamdb = root.path().to_path_buf();
+        datamdb.push("data.mdb");
+
+        let k = Rkv::from_builder(&datamdb, builder).expect("rkv");
+        check_rkv(&k);
+    }
+}
+
+#[test]
+#[should_panic(expected = "rkv: UnsuitableEnvironmentPath")]
+fn test_open_from_builder_with_no_subdir_2() {
+    let root = Builder::new().prefix("test_open_from_builder").tempdir().expect("tempdir");
+    println!("Root path: {:?}", root.path());
+    fs::create_dir_all(root.path()).expect("dir created");
+    assert!(root.path().is_dir());
+
+    {
+        let mut builder = Rkv::environment_builder::<Lmdb>();
+        builder.set_max_dbs(2);
+
+        let k = Rkv::from_builder(root.path(), builder).expect("rkv");
+        check_rkv(&k);
+    }
+    {
+        let mut builder = Rkv::environment_builder::<Lmdb>();
+        builder.set_flags(EnvironmentFlags::NO_SUB_DIR);
+        builder.set_max_dbs(2);
+
+        let mut datamdb = root.path().to_path_buf();
+        datamdb.push("bogus.mdb");
+
+        let k = Rkv::from_builder(&datamdb, builder).expect("rkv");
+        check_rkv(&k);
+    }
+}
+
+#[test]
 fn test_open_from_builder_with_dir_1() {
     let root = Builder::new().prefix("test_open_from_builder").tempdir().expect("tempdir");
     println!("Root path: {:?}", root.path());
@@ -118,7 +173,7 @@ fn test_open_from_builder_with_dir_1() {
 }
 
 #[test]
-#[should_panic(expected = "rkv: DirectoryDoesNotExistError(\"bogus\")")]
+#[should_panic(expected = "rkv: UnsuitableEnvironmentPath(\"bogus\")")]
 fn test_open_from_builder_with_dir_2() {
     let root = Path::new("bogus");
     println!("Root path: {:?}", root);

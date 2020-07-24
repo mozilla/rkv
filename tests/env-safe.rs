@@ -66,7 +66,7 @@ fn test_open_fails_safe() {
 
     let pb = nope.to_path_buf();
     match Rkv::new::<SafeMode>(nope.as_path()).err() {
-        Some(StoreError::DirectoryDoesNotExistError(p)) => {
+        Some(StoreError::UnsuitableEnvironmentPath(p)) => {
             assert_eq!(pb, p);
         },
         _ => panic!("expected error"),
@@ -112,7 +112,7 @@ fn test_open_from_builder_with_dir_safe_1() {
 }
 
 #[test]
-#[should_panic(expected = "rkv: DirectoryDoesNotExistError(\"bogus\")")]
+#[should_panic(expected = "rkv: UnsuitableEnvironmentPath(\"bogus\")")]
 fn test_open_from_builder_with_dir_safe_2() {
     let root = Path::new("bogus");
     println!("Root path: {:?}", root);
