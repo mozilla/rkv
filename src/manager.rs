@@ -49,6 +49,15 @@ lazy_static! {
 
 /// A process is only permitted to have one open handle to each Rkv environment. This
 /// manager exists to enforce that constraint: don't open environments directly.
+///
+/// By default, path canonicalization is enabled for identifying RKV instances. This
+/// is true by default, because it helps enforce the constraints guaranteed by
+/// this manager. However, path canonicalization might crash in some fringe
+/// circumstances, so the `no-canonicalize-path` feature offers the possibility of
+/// disabling it. See: https://bugzilla.mozilla.org/show_bug.cgi?id=1531887
+///
+/// When path canonicalization is disabled, you *must* ensure an RKV environment is
+/// always created or retrieved with the same path.
 pub struct Manager<E> {
     environments: BTreeMap<PathBuf, SharedRkv<E>>,
 }
@@ -68,7 +77,11 @@ where
     where
         P: Into<&'p Path>,
     {
-        let canonical = canonicalize_path(path)?;
+        let canonical = if cfg!(feature = "no-canonicalize-path") {
+            path.into().to_path_buf()
+        } else {
+            canonicalize_path(path)?
+        };
         Ok(self.environments.get(&canonical).cloned())
     }
 
@@ -78,7 +91,11 @@ where
         F: FnOnce(&Path) -> Result<Rkv<E>>,
         P: Into<&'p Path>,
     {
-        let canonical = canonicalize_path(path)?;
+        let canonical = if cfg!(feature = "no-canonicalize-path") {
+            path.into().to_path_buf()
+        } else {
+            canonicalize_path(path)?
+        };
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
@@ -94,7 +111,11 @@ where
         F: FnOnce(&Path, c_uint) -> Result<Rkv<E>>,
         P: Into<&'p Path>,
     {
-        let canonical = canonicalize_path(path)?;
+        let canonical = if cfg!(feature = "no-canonicalize-path") {
+            path.into().to_path_buf()
+        } else {
+            canonicalize_path(path)?
+        };
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
@@ -111,7 +132,11 @@ where
         P: Into<&'p Path>,
         B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
-        let canonical = canonicalize_path(path)?;
+        let canonical = if cfg!(feature = "no-canonicalize-path") {
+            path.into().to_path_buf()
+        } else {
+            canonicalize_path(path)?
+        };
         Ok(match self.environments.entry(canonical) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
@@ -128,7 +153,11 @@ where
     where
         P: Into<&'p Path>,
     {
-        let canonical = canonicalize_path(path)?;
+        let canonical = if cfg!(feature = "no-canonicalize-path") {
+            path.into().to_path_buf()
+        } else {
+            canonicalize_path(path)?
+        };
         match self.environments.entry(canonical) {
             Entry::Vacant(_) => {}, // noop
             Entry::Occupied(e) => {
