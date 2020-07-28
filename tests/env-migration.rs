@@ -222,6 +222,54 @@ fn test_migrator_no_dir_2() {
 }
 
 #[test]
+fn test_migrator_invalid_1() {
+    let root = Builder::new().prefix("test_migrator_invalid").tempdir().expect("tempdir");
+    fs::create_dir_all(root.path()).expect("dir created");
+
+    let dbfile = root.path().join("data.mdb");
+    fs::write(dbfile, "bogus").expect("dbfile created");
+
+    // This won't fail with FileInvalid even though the database is a bogus file, because this
+    // is the "easy mode" migration which automatically handles (ignores) this error.
+    let dst_env = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
+    Migrator::auto_migrate_lmdb_to_safe_mode(root.path(), |builder| builder, &dst_env).expect("migrated");
+
+    let mut datamdb = root.path().to_path_buf();
+    let mut lockmdb = root.path().to_path_buf();
+    let mut safebin = root.path().to_path_buf();
+    datamdb.push("data.mdb");
+    lockmdb.push("lock.mdb");
+    safebin.push("data.safe.bin");
+    assert!(datamdb.exists()); // corrupted db isn't deleted
+    assert!(lockmdb.exists());
+    assert!(!safebin.exists());
+}
+
+#[test]
+fn test_migrator_invalid_2() {
+    let root = Builder::new().prefix("test_migrator_invalid").tempdir().expect("tempdir");
+    fs::create_dir_all(root.path()).expect("dir created");
+
+    let dbfile = root.path().join("data.safe.bin");
+    fs::write(dbfile, "bogus").expect("dbfile created");
+
+    // This won't fail with FileInvalid even though the database is a bogus file, because this
+    // is the "easy mode" migration which automatically handles (ignores) this error.
+    let dst_env = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    Migrator::auto_migrate_safe_mode_to_lmdb(root.path(), |builder| builder, &dst_env).expect("migrated");
+
+    let mut datamdb = root.path().to_path_buf();
+    let mut lockmdb = root.path().to_path_buf();
+    let mut safebin = root.path().to_path_buf();
+    datamdb.push("data.mdb");
+    lockmdb.push("lock.mdb");
+    safebin.push("data.safe.bin");
+    assert!(datamdb.exists()); // lmdb writes an empty db to disk
+    assert!(lockmdb.exists());
+    assert!(safebin.exists()); // corrupted db isn't deleted
+}
+
+#[test]
 #[should_panic(expected = "migrated: SourceEmpty")]
 fn test_migrator_lmdb_to_safe_1() {
     let root = Builder::new().prefix("test_migrate_lmdb_to_safe").tempdir().expect("tempdir");
