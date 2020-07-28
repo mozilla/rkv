@@ -88,8 +88,8 @@ macro_rules! fn_migrator {
 
     ($migrate:tt, $name:tt, $builder:tt, $src_env:ty, $dst_env:ty) => {
         /// Same as the other migration methods, but automatically attempts to open the source
-        /// environment, ignores it if it doesn't exist or if it's empty, and finally attempts to
-        /// delete all of its supporting files.
+        /// environment, ignores it if it's invalid, if it doesn't exist or if it's empty.
+        /// Finally, attempts to delete all of its supporting files.
         pub fn $name<F, D>(path: &std::path::Path, build: F, dst_env: D) -> Result<(), MigrateError>
         where
             F: FnOnce(crate::backend::$builder) -> crate::backend::$builder,
@@ -103,6 +103,7 @@ macro_rules! fn_migrator {
             builder = build(builder);
 
             let src_env = match manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>) {
+                Err(crate::StoreError::FileInvalid) => return Ok(()),
                 Err(crate::StoreError::IoError(ref e)) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
                 Err(crate::StoreError::UnsuitableEnvironmentPath(_)) => return Ok(()),
                 result => result,
