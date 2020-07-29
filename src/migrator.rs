@@ -18,6 +18,19 @@
 //!
 //! The destination environment should be empty of data, otherwise an error is returned.
 //!
+//! There are 3 versions of the migration methods:
+//! * `migrate_<src>_to_<dst>`, where `<src>` and `<dst>` are the source and destination
+//!   environment types. You're responsive with opening both these environments, handling
+//!   all errors, and performing any cleanup if necessary.
+//! * `open_and_migrate_<src>_to_<dst>`, which is similar the the above, but automatically
+//!   attempts to open the source environment and delete all of its supporting files if
+//!   there's no other environment open at that path. You're still responsible with
+//!   handling all errors.
+//! * `easy_migrate_<src>_to_<dst>` which is similar to the above, but ignores the
+//!   migration and doesn't delete any files if the source environment is invalid
+//!   (corrupted), unavailable (path not found or incompatible with configuration), or
+//!   empty (database has no records).
+//!
 //! The tool currently has these limitations:
 //!
 //! 1. It doesn't support migration from environments created with
@@ -86,10 +99,10 @@ macro_rules! fn_migrator {
         }
     };
 
-    ($migrate:tt, $name:tt, $builder:tt, $src_env:ty, $dst_env:ty) => {
-        /// Same as the other migration methods, but automatically attempts to open the source
-        /// environment, ignores it if it's invalid, if it doesn't exist or if it's empty.
-        /// Finally, attempts to delete all of its supporting files.
+    (open $migrate:tt, $name:tt, $builder:tt, $src_env:ty, $dst_env:ty) => {
+        /// Same as the non `open_*` migration method, but automatically attempts to open the
+        /// source environment. Finally, deletes all of its supporting files if there's no other
+        /// environment open at that path.
         pub fn $name<F, D>(path: &std::path::Path, build: F, dst_env: D) -> Result<(), MigrateError>
         where
             F: FnOnce(crate::backend::$builder) -> crate::backend::$builder,
@@ -102,20 +115,30 @@ macro_rules! fn_migrator {
             builder.set_max_dbs(crate::env::DEFAULT_MAX_DBS);
             builder = build(builder);
 
-            let src_env = match manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>) {
-                Err(crate::StoreError::FileInvalid) => return Ok(()),
-                Err(crate::StoreError::IoError(ref e)) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-                Err(crate::StoreError::UnsuitableEnvironmentPath(_)) => return Ok(()),
-                result => result,
-            }?;
-
-            match Migrator::$migrate(src_env.read()?, dst_env) {
-                Err(crate::MigrateError::SourceEmpty) => return Ok(()),
-                result => result,
-            }?;
+            let src_env = manager.get_or_create_from_builder(path, builder, Rkv::from_builder::<$builder>)?;
+            Migrator::$migrate(src_env.read()?, dst_env)?;
 
             drop(src_env);
             manager.try_close_and_delete(path)?;
+
+            Ok(())
+        }
+    };
+
+    (easy $migrate:tt, $name:tt, $src_env:ty, $dst_env:ty) => {
+        /// Same as the `open_*` migration method, but ignores the migration and doesn't delete
+        /// any files if the source environment is invalid (corrupted), unavailable, or empty.
+        pub fn $name<D>(path: &std::path::Path, dst_env: D) -> Result<(), MigrateError>
+        where
+            D: std::ops::Deref<Target = Rkv<$dst_env>>,
+        {
+            match Migrator::$migrate(path, |builder| builder, dst_env) {
+                Err(crate::MigrateError::StoreError(crate::StoreError::FileInvalid)) => Ok(()),
+                Err(crate::MigrateError::StoreError(crate::StoreError::IoError(_))) => Ok(()),
+                Err(crate::MigrateError::StoreError(crate::StoreError::UnsuitableEnvironmentPath(_))) => Ok(()),
+                Err(crate::MigrateError::SourceEmpty) => Ok(()),
+                result => result,
+            }?;
 
             Ok(())
         }
@@ -132,7 +155,8 @@ macro_rules! fns_migrator {
     ($name:tt, $src:tt, $dst:tt) => {
         paste::item! {
             fn_migrator!($name, [<$src:camel Environment>], [<$dst:camel Environment>]);
-            fn_migrator!($name, [<auto_ $name>], [<$src:camel>], [<$src:camel Environment>], [<$dst:camel Environment>]);
+            fn_migrator!(open $name, [<open_and_ $name>], [<$src:camel>], [<$src:camel Environment>], [<$dst:camel Environment>]);
+            fn_migrator!(easy [<open_and_ $name>], [<easy_ $name>], [<$src:camel Environment>], [<$dst:camel Environment>]);
         }
     };
 }

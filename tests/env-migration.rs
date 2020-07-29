@@ -66,10 +66,10 @@ fn test_simple_migrator_lmdb_to_safe() {
         assert_eq!(store.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
         assert_eq!(store.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
     }
-    // Easy migrate.
+    // Open and migrate.
     {
         let dst_env = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
-        Migrator::auto_migrate_lmdb_to_safe_mode(root.path(), |builder| builder, &dst_env).expect("migrated");
+        Migrator::open_and_migrate_lmdb_to_safe_mode(root.path(), |builder| builder, &dst_env).expect("migrated");
     }
     // Verify that the database was indeed migrated.
     {
@@ -117,10 +117,10 @@ fn test_simple_migrator_safe_to_lmdb() {
         assert_eq!(store.get(&reader, "bar").expect("read"), Some(Value::Bool(true)));
         assert_eq!(store.get(&reader, "baz").expect("read"), Some(Value::Str("héllo, yöu")));
     }
-    // Easy migrate.
+    // Open and migrate.
     {
         let dst_env = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
-        Migrator::auto_migrate_safe_mode_to_lmdb(root.path(), |builder| builder, &dst_env).expect("migrated");
+        Migrator::open_and_migrate_safe_mode_to_lmdb(root.path(), |builder| builder, &dst_env).expect("migrated");
     }
     // Verify that the database was indeed migrated.
     {
@@ -150,15 +150,15 @@ fn test_migrator_round_trip() {
         populate_store!(&src_env);
         src_env.sync(true).expect("synced");
     }
-    // Easy migrate.
+    // Open and migrate.
     {
         let dst_env = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
-        Migrator::auto_migrate_lmdb_to_safe_mode(root.path(), |builder| builder, &dst_env).expect("migrated");
+        Migrator::open_and_migrate_lmdb_to_safe_mode(root.path(), |builder| builder, &dst_env).expect("migrated");
     }
-    // Easy migrate back.
+    // Open and migrate back.
     {
         let dst_env = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
-        Migrator::auto_migrate_safe_mode_to_lmdb(root.path(), |builder| builder, &dst_env).expect("migrated");
+        Migrator::open_and_migrate_safe_mode_to_lmdb(root.path(), |builder| builder, &dst_env).expect("migrated");
     }
     // Verify that the database was indeed migrated twice.
     {
@@ -188,8 +188,10 @@ fn test_migrator_no_dir_1() {
     let root = Builder::new().prefix("test_migrator_no_dir").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
+    // This won't fail with IoError even though the path is a bogus path, because this
+    // is the "easy mode" migration which automatically handles (ignores) this error.
     let dst_env = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
-    Migrator::auto_migrate_lmdb_to_safe_mode(Path::new("bogus"), |builder| builder, &dst_env).expect("migrated");
+    Migrator::easy_migrate_lmdb_to_safe_mode(Path::new("bogus"), &dst_env).expect("migrated");
 
     let mut datamdb = root.path().to_path_buf();
     let mut lockmdb = root.path().to_path_buf();
@@ -207,8 +209,10 @@ fn test_migrator_no_dir_2() {
     let root = Builder::new().prefix("test_migrator_no_dir").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
+    // This won't fail with IoError even though the path is a bogus path, because this
+    // is the "easy mode" migration which automatically handles (ignores) this error.
     let dst_env = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
-    Migrator::auto_migrate_safe_mode_to_lmdb(Path::new("bogus"), |builder| builder, &dst_env).expect("migrated");
+    Migrator::easy_migrate_safe_mode_to_lmdb(Path::new("bogus"), &dst_env).expect("migrated");
 
     let mut datamdb = root.path().to_path_buf();
     let mut lockmdb = root.path().to_path_buf();
@@ -232,7 +236,7 @@ fn test_migrator_invalid_1() {
     // This won't fail with FileInvalid even though the database is a bogus file, because this
     // is the "easy mode" migration which automatically handles (ignores) this error.
     let dst_env = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
-    Migrator::auto_migrate_lmdb_to_safe_mode(root.path(), |builder| builder, &dst_env).expect("migrated");
+    Migrator::easy_migrate_lmdb_to_safe_mode(root.path(), &dst_env).expect("migrated");
 
     let mut datamdb = root.path().to_path_buf();
     let mut lockmdb = root.path().to_path_buf();
@@ -256,7 +260,7 @@ fn test_migrator_invalid_2() {
     // This won't fail with FileInvalid even though the database is a bogus file, because this
     // is the "easy mode" migration which automatically handles (ignores) this error.
     let dst_env = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
-    Migrator::auto_migrate_safe_mode_to_lmdb(root.path(), |builder| builder, &dst_env).expect("migrated");
+    Migrator::easy_migrate_safe_mode_to_lmdb(root.path(), &dst_env).expect("migrated");
 
     let mut datamdb = root.path().to_path_buf();
     let mut lockmdb = root.path().to_path_buf();
