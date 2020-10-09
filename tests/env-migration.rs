@@ -428,6 +428,7 @@ fn test_easy_migrator_from_manager_failed_migration_1() {
         let created_dst_arc_1 = dst_manager.get_or_create(root.path(), Rkv::new::<SafeMode>).unwrap();
         let dst_env_1 = created_dst_arc_1.read().unwrap();
         populate_store!(&dst_env_1);
+        dst_env_1.sync(true).expect("synced");
     }
 
     // Attempt to migrate again in a new env. This should *NOT* fail with DestinationNotEmpty.
@@ -453,6 +454,7 @@ fn test_easy_migrator_from_manager_failed_migration_2() {
         let created_dst_arc_1 = dst_manager.get_or_create(root.path(), Rkv::new::<Lmdb>).unwrap();
         let dst_env_1 = created_dst_arc_1.read().unwrap();
         populate_store!(&dst_env_1);
+        dst_env_1.sync(true).expect("synced");
     }
 
     // Attempt to migrate again in a new env. This should *NOT* fail with DestinationNotEmpty.
