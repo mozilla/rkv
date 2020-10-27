@@ -108,7 +108,10 @@ macro_rules! fn_migrator {
             F: FnOnce(crate::backend::$builder) -> crate::backend::$builder,
             D: std::ops::Deref<Target = Rkv<$dst_env>>,
         {
-            use crate::backend::*;
+            use crate::{
+                backend::*,
+                CloseOptions,
+            };
 
             let mut manager = crate::Manager::<$src_env>::singleton().write()?;
             let mut builder = Rkv::<$src_env>::environment_builder::<$builder>();
@@ -119,7 +122,7 @@ macro_rules! fn_migrator {
             Migrator::$migrate(src_env.read()?, dst_env)?;
 
             drop(src_env);
-            manager.try_close_and_delete(path)?;
+            manager.try_close(path, CloseOptions::delete_files_on_disk())?;
 
             Ok(())
         }
@@ -138,10 +141,17 @@ macro_rules! fn_migrator {
             D: std::ops::Deref<Target = Rkv<$dst_env>>,
         {
             match Migrator::$migrate(path, |builder| builder, dst_env) {
+                // Source environment is corrupted.
                 Err(crate::MigrateError::StoreError(crate::StoreError::FileInvalid)) => Ok(()),
+                // Path not accessible.
                 Err(crate::MigrateError::StoreError(crate::StoreError::IoError(_))) => Ok(()),
+                // Path accessible but incompatible for configuration.
                 Err(crate::MigrateError::StoreError(crate::StoreError::UnsuitableEnvironmentPath(_))) => Ok(()),
+                // Couldn't close source environment and delete files on disk (e.g. other stores still open).
+                Err(crate::MigrateError::CloseError(_)) => Ok(()),
+                // Nothing to migrate.
                 Err(crate::MigrateError::SourceEmpty) => Ok(()),
+                // Migrating would overwrite.
                 Err(crate::MigrateError::DestinationNotEmpty) => Ok(()),
                 result => result,
             }?;

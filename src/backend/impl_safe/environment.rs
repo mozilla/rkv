@@ -55,7 +55,8 @@ pub struct EnvironmentBuilderImpl {
     max_readers: Option<usize>,
     max_dbs: Option<usize>,
     map_size: Option<usize>,
-    make_dir: bool,
+    make_dir_if_needed: bool,
+    discard_if_corrupted: bool,
 }
 
 impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
@@ -69,7 +70,8 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
             max_readers: None,
             max_dbs: None,
             map_size: None,
-            make_dir: false,
+            make_dir_if_needed: false,
+            discard_if_corrupted: false,
         }
     }
 
@@ -96,8 +98,13 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
         self
     }
 
-    fn set_make_dir_if_needed(&mut self, make_dir: bool) -> &mut Self {
-        self.make_dir = make_dir;
+    fn set_make_dir_if_needed(&mut self, make_dir_if_needed: bool) -> &mut Self {
+        self.make_dir_if_needed = make_dir_if_needed;
+        self
+    }
+
+    fn set_discard_if_corrupted(&mut self, discard_if_corrupted: bool) -> &mut Self {
+        self.discard_if_corrupted = discard_if_corrupted;
         self
     }
 
@@ -105,13 +112,13 @@ impl<'b> BackendEnvironmentBuilder<'b> for EnvironmentBuilderImpl {
         // Technically NO_SUB_DIR should change these checks here, but they're both currently
         // unimplemented with this storage backend.
         if !path.is_dir() {
-            if !self.make_dir {
+            if !self.make_dir_if_needed {
                 return Err(ErrorImpl::UnsuitableEnvironmentPath(path.into()));
             }
             fs::create_dir_all(path)?;
         }
         let mut env = EnvironmentImpl::new(path, self.flags, self.max_readers, self.max_dbs, self.map_size)?;
-        env.read_from_disk()?;
+        env.read_from_disk(self.discard_if_corrupted)?;
         Ok(env)
     }
 }
@@ -153,10 +160,13 @@ impl EnvironmentImpl {
         Ok(bincode::serialize(&data)?)
     }
 
-    fn deserialize(bytes: &[u8]) -> Result<(DatabaseArena, DatabaseNameMap), ErrorImpl> {
+    fn deserialize(bytes: &[u8], discard_if_corrupted: bool) -> Result<(DatabaseArena, DatabaseNameMap), ErrorImpl> {
         let mut arena = DatabaseArena::new();
         let mut name_map = HashMap::new();
-        let data: HashMap<_, _> = bincode::deserialize(&bytes)?;
+        let data: HashMap<_, _> = match bincode::deserialize(&bytes) {
+            Err(_) if discard_if_corrupted => Ok(HashMap::new()),
+            result => result,
+        }?;
         for (name, db) in data {
             name_map.insert(name, DatabaseImpl(arena.alloc(db)));
         }
@@ -194,7 +204,7 @@ impl EnvironmentImpl {
         })
     }
 
-    pub(crate) fn read_from_disk(&mut self) -> Result<(), ErrorImpl> {
+    pub(crate) fn read_from_disk(&mut self, discard_if_corrupted: bool) -> Result<(), ErrorImpl> {
         let mut path = Cow::from(&self.path);
         if fs::metadata(&path)?.is_dir() {
             path.to_mut().push(DEFAULT_DB_FILENAME);
@@ -202,7 +212,7 @@ impl EnvironmentImpl {
         if fs::metadata(&path).is_err() {
             return Ok(());
         };
-        let (arena, name_map) = Self::deserialize(&fs::read(&path)?)?;
+        let (arena, name_map) = Self::deserialize(&fs::read(&path)?, discard_if_corrupted)?;
         self.dbs = RwLock::new(EnvironmentDbs {
             arena,
             name_map,
