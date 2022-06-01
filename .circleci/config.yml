@@ -1,0 +1,44 @@
+---
+
+version: 2.1
+
+jobs:
+  rust-fmt:
+    docker:
+      - image: cimg/rust:1.61
+    steps:
+      - checkout
+      - run:
+          name: Install Rust Nightly
+          command: |
+            rustup toolchain install nightly
+            rustup default nightly
+      - run:
+          name: Format check
+          command: |
+            cargo fmt --all -- --check
+
+  rust-test:
+    docker:
+      - image: cimg/rust:1.61
+    steps:
+      - checkout
+      - run:
+          name: Turn on RUST_BACKTRACE
+          command: |
+              echo "export RUST_BACKTRACE=1" >> $BASH_ENV
+
+      - run: cargo test --all --verbose
+      - run: cargo test --lib --no-default-features --verbose
+      - run: cargo test --lib --no-default-features --features "db-dup-sort" --verbose
+      - run: cargo test --lib --no-default-features --features "db-int-key" --verbose
+      - run: cargo test --release --all --verbose
+      - run: ./run-all-examples.sh
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - rust-fmt
+      - rust-test
+
