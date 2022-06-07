@@ -1,2 +1,2 @@
-# Prevent line ending normalization
-* -text
+# Force LF normalization
+* text=auto eol=lf
