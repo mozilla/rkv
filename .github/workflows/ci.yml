@@ -9,24 +9,28 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        target:
+          - { os: ubuntu-latest, host: '' }
+          - { os: macos-latest, host: '' }
+          - { os: windows-latest, host: '-x86_64-pc-windows-msvc' }
+          - { os: windows-latest, host: '-i686-pc-windows-msvc' }
         toolchain: [1.45.0, stable, beta, nightly]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.target.os }}
 
     steps:
       - uses: actions/checkout@v3
-      - name: Install Rust toolchain ${{ matrix.toolchain }} on ${{ matrix.os }}
+      - name: Install Rust toolchain ${{ matrix.toolchain }}${{ matrix.target.host }} on ${{ matrix.target.os }}
         run: |
-          rustup toolchain install ${{ matrix.toolchain }} --profile minimal --component rustfmt clippy
-          rustup default ${{ matrix.toolchain }}
+          rustup toolchain install ${{ matrix.toolchain }}${{ matrix.target.host }} --profile minimal --component rustfmt clippy
+          rustup default ${{ matrix.toolchain }}${{ matrix.target.host }}
 
       # We install a known-to-have-rustfmt version of the nightly toolchain
       # in order to run the nightly version of rustfmt, which supports rules
       # that we depend upon. When updating, pick a suitable nightly version
       # from https://rust-lang.github.io/rustup-components-history/
       # See .rustfmt.toml for the list of unstable features.
-      - if: ${{ matrix.toolchain == 'nightly' && matrix.os == 'ubuntu-latest' }}
+      - if: ${{ matrix.toolchain == 'nightly' && matrix.target.os == 'ubuntu-latest' }}
         env:
           KNOWN_TO_HAVE_RUSTFMT: nightly-2022-06-07
         run: |
