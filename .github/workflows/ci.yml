@@ -37,8 +37,7 @@ jobs:
           rustup toolchain install $KNOWN_TO_HAVE_RUSTFMT --profile minimal --component rustfmt clippy
           cargo +$KNOWN_TO_HAVE_RUSTFMT fmt --all -- --check
 
-      - if: ${{ matrix.toolchain != '1.45.0' }}
-        run: cargo clippy --all-features -- -D warnings
+      - run: cargo clippy --all-features -- -D warnings
         env:
           CC: clang
       - run: cargo build --verbose
