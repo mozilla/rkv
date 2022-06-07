@@ -37,25 +37,19 @@ jobs:
       - run: cargo build --verbose
 
       - name: Test with all features
-        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo test --all --verbose
 
       - name: Test with no default features
-        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo test --lib --no-default-features --verbose
 
       - name: Test with db-dup-sort
-        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo test --lib --no-default-features --features "db-dup-sort" --verbose
 
       - name: Test with db-int-key
-        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo test --lib --no-default-features --features "db-int-key" --verbose
 
       - name: Test in release mode
-        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo test --release --all --verbose
 
       - name: Run all examples
-        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: ./run-all-examples.sh
