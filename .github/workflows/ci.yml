@@ -59,3 +59,4 @@ jobs:
 
       - name: Run all examples
         run: ./run-all-examples.sh
+        shell: bash
