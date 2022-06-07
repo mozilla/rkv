@@ -15,8 +15,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Rust toolchain
+      - uses: actions/checkout@v3
+      - name: Install Rust toolchain ${{ matrix.toolchain }} on ${{ matrix.os }}
         run:
           rustup toolchain install ${{ matrix.toolchain }} --profile minimal --component rustfmt clippy
           rustup default ${{ matrix.toolchain }}
