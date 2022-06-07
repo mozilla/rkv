@@ -1,9 +1,18 @@
-comment_width = 90
-force_multiline_blocks = true
-imports_layout = "Vertical"
 match_block_trailing_comma = true
 max_width = 120
-merge_imports = true
-reorder_impl_items = true
 use_small_heuristics = "Off"
+
+### unstable, nightly-only
+
+# https://github.com/rust-lang/rustfmt/issues/3349
+comment_width = 90
+# https://github.com/rust-lang/rustfmt/issues/3374
+force_multiline_blocks = true
+# https://github.com/rust-lang/rustfmt/issues/4991
+imports_granularity="Crate"
+# https://github.com/rust-lang/rustfmt/issues/3361
+imports_layout = "Vertical"
+# https://github.com/rust-lang/rustfmt/issues/3363
+reorder_impl_items = true
+# https://github.com/rust-lang/rustfmt/issues/3347
 wrap_comments = true
