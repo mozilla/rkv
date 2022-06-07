@@ -38,6 +38,8 @@ jobs:
           cargo +$KNOWN_TO_HAVE_RUSTFMT fmt --all -- --check
 
       - run: cargo clippy --all-features -- -D warnings
+        env:
+          CC: clang
       - run: cargo build --verbose
 
       - name: Test with all features
