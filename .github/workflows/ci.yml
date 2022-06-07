@@ -33,10 +33,10 @@ jobs:
 
       - if: ${{ matrix.toolchain == 'nightly' }}
         run: |
-          rustup toolchain install $KNOWN_TO_HAVE_RUSTFMT --profile minimal --component rustfmt clippy
-          cargo +$KNOWN_TO_HAVE_RUSTFMT fmt --all -- --check
+          rustup toolchain install ${{ env.KNOWN_TO_HAVE_RUSTFMT }} --profile minimal --component rustfmt clippy
+          cargo +${{ env.KNOWN_TO_HAVE_RUSTFMT }} fmt --all -- --check
       - if: ${{ matrix.toolchain == 'nightly' }}
-        run: cargo +$KNOWN_TO_HAVE_RUSTFMT clippy --all-features -- -D warnings
+        run: cargo +${{ env.KNOWN_TO_HAVE_RUSTFMT }} clippy --all-features -- -D warnings
         env:
           CC: clang
 
