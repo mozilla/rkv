@@ -83,6 +83,7 @@ pub enum StoreError {
     #[error("data error: {0:?}")]
     DataError(#[from] DataError),
 
+    #[cfg(feature = "lmdb")]
     #[error("lmdb backend error: {0}")]
     LmdbError(lmdb::Error),
 
