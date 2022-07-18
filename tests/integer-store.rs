@@ -16,7 +16,7 @@ use serde_derive::Serialize;
 use tempfile::Builder;
 
 use rkv::{
-    backend::Lmdb,
+    backend::SafeMode,
     PrimitiveInt,
     Rkv,
     StoreOptions,
@@ -28,7 +28,7 @@ fn test_integer_keys() {
     let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
 
-    let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
+    let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
     let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
     macro_rules! test_integer_keys {

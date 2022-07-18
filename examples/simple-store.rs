@@ -13,11 +13,10 @@ use tempfile::Builder;
 
 use rkv::{
     backend::{
-        BackendStat,
-        Lmdb,
-        LmdbDatabase,
-        LmdbEnvironment,
-        LmdbRwTransaction,
+        SafeMode,
+        SafeModeDatabase,
+        SafeModeEnvironment,
+        SafeModeRwTransaction,
     },
     Manager,
     Rkv,
@@ -25,8 +24,8 @@ use rkv::{
     Value,
 };
 
-type MultiStore = rkv::MultiStore<LmdbDatabase>;
-type Writer<'w> = rkv::Writer<LmdbRwTransaction<'w>>;
+type MultiStore = rkv::MultiStore<SafeModeDatabase>;
+type Writer<'w> = rkv::Writer<SafeModeRwTransaction<'w>>;
 
 fn getput<'w, 's>(store: MultiStore, writer: &'w mut Writer, ids: &'s mut Vec<String>) {
     let keys = vec!["str1", "str2", "str3"];
@@ -62,8 +61,8 @@ fn main() {
     let p = root.path();
 
     // The manager enforces that each process opens the same lmdb environment at most once
-    let mut manager = Manager::<LmdbEnvironment>::singleton().write().unwrap();
-    let created_arc = manager.get_or_create(p, Rkv::new::<Lmdb>).unwrap();
+    let mut manager = Manager::<SafeModeEnvironment>::singleton().write().unwrap();
+    let created_arc = manager.get_or_create(p, Rkv::new::<SafeMode>).unwrap();
     let k = created_arc.read().unwrap();
 
     // Creates a store called "store"
@@ -189,6 +188,4 @@ fn main() {
         println!("Get from store value: {:?}", store.get(&reader, "foo").unwrap());
         println!("Get from another store value: {:?}", another_store.get(&reader, "foo").unwrap());
     }
-
-    println!("Environment statistics: btree depth = {}", k.stat().unwrap().depth());
 }

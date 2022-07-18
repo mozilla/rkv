@@ -15,11 +15,14 @@ use std::{
 
 use tempfile::Builder;
 
+#[cfg(feature = "lmdb")]
+use rkv::backend::{
+    Lmdb,
+    LmdbEnvironment,
+};
 use rkv::{
     backend::{
         BackendEnvironmentBuilder,
-        Lmdb,
-        LmdbEnvironment,
         SafeMode,
         SafeModeEnvironment,
     },
@@ -30,6 +33,7 @@ use rkv::{
 };
 
 /// Test that a manager can be created with simple type inference.
+#[cfg(feature = "lmdb")]
 #[test]
 #[allow(clippy::let_underscore_lock)]
 fn test_simple() {
@@ -48,6 +52,7 @@ fn test_simple_safe() {
 }
 
 /// Test that a shared Rkv instance can be created with simple type inference.
+#[cfg(feature = "lmdb")]
 #[test]
 fn test_simple_2() {
     type Manager = rkv::Manager<LmdbEnvironment>;
@@ -72,6 +77,7 @@ fn test_simple_safe_2() {
 }
 
 /// Test that the manager will return the same Rkv instance each time for each path.
+#[cfg(feature = "lmdb")]
 #[test]
 fn test_same() {
     type Manager = rkv::Manager<LmdbEnvironment>;
@@ -104,6 +110,7 @@ fn test_same_safe() {
 }
 
 /// Test that the manager will return the same Rkv instance each time for each path.
+#[cfg(feature = "lmdb")]
 #[test]
 fn test_same_with_capacity() {
     type Manager = rkv::Manager<LmdbEnvironment>;

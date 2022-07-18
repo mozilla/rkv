@@ -9,6 +9,7 @@
 // specific language governing permissions and limitations under the License.
 
 mod common;
+#[cfg(feature = "lmdb")]
 mod impl_lmdb;
 mod impl_safe;
 mod traits;
@@ -16,6 +17,7 @@ mod traits;
 pub use common::*;
 pub use traits::*;
 
+#[cfg(feature = "lmdb")]
 pub use impl_lmdb::{
     ArchMigrateError as LmdbArchMigrateError,
     ArchMigrateResult as LmdbArchMigrateResult,

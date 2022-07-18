@@ -93,7 +93,7 @@ mod tests {
         let root = Builder::new().prefix("test_integer_keys").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
-        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
         let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
         macro_rules! test_integer_keys {
@@ -118,7 +118,7 @@ mod tests {
         let root = Builder::new().prefix("test_integer_clear").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
-        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
         let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
         {
@@ -149,7 +149,7 @@ mod tests {
         let root = Builder::new().prefix("test_integer_dup").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
-        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
         let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
         {
@@ -180,7 +180,7 @@ mod tests {
         let root = Builder::new().prefix("test_integer_del").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
-        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
         let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
         {
@@ -228,7 +228,7 @@ mod tests {
         fs::create_dir_all(root.path()).expect("dir created");
 
         {
-            let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+            let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
             let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
             let mut writer = k.write().expect("writer");
@@ -242,7 +242,7 @@ mod tests {
         }
 
         {
-            let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+            let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
             let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
             let reader = k.read().expect("reader");
@@ -257,7 +257,7 @@ mod tests {
         let root = Builder::new().prefix("test_integer_intertwine_read_write").tempdir().expect("tempdir");
         fs::create_dir_all(root.path()).expect("dir created");
 
-        let k = Rkv::new::<backend::Lmdb>(root.path()).expect("new succeeded");
+        let k = Rkv::new::<backend::SafeMode>(root.path()).expect("new succeeded");
         let s = k.open_integer("s", StoreOptions::create()).expect("open");
 
         {

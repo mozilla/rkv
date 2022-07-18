@@ -45,7 +45,7 @@
 //! ## Basic Usage
 //! ```
 //! use rkv::{Manager, Rkv, SingleStore, Value, StoreOptions};
-//! use rkv::backend::{Lmdb, LmdbEnvironment};
+//! use rkv::backend::{SafeMode, SafeModeEnvironment};
 //! use std::fs;
 //! use tempfile::Builder;
 //!
@@ -64,8 +64,8 @@
 //! // The `Manager` enforces that each process opens the same environment at most once by
 //! // caching a handle to each environment that it opens. Use it to retrieve the handle
 //! // to an opened environment—or create one if it hasn't already been opened:
-//! let mut manager = Manager::<LmdbEnvironment>::singleton().write().unwrap();
-//! let created_arc = manager.get_or_create(path, Rkv::new::<Lmdb>).unwrap();
+//! let mut manager = Manager::<SafeModeEnvironment>::singleton().write().unwrap();
+//! let created_arc = manager.get_or_create(path, Rkv::new::<SafeMode>).unwrap();
 //! let env = created_arc.read().unwrap();
 //!
 //! // Then you can use the environment handle to get a handle to a datastore:
@@ -208,6 +208,7 @@ mod manager;
 mod readwrite;
 
 pub mod backend;
+#[cfg(feature = "lmdb")]
 pub mod migrator;
 pub mod store;
 pub mod value;
@@ -224,6 +225,7 @@ pub use error::{
     StoreError,
 };
 pub use manager::Manager;
+#[cfg(feature = "lmdb")]
 pub use migrator::Migrator;
 pub use readwrite::{
     Readable,

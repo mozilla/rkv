@@ -27,11 +27,12 @@ use std::{
 
 use lazy_static::lazy_static;
 
+#[cfg(feature = "lmdb")]
+use crate::backend::LmdbEnvironment;
 use crate::{
     backend::{
         BackendEnvironment,
         BackendEnvironmentBuilder,
-        LmdbEnvironment,
         SafeModeEnvironment,
     },
     error::{
@@ -47,8 +48,12 @@ type Result<T> = result::Result<T, StoreError>;
 type CloseResult<T> = result::Result<T, CloseError>;
 type SharedRkv<E> = Arc<RwLock<Rkv<E>>>;
 
+#[cfg(feature = "lmdb")]
 lazy_static! {
     static ref MANAGER_LMDB: RwLock<Manager<LmdbEnvironment>> = RwLock::new(Manager::new());
+}
+
+lazy_static! {
     static ref MANAGER_SAFE_MODE: RwLock<Manager<SafeModeEnvironment>> = RwLock::new(Manager::new());
 }
 
@@ -174,6 +179,7 @@ where
     }
 }
 
+#[cfg(feature = "lmdb")]
 impl Manager<LmdbEnvironment> {
     pub fn singleton() -> &'static RwLock<Manager<LmdbEnvironment>> {
         &*MANAGER_LMDB
@@ -195,9 +201,11 @@ mod tests {
 
     use tempfile::Builder;
 
+    #[cfg(feature = "lmdb")]
     use backend::Lmdb;
 
     /// Test that one can mutate managed Rkv instances in surprising ways.
+    #[cfg(feature = "lmdb")]
     #[test]
     fn test_mutate_managed_rkv() {
         let mut manager = Manager::<LmdbEnvironment>::new();

@@ -993,7 +993,7 @@ fn test_store_multiple_thread_safe() {
                 Ok(Some(Value::U64(value))) => value,
                 Ok(Some(_)) => panic!("value type unexpected"),
                 Ok(None) => panic!("value not found"),
-                Err(err) => panic!(err),
+                Err(err) => panic!("{}", err),
             };
             assert_eq!(value, i);
             value

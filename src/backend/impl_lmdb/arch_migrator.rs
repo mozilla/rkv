@@ -801,10 +801,10 @@ mod tests {
 
         loop {
             match ref_file.read(ref_buf) {
-                Err(err) => panic!(err),
+                Err(err) => panic!("{}", err),
                 Ok(ref_len) => {
                     match new_file.read(new_buf) {
-                        Err(err) => panic!(err),
+                        Err(err) => panic!("{}", err),
                         Ok(new_len) => {
                             assert_eq!(ref_len, new_len);
                             if ref_len == 0 {
