@@ -25,6 +25,7 @@ jobs:
           - { os: windows-latest, host: '-x86_64-pc-windows-msvc' }
           - { os: windows-latest, host: '-i686-pc-windows-msvc' }
         toolchain: [1.45.0, stable, beta, nightly]
+      fail-fast: false
 
     runs-on: ${{ matrix.target.os }}
 
