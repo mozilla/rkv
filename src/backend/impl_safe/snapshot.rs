@@ -38,7 +38,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub(crate) fn new(flags: Option<DatabaseFlagsImpl>) -> Snapshot {
         Snapshot {
-            flags: flags.unwrap_or_else(DatabaseFlagsImpl::default),
+            flags: flags.unwrap_or_default(),
             map: Default::default(),
         }
     }

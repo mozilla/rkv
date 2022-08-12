@@ -163,7 +163,7 @@ impl EnvironmentImpl {
     fn deserialize(bytes: &[u8], discard_if_corrupted: bool) -> Result<(DatabaseArena, DatabaseNameMap), ErrorImpl> {
         let mut arena = DatabaseArena::new();
         let mut name_map = HashMap::new();
-        let data: HashMap<_, _> = match bincode::deserialize(&bytes) {
+        let data: HashMap<_, _> = match bincode::deserialize(bytes) {
             Err(_) if discard_if_corrupted => Ok(HashMap::new()),
             result => result,
         }?;
@@ -320,6 +320,6 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         // they're both currently unimplemented with this storage backend.
         let mut db_filename = self.path.clone();
         db_filename.push(DEFAULT_DB_FILENAME);
-        return vec![db_filename];
+        vec![db_filename]
     }
 }
