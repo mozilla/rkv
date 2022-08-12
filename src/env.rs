@@ -11,38 +11,19 @@
 use std::{
     fs,
     os::raw::c_uint,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
 };
 
 #[cfg(any(feature = "db-dup-sort", feature = "db-int-key"))]
-use crate::backend::{
-    BackendDatabaseFlags,
-    DatabaseFlags,
-};
+use crate::backend::{BackendDatabaseFlags, DatabaseFlags};
 use crate::{
     backend::{
-        BackendEnvironment,
-        BackendEnvironmentBuilder,
-        BackendRoCursorTransaction,
-        BackendRwCursorTransaction,
-        SafeModeError,
+        BackendEnvironment, BackendEnvironmentBuilder, BackendRoCursorTransaction,
+        BackendRwCursorTransaction, SafeModeError,
     },
-    error::{
-        CloseError,
-        StoreError,
-    },
-    readwrite::{
-        Reader,
-        Writer,
-    },
-    store::{
-        single::SingleStore,
-        CloseOptions,
-        Options as StoreOptions,
-    },
+    error::{CloseError, StoreError},
+    readwrite::{Reader, Writer},
+    store::{single::SingleStore, CloseOptions, Options as StoreOptions},
 };
 
 #[cfg(feature = "db-dup-sort")]
@@ -190,22 +171,28 @@ where
         T: Into<Option<&'s str>>,
     {
         if opts.create {
-            self.env.create_db(name.into(), opts.flags).map_err(|e| {
-                match e.into() {
+            self.env
+                .create_db(name.into(), opts.flags)
+                .map_err(|e| match e.into() {
                     #[cfg(feature = "lmdb")]
-                    StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
-                    StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
+                    StoreError::LmdbError(lmdb::Error::BadRslot) => {
+                        StoreError::open_during_transaction()
+                    }
+                    StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => {
+                        StoreError::open_during_transaction()
+                    }
                     e => e,
-                }
-            })
+                })
         } else {
-            self.env.open_db(name.into()).map_err(|e| {
-                match e.into() {
-                    #[cfg(feature = "lmdb")]
-                    StoreError::LmdbError(lmdb::Error::BadRslot) => StoreError::open_during_transaction(),
-                    StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => StoreError::open_during_transaction(),
-                    e => e,
+            self.env.open_db(name.into()).map_err(|e| match e.into() {
+                #[cfg(feature = "lmdb")]
+                StoreError::LmdbError(lmdb::Error::BadRslot) => {
+                    StoreError::open_during_transaction()
                 }
+                StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => {
+                    StoreError::open_during_transaction()
+                }
+                e => e,
             })
         }
     }

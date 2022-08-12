@@ -9,23 +9,13 @@
 // specific language governing permissions and limitations under the License.
 #![allow(dead_code)] // TODO: Get rid of unused struct members
 
-use std::{
-    collections::HashMap,
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use super::{
-    snapshot::Snapshot,
-    DatabaseImpl,
-    EnvironmentImpl,
-    ErrorImpl,
-    RoCursorImpl,
-    WriteFlagsImpl,
+    snapshot::Snapshot, DatabaseImpl, EnvironmentImpl, ErrorImpl, RoCursorImpl, WriteFlagsImpl,
 };
 use crate::backend::traits::{
-    BackendRoCursorTransaction,
-    BackendRoTransaction,
-    BackendRwCursorTransaction,
+    BackendRoCursorTransaction, BackendRoTransaction, BackendRwCursorTransaction,
     BackendRwTransaction,
 };
 
@@ -37,8 +27,16 @@ pub struct RoTransactionImpl<'t> {
 }
 
 impl<'t> RoTransactionImpl<'t> {
-    pub(crate) fn new(env: &'t EnvironmentImpl, idx: Arc<()>) -> Result<RoTransactionImpl<'t>, ErrorImpl> {
-        let snapshots = env.dbs()?.arena.iter().map(|(id, db)| (DatabaseImpl(id), db.snapshot())).collect();
+    pub(crate) fn new(
+        env: &'t EnvironmentImpl,
+        idx: Arc<()>,
+    ) -> Result<RoTransactionImpl<'t>, ErrorImpl> {
+        let snapshots = env
+            .dbs()?
+            .arena
+            .iter()
+            .map(|(id, db)| (DatabaseImpl(id), db.snapshot()))
+            .collect();
         Ok(RoTransactionImpl {
             env,
             snapshots,
@@ -78,8 +76,16 @@ pub struct RwTransactionImpl<'t> {
 }
 
 impl<'t> RwTransactionImpl<'t> {
-    pub(crate) fn new(env: &'t EnvironmentImpl, idx: Arc<()>) -> Result<RwTransactionImpl<'t>, ErrorImpl> {
-        let snapshots = env.dbs()?.arena.iter().map(|(id, db)| (DatabaseImpl(id), db.snapshot())).collect();
+    pub(crate) fn new(
+        env: &'t EnvironmentImpl,
+        idx: Arc<()>,
+    ) -> Result<RwTransactionImpl<'t>, ErrorImpl> {
+        let snapshots = env
+            .dbs()?
+            .arena
+            .iter()
+            .map(|(id, db)| (DatabaseImpl(id), db.snapshot()))
+            .collect();
         Ok(RwTransactionImpl {
             env,
             snapshots,
@@ -99,16 +105,34 @@ impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
     }
 
     #[cfg(not(feature = "db-dup-sort"))]
-    fn put(&mut self, db: &Self::Database, key: &[u8], value: &[u8], _flags: Self::Flags) -> Result<(), Self::Error> {
-        let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+    fn put(
+        &mut self,
+        db: &Self::Database,
+        key: &[u8],
+        value: &[u8],
+        _flags: Self::Flags,
+    ) -> Result<(), Self::Error> {
+        let snapshot = self
+            .snapshots
+            .get_mut(db)
+            .ok_or_else(|| ErrorImpl::DbIsForeignError)?;
         snapshot.put(key, value);
         Ok(())
     }
 
     #[cfg(feature = "db-dup-sort")]
-    fn put(&mut self, db: &Self::Database, key: &[u8], value: &[u8], _flags: Self::Flags) -> Result<(), Self::Error> {
+    fn put(
+        &mut self,
+        db: &Self::Database,
+        key: &[u8],
+        value: &[u8],
+        _flags: Self::Flags,
+    ) -> Result<(), Self::Error> {
         use super::DatabaseFlagsImpl;
-        let snapshot = self.snapshots.get_mut(db).ok_or(ErrorImpl::DbIsForeignError)?;
+        let snapshot = self
+            .snapshots
+            .get_mut(db)
+            .ok_or(ErrorImpl::DbIsForeignError)?;
         if snapshot.flags().contains(DatabaseFlagsImpl::DUP_SORT) {
             snapshot.put_dup(key, value);
         } else {
@@ -119,24 +143,40 @@ impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
 
     #[cfg(not(feature = "db-dup-sort"))]
     fn del(&mut self, db: &Self::Database, key: &[u8]) -> Result<(), Self::Error> {
-        let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        let snapshot = self
+            .snapshots
+            .get_mut(db)
+            .ok_or_else(|| ErrorImpl::DbIsForeignError)?;
         let deleted = snapshot.del(key);
         Ok(deleted.ok_or_else(|| ErrorImpl::KeyValuePairNotFound)?)
     }
 
     #[cfg(feature = "db-dup-sort")]
-    fn del(&mut self, db: &Self::Database, key: &[u8], value: Option<&[u8]>) -> Result<(), Self::Error> {
+    fn del(
+        &mut self,
+        db: &Self::Database,
+        key: &[u8],
+        value: Option<&[u8]>,
+    ) -> Result<(), Self::Error> {
         use super::DatabaseFlagsImpl;
-        let snapshot = self.snapshots.get_mut(db).ok_or(ErrorImpl::DbIsForeignError)?;
+        let snapshot = self
+            .snapshots
+            .get_mut(db)
+            .ok_or(ErrorImpl::DbIsForeignError)?;
         let deleted = match (value, snapshot.flags()) {
-            (Some(value), flags) if flags.contains(DatabaseFlagsImpl::DUP_SORT) => snapshot.del_exact(key, value),
+            (Some(value), flags) if flags.contains(DatabaseFlagsImpl::DUP_SORT) => {
+                snapshot.del_exact(key, value)
+            }
             _ => snapshot.del(key),
         };
         deleted.ok_or(ErrorImpl::KeyValuePairNotFound)
     }
 
     fn clear_db(&mut self, db: &Self::Database) -> Result<(), Self::Error> {
-        let snapshot = self.snapshots.get_mut(db).ok_or(ErrorImpl::DbIsForeignError)?;
+        let snapshot = self
+            .snapshots
+            .get_mut(db)
+            .ok_or(ErrorImpl::DbIsForeignError)?;
         snapshot.clear();
         Ok(())
     }

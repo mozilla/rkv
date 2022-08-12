@@ -4,12 +4,6 @@ on: [push, pull_request]
 
 env:
   RUST_BACKTRACE: 1
-  # We install a known-to-have-rustfmt version of the nightly toolchain
-  # in order to run the nightly version of rustfmt, which supports rules
-  # that we depend upon. When updating, pick a suitable nightly version
-  # from https://rust-lang.github.io/rustup-components-history/
-  # See .rustfmt.toml for the list of unstable features.
-  KNOWN_TO_HAVE_RUSTFMT: nightly-2022-08-12
 
 defaults:
   run:
@@ -37,11 +31,7 @@ jobs:
           rustup default ${{ matrix.toolchain }}${{ matrix.target.host }}
 
       - if: ${{ matrix.toolchain == 'nightly' }}
-        run: |
-          rustup toolchain install $KNOWN_TO_HAVE_RUSTFMT --profile minimal --component rustfmt clippy
-          cargo +$KNOWN_TO_HAVE_RUSTFMT fmt --all -- --check
-      - if: ${{ matrix.toolchain == 'nightly' }}
-        run: cargo +$KNOWN_TO_HAVE_RUSTFMT clippy --all-features -- -D warnings
+        run: cargo clippy --all-features -- -D warnings
         env:
           CC: clang
 

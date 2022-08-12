@@ -14,17 +14,8 @@ use std::fs;
 use tempfile::Builder;
 
 use rkv::{
-    backend::{
-        SafeMode,
-        SafeModeDatabase,
-        SafeModeRoCursor,
-        SafeModeRwTransaction,
-    },
-    Readable,
-    Rkv,
-    StoreOptions,
-    Value,
-    Writer,
+    backend::{SafeMode, SafeModeDatabase, SafeModeRoCursor, SafeModeRwTransaction},
+    Readable, Rkv, StoreOptions, Value, Writer,
 };
 
 /// Consider a struct like this:
@@ -46,7 +37,10 @@ type MultiStore = rkv::MultiStore<SafeModeDatabase>;
 
 #[test]
 fn read_many() {
-    let root = Builder::new().prefix("test_txns").tempdir().expect("tempdir");
+    let root = Builder::new()
+        .prefix("test_txns")
+        .tempdir()
+        .expect("tempdir");
     fs::create_dir_all(root.path()).expect("dir created");
     let k = Rkv::new::<SafeMode>(root.path()).expect("new succeeded");
     let samplestore = k.open_single("s", StoreOptions::create()).expect("open");
@@ -97,11 +91,9 @@ where
     store
         .get(txn, field)
         .expect("get iterator")
-        .map(|id| {
-            match id.expect("field") {
-                (_, Value::U64(id)) => id,
-                _ => panic!("getting value in iter"),
-            }
+        .map(|id| match id.expect("field") {
+            (_, Value::U64(id)) => id,
+            _ => panic!("getting value in iter"),
         })
         .collect::<Vec<u64>>()
 }
@@ -122,9 +114,16 @@ where
         .collect::<Vec<String>>()
 }
 
-fn put_sample(txn: &mut Writer<SafeModeRwTransaction>, samplestore: SingleStore, id: u64, value: &str) {
+fn put_sample(
+    txn: &mut Writer<SafeModeRwTransaction>,
+    samplestore: SingleStore,
+    id: u64,
+    value: &str,
+) {
     let idbytes = id.to_be_bytes();
-    samplestore.put(txn, &idbytes, &Value::Str(value)).expect("put id");
+    samplestore
+        .put(txn, &idbytes, &Value::Str(value))
+        .expect("put id");
 }
 
 fn put_id_field(txn: &mut Writer<SafeModeRwTransaction>, store: MultiStore, field: &str, id: u64) {

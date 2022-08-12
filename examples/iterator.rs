@@ -7,25 +7,13 @@
 //!
 //!     cargo run --example iterator
 
-use std::{
-    fs,
-    str,
-};
+use std::{fs, str};
 
 use tempfile::Builder;
 
 use rkv::{
-    backend::{
-        SafeMode,
-        SafeModeDatabase,
-        SafeModeEnvironment,
-    },
-    Manager,
-    Rkv,
-    SingleStore,
-    StoreError,
-    StoreOptions,
-    Value,
+    backend::{SafeMode, SafeModeDatabase, SafeModeEnvironment},
+    Manager, Rkv, SingleStore, StoreError, StoreOptions, Value,
 };
 
 fn main() {
@@ -67,7 +55,10 @@ fn main() {
     }
 }
 
-fn populate_store(k: &Rkv<SafeModeEnvironment>, store: SingleStore<SafeModeDatabase>) -> Result<(), StoreError> {
+fn populate_store(
+    k: &Rkv<SafeModeEnvironment>,
+    store: SingleStore<SafeModeDatabase>,
+) -> Result<(), StoreError> {
     let mut writer = k.write()?;
     for (country, city) in vec![
         ("Canada", Value::Str("Ottawa")),
