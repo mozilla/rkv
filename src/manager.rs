@@ -9,20 +9,11 @@
 // specific language governing permissions and limitations under the License.
 
 use std::{
-    collections::{
-        btree_map::Entry,
-        BTreeMap,
-    },
+    collections::{btree_map::Entry, BTreeMap},
     os::raw::c_uint,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
     result,
-    sync::{
-        Arc,
-        RwLock,
-    },
+    sync::{Arc, RwLock},
 };
 
 use lazy_static::lazy_static;
@@ -30,15 +21,8 @@ use lazy_static::lazy_static;
 #[cfg(feature = "lmdb")]
 use crate::backend::LmdbEnvironment;
 use crate::{
-    backend::{
-        BackendEnvironment,
-        BackendEnvironmentBuilder,
-        SafeModeEnvironment,
-    },
-    error::{
-        CloseError,
-        StoreError,
-    },
+    backend::{BackendEnvironment, BackendEnvironmentBuilder, SafeModeEnvironment},
+    error::{CloseError, StoreError},
     helpers::canonicalize_path,
     store::CloseOptions,
     Rkv,
@@ -54,7 +38,8 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref MANAGER_SAFE_MODE: RwLock<Manager<SafeModeEnvironment>> = RwLock::new(Manager::new());
+    static ref MANAGER_SAFE_MODE: RwLock<Manager<SafeModeEnvironment>> =
+        RwLock::new(Manager::new());
 }
 
 /// A process is only permitted to have one open handle to each Rkv environment. This
@@ -111,12 +96,17 @@ where
             Entry::Vacant(e) => {
                 let k = Arc::new(RwLock::new(f(e.key().as_path())?));
                 e.insert(k).clone()
-            },
+            }
         })
     }
 
     /// Return the open env at `path` with `capacity`, or create it by calling `f`.
-    pub fn get_or_create_with_capacity<'p, F, P>(&mut self, path: P, capacity: c_uint, f: F) -> Result<SharedRkv<E>>
+    pub fn get_or_create_with_capacity<'p, F, P>(
+        &mut self,
+        path: P,
+        capacity: c_uint,
+        f: F,
+    ) -> Result<SharedRkv<E>>
     where
         F: FnOnce(&Path, c_uint) -> Result<Rkv<E>>,
         P: Into<&'p Path>,
@@ -131,12 +121,17 @@ where
             Entry::Vacant(e) => {
                 let k = Arc::new(RwLock::new(f(e.key().as_path(), capacity)?));
                 e.insert(k).clone()
-            },
+            }
         })
     }
 
     /// Return a new Rkv environment from the builder, or create it by calling `f`.
-    pub fn get_or_create_from_builder<'p, F, P, B>(&mut self, path: P, builder: B, f: F) -> Result<SharedRkv<E>>
+    pub fn get_or_create_from_builder<'p, F, P, B>(
+        &mut self,
+        path: P,
+        builder: B,
+        f: F,
+    ) -> Result<SharedRkv<E>>
     where
         F: FnOnce(&Path, B) -> Result<Rkv<E>>,
         P: Into<&'p Path>,
@@ -152,7 +147,7 @@ where
             Entry::Vacant(e) => {
                 let k = Arc::new(RwLock::new(f(e.key().as_path(), builder)?));
                 e.insert(k).clone()
-            },
+            }
         })
     }
 
@@ -169,12 +164,15 @@ where
         };
         match self.environments.entry(canonical) {
             Entry::Vacant(_) => Ok(()),
-            Entry::Occupied(e) if Arc::strong_count(e.get()) > 1 => Err(CloseError::EnvironmentStillOpen),
+            Entry::Occupied(e) if Arc::strong_count(e.get()) > 1 => {
+                Err(CloseError::EnvironmentStillOpen)
+            }
             Entry::Occupied(e) => {
-                let env = Arc::try_unwrap(e.remove()).map_err(|_| CloseError::UnknownEnvironmentStillOpen)?;
+                let env = Arc::try_unwrap(e.remove())
+                    .map_err(|_| CloseError::UnknownEnvironmentStillOpen)?;
                 env.into_inner()?.close(options)?;
                 Ok(())
-            },
+            }
         }
     }
 }
@@ -210,14 +208,22 @@ mod tests {
     fn test_mutate_managed_rkv() {
         let mut manager = Manager::<LmdbEnvironment>::new();
 
-        let root1 = Builder::new().prefix("test_mutate_managed_rkv_1").tempdir().expect("tempdir");
+        let root1 = Builder::new()
+            .prefix("test_mutate_managed_rkv_1")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root1.path()).expect("dir created");
         let path1 = root1.path();
-        let arc = manager.get_or_create(path1, Rkv::new::<Lmdb>).expect("created");
+        let arc = manager
+            .get_or_create(path1, Rkv::new::<Lmdb>)
+            .expect("created");
 
         // Arc<RwLock<>> has interior mutability, so we can replace arc's Rkv instance with a new
         // instance that has a different path.
-        let root2 = Builder::new().prefix("test_mutate_managed_rkv_2").tempdir().expect("tempdir");
+        let root2 = Builder::new()
+            .prefix("test_mutate_managed_rkv_2")
+            .tempdir()
+            .expect("tempdir");
         fs::create_dir_all(root2.path()).expect("dir created");
         let path2 = root2.path();
         {
@@ -233,7 +239,9 @@ mod tests {
 
         // Meanwhile, a new Arc for path2 has a different pointer, even though its Rkv's path is
         // the same as arc's current path.
-        let path2_arc = manager.get_or_create(path2, Rkv::new::<Lmdb>).expect("success");
+        let path2_arc = manager
+            .get_or_create(path2, Rkv::new::<Lmdb>)
+            .expect("success");
         assert!(!Arc::ptr_eq(&path2_arc, &arc));
     }
 }
