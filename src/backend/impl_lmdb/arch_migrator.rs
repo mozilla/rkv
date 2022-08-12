@@ -7,6 +7,8 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+#![allow(dead_code)] // TODO: Get rid of unused struct members
+#![allow(clippy::upper_case_acronyms)] // TODO: Consider renaming things like `BRANCH`
 
 //! A utility for migrating data from one LMDB environment to another. Notably, this tool
 //! can migrate data from an enviroment created with a different bit-depth than the
@@ -333,7 +335,7 @@ impl Page {
         }
     }
 
-    fn parse_meta_data(mut cursor: &mut Cursor<&[u8]>, bits: Bits) -> MigrateResult<MetaData> {
+    fn parse_meta_data(cursor: &mut Cursor<&[u8]>, bits: Bits) -> MigrateResult<MetaData> {
         cursor.seek(SeekFrom::Start(page_header_size(bits)))?;
 
         Ok(MetaData {
@@ -342,8 +344,8 @@ impl Page {
             mm_address: cursor.read_uint::<LittleEndian>(bits.size())?,
             mm_mapsize: cursor.read_uint::<LittleEndian>(bits.size())?,
             mm_dbs: Databases {
-                free: Database::new(&mut cursor, bits)?,
-                main: Database::new(&mut cursor, bits)?,
+                free: Database::new(cursor, bits)?,
+                main: Database::new(cursor, bits)?,
             },
             mm_last_pg: cursor.read_uint::<LittleEndian>(bits.size())?,
             mm_txnid: cursor.read_uint::<LittleEndian>(bits.size())?,
@@ -614,7 +616,7 @@ impl Migrator {
         // awaiting completion of an existing one.
         env.create_db(None, meta_data.mm_dbs.main.md_flags)?;
         for (subdb_name, subdb_info) in &subdbs {
-            env.create_db(Some(str::from_utf8(&subdb_name)?), subdb_info.md_flags)?;
+            env.create_db(Some(str::from_utf8(subdb_name)?), subdb_info.md_flags)?;
         }
 
         // Now open the read-write transaction that we'll use to migrate all the data.
@@ -633,7 +635,7 @@ impl Migrator {
         for (subdb_name, subdb_info) in &subdbs {
             let root_page = Rc::new(self.get_page(subdb_info.md_root)?);
             let pairs = self.get_pairs(root_page)?;
-            let db = env.open_db(Some(str::from_utf8(&subdb_name)?))?;
+            let db = env.open_db(Some(str::from_utf8(subdb_name)?))?;
             for (key, value) in pairs {
                 // If we knew that the target database was empty, we could specify
                 // WriteFlags::APPEND to speed up the migration.
@@ -916,7 +918,7 @@ mod tests {
         migrator.migrate(new_env.path())?;
 
         // Dump data from the new env to a new dump file.
-        let mut migrator = Migrator::new(&new_env.path())?;
+        let mut migrator = Migrator::new(new_env.path())?;
         let mut new_dump_file = tempfile()?;
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
@@ -942,7 +944,7 @@ mod tests {
         migrator.migrate(new_env.path())?;
 
         // Dump data from the new env to a new dump file.
-        let mut migrator = Migrator::new(&new_env.path())?;
+        let mut migrator = Migrator::new(new_env.path())?;
         let mut new_dump_file = tempfile()?;
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
@@ -974,7 +976,7 @@ mod tests {
 
         // Confirm that it isn't possible to open the old environment with LMDB.
         assert_eq!(
-            match Environment::new().open(&old_env.path()) {
+            match Environment::new().open(old_env.path()) {
                 Err(err) => err,
                 _ => panic!("opening the environment should have failed"),
             },
@@ -983,11 +985,11 @@ mod tests {
 
         // Migrate data from the old env to a new one.
         let new_env = tempdir()?;
-        let mut migrator = Migrator::new(&old_env.path())?;
+        let mut migrator = Migrator::new(old_env.path())?;
         migrator.migrate(new_env.path())?;
 
         // Dump data from the new env to a new dump file.
-        let mut migrator = Migrator::new(&new_env.path())?;
+        let mut migrator = Migrator::new(new_env.path())?;
         let mut new_dump_file = tempfile()?;
         migrator.dump(Some("subdb"), &new_dump_file)?;
 
@@ -1002,7 +1004,7 @@ mod tests {
         // possible to open the old env with LMDB.
         fs::copy(new_env.path().join("data.mdb"), old_env.path().join("data.mdb"))?;
         fs::copy(new_env.path().join("lock.mdb"), old_env.path().join("lock.mdb"))?;
-        assert!(Environment::new().open(&old_env.path()).is_ok());
+        assert!(Environment::new().open(old_env.path()).is_ok());
 
         Ok(())
     }

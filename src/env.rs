@@ -61,7 +61,7 @@ pub static DEFAULT_MAX_DBS: c_uint = 5;
 /// Wrapper around an `Environment` (e.g. such as an `LMDB` or `SafeMode` environment).
 #[derive(Debug)]
 pub struct Rkv<E> {
-    path: PathBuf,
+    _path: PathBuf,
     env: E,
 }
 
@@ -104,7 +104,7 @@ where
         B: BackendEnvironmentBuilder<'e, Environment = E>,
     {
         Ok(Rkv {
-            path: path.into(),
+            _path: path.into(),
             env: builder.open(path).map_err(|e| e.into())?,
         })
     }

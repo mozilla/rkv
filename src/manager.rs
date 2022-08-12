@@ -182,13 +182,13 @@ where
 #[cfg(feature = "lmdb")]
 impl Manager<LmdbEnvironment> {
     pub fn singleton() -> &'static RwLock<Manager<LmdbEnvironment>> {
-        &*MANAGER_LMDB
+        &MANAGER_LMDB
     }
 }
 
 impl Manager<SafeModeEnvironment> {
     pub fn singleton() -> &'static RwLock<Manager<SafeModeEnvironment>> {
-        &*MANAGER_SAFE_MODE
+        &MANAGER_SAFE_MODE
     }
 }
 

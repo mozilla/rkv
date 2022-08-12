@@ -7,6 +7,7 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+#![allow(dead_code)] // TODO: Get rid of unused struct members
 
 use std::{
     collections::HashMap,
@@ -51,8 +52,8 @@ impl<'t> BackendRoTransaction for RoTransactionImpl<'t> {
     type Error = ErrorImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {
-        let snapshot = self.snapshots.get(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
-        snapshot.get(key).ok_or_else(|| ErrorImpl::KeyValuePairNotFound)
+        let snapshot = self.snapshots.get(db).ok_or(ErrorImpl::DbIsForeignError)?;
+        snapshot.get(key).ok_or(ErrorImpl::KeyValuePairNotFound)
     }
 
     fn abort(self) {
@@ -64,7 +65,7 @@ impl<'t> BackendRoCursorTransaction<'t> for RoTransactionImpl<'t> {
     type RoCursor = RoCursorImpl<'t>;
 
     fn open_ro_cursor(&'t self, db: &Self::Database) -> Result<Self::RoCursor, Self::Error> {
-        let snapshot = self.snapshots.get(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        let snapshot = self.snapshots.get(db).ok_or(ErrorImpl::DbIsForeignError)?;
         Ok(RoCursorImpl(snapshot))
     }
 }
@@ -93,8 +94,8 @@ impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
     type Flags = WriteFlagsImpl;
 
     fn get(&self, db: &Self::Database, key: &[u8]) -> Result<&[u8], Self::Error> {
-        let snapshot = self.snapshots.get(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
-        snapshot.get(key).ok_or_else(|| ErrorImpl::KeyValuePairNotFound)
+        let snapshot = self.snapshots.get(db).ok_or(ErrorImpl::DbIsForeignError)?;
+        snapshot.get(key).ok_or(ErrorImpl::KeyValuePairNotFound)
     }
 
     #[cfg(not(feature = "db-dup-sort"))]
@@ -107,7 +108,7 @@ impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
     #[cfg(feature = "db-dup-sort")]
     fn put(&mut self, db: &Self::Database, key: &[u8], value: &[u8], _flags: Self::Flags) -> Result<(), Self::Error> {
         use super::DatabaseFlagsImpl;
-        let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        let snapshot = self.snapshots.get_mut(db).ok_or(ErrorImpl::DbIsForeignError)?;
         if snapshot.flags().contains(DatabaseFlagsImpl::DUP_SORT) {
             snapshot.put_dup(key, value);
         } else {
@@ -126,16 +127,16 @@ impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
     #[cfg(feature = "db-dup-sort")]
     fn del(&mut self, db: &Self::Database, key: &[u8], value: Option<&[u8]>) -> Result<(), Self::Error> {
         use super::DatabaseFlagsImpl;
-        let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        let snapshot = self.snapshots.get_mut(db).ok_or(ErrorImpl::DbIsForeignError)?;
         let deleted = match (value, snapshot.flags()) {
             (Some(value), flags) if flags.contains(DatabaseFlagsImpl::DUP_SORT) => snapshot.del_exact(key, value),
             _ => snapshot.del(key),
         };
-        Ok(deleted.ok_or_else(|| ErrorImpl::KeyValuePairNotFound)?)
+        deleted.ok_or(ErrorImpl::KeyValuePairNotFound)
     }
 
     fn clear_db(&mut self, db: &Self::Database) -> Result<(), Self::Error> {
-        let snapshot = self.snapshots.get_mut(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        let snapshot = self.snapshots.get_mut(db).ok_or(ErrorImpl::DbIsForeignError)?;
         snapshot.clear();
         Ok(())
     }
@@ -144,7 +145,7 @@ impl<'t> BackendRwTransaction for RwTransactionImpl<'t> {
         let mut dbs = self.env.dbs_mut()?;
 
         for (id, snapshot) in self.snapshots {
-            let db = dbs.arena.get_mut(id.0).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+            let db = dbs.arena.get_mut(id.0).ok_or(ErrorImpl::DbIsForeignError)?;
             db.replace(snapshot);
         }
 
@@ -161,7 +162,7 @@ impl<'t> BackendRwCursorTransaction<'t> for RwTransactionImpl<'t> {
     type RoCursor = RoCursorImpl<'t>;
 
     fn open_ro_cursor(&'t self, db: &Self::Database) -> Result<Self::RoCursor, Self::Error> {
-        let snapshot = self.snapshots.get(db).ok_or_else(|| ErrorImpl::DbIsForeignError)?;
+        let snapshot = self.snapshots.get(db).ok_or(ErrorImpl::DbIsForeignError)?;
         Ok(RoCursorImpl(snapshot))
     }
 }
