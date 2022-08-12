@@ -45,6 +45,10 @@ jobs:
         env:
           CC: clang
 
+      - if: ${{ matrix.toolchain == '1.45.0' }}
+        run: |
+          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> $GITHUB_ENV
+
       - run: cargo build --verbose
 
       - name: Test with all features
