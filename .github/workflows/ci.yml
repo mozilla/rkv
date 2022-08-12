@@ -9,7 +9,7 @@ env:
   # that we depend upon. When updating, pick a suitable nightly version
   # from https://rust-lang.github.io/rustup-components-history/
   # See .rustfmt.toml for the list of unstable features.
-  KNOWN_TO_HAVE_RUSTFMT: nightly-2020-07-12
+  KNOWN_TO_HAVE_RUSTFMT: nightly-2022-08-12
 
 defaults:
   run:
