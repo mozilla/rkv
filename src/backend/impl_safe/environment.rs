@@ -266,7 +266,7 @@ impl<'e> BackendEnvironment<'e> for EnvironmentImpl {
         // TOOD: don't reallocate `name`.
         let key = name.map(String::from);
         let mut dbs = self.dbs.write().map_err(|_| ErrorImpl::EnvPoisonError)?;
-        if dbs.name_map.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs && name != None {
+        if dbs.name_map.keys().filter_map(|k| k.as_ref()).count() >= self.max_dbs && name.is_some() {
             return Err(ErrorImpl::DbsFull);
         }
         let parts = EnvironmentDbsRefMut::from(dbs.deref_mut());

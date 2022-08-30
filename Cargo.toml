@@ -62,11 +62,7 @@ lmdb-rkv = { version = "0.14", optional = true }
 log = "0.4.4"
 ordered-float = "3.0.0"
 paste = "1.0.6"
-# Fixed version.
-# See
-# https://github.com/serde-rs/serde/issues/2255
-# https://github.com/rust-lang/cargo/issues/10954
-serde = {version = "=1.0.142", features = ["derive", "rc"]}
+serde = {version = "1.0.144", features = ["derive", "rc"]}
 serde_derive = "1.0"
 thiserror = "1.0"
 url = "2.0"
