@@ -26,7 +26,7 @@ use rkv::{
 fn test_simple() {
     type Manager = rkv::Manager<LmdbEnvironment>;
 
-    let _ = Manager::singleton().write().unwrap();
+    let _unused = Manager::singleton().write().unwrap();
 }
 
 /// Test that a manager can be created with simple type inference.
@@ -35,7 +35,7 @@ fn test_simple() {
 fn test_simple_safe() {
     type Manager = rkv::Manager<SafeModeEnvironment>;
 
-    let _ = Manager::singleton().write().unwrap();
+    let _unused = Manager::singleton().write().unwrap();
 }
 
 /// Test that a shared Rkv instance can be created with simple type inference.
