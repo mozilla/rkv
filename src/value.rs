@@ -37,7 +37,8 @@ pub enum Type {
 /// We use manual tagging, because <https://github.com/serde-rs/serde/issues/610>.
 impl Type {
     pub fn from_tag(tag: u8) -> Result<Type, DataError> {
-        Type::from_primitive(tag).ok_or(DataError::UnknownType(tag))
+        #![allow(clippy::unnecessary_lazy_evaluations)]
+        Type::from_primitive(tag).ok_or_else(|| DataError::UnknownType(tag))
     }
 
     #[allow(clippy::wrong_self_convention)]
