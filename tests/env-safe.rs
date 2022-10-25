@@ -115,7 +115,7 @@ fn test_open_from_builder_with_dir_safe_1() {
 #[should_panic(expected = "rkv: UnsuitableEnvironmentPath(\"bogus\")")]
 fn test_open_from_builder_with_dir_safe_2() {
     let root = Path::new("bogus");
-    println!("Root path: {:?}", root);
+    println!("Root path: {root:?}");
     assert!(!root.is_dir());
 
     let mut builder = Rkv::environment_builder::<SafeMode>();
