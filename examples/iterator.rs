@@ -35,7 +35,8 @@ fn main() {
     // returns the (key, value) tuples in order.
     let mut iter = store.iter_start(&reader).unwrap();
     while let Some(Ok((country, city))) = iter.next() {
-        println!("{}, {city:?}", str::from_utf8(country).unwrap());
+        let country = str::from_utf8(country).unwrap();
+        println!("{country}, {city:?}");
     }
 
     println!();
