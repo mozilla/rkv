@@ -179,7 +179,7 @@ fn test_open_from_builder_with_dir_1() {
 #[should_panic(expected = "rkv: UnsuitableEnvironmentPath(\"bogus\")")]
 fn test_open_from_builder_with_dir_2() {
     let root = Path::new("bogus");
-    println!("Root path: {:?}", root);
+    println!("Root path: {root:?}");
     assert!(!root.is_dir());
 
     let mut builder = Rkv::environment_builder::<Lmdb>();
@@ -897,10 +897,10 @@ fn test_concurrent_read_transactions_prohibited() {
 
     match second {
         Err(StoreError::ReadTransactionAlreadyExists(t)) => {
-            println!("Thread was {:?}", t);
+            println!("Thread was {t:?}");
         }
         Err(e) => {
-            println!("Got error {:?}", e);
+            println!("Got error {e:?}");
         }
         _ => {
             panic!("Expected error.");
@@ -1045,7 +1045,7 @@ fn test_stat() {
     let k = Rkv::new::<Lmdb>(root.path()).expect("new succeeded");
     for i in 0..5 {
         let sk = k
-            .open_integer(&format!("sk{}", i)[..], StoreOptions::create())
+            .open_integer(&format!("sk{i}")[..], StoreOptions::create())
             .expect("opened");
         {
             let mut writer = k.write().expect("writer");

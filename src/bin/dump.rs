@@ -29,7 +29,7 @@ fn main() -> Result<(), LmdbArchMigrateError> {
                         Some(str) => Some(str),
                     };
                 }
-                str => return Err(format!("arg -{} not recognized", str).into()),
+                str => return Err(format!("arg -{str} not recognized").into()),
             }
         } else {
             if env_path.is_some() {

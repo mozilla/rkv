@@ -545,7 +545,7 @@ impl Migrator {
         out.write_all(b"VERSION=3\n")?;
         out.write_all(b"format=bytevalue\n")?;
         if let Some(database) = database {
-            writeln!(out, "database={}", database)?;
+            writeln!(out, "database={database}")?;
         }
         out.write_all(b"type=btree\n")?;
         writeln!(out, "mapsize={}", meta_data.mm_mapsize)?;
@@ -556,12 +556,12 @@ impl Migrator {
         for (key, value) in pairs {
             out.write_all(b" ")?;
             for byte in key {
-                write!(out, "{:02x}", byte)?;
+                write!(out, "{byte:02x}")?;
             }
             out.write_all(b"\n")?;
             out.write_all(b" ")?;
             for byte in value {
-                write!(out, "{:02x}", byte)?;
+                write!(out, "{byte:02x}")?;
             }
             out.write_all(b"\n")?;
         }

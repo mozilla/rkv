@@ -51,8 +51,8 @@ fn read_many() {
         let mut writer = k.write().expect("env write lock");
 
         for id in 0..30_u64 {
-            let value = format!("value{}", id);
-            let date = format!("2019-06-{}", id);
+            let value = format!("value{id}");
+            let date = format!("2019-06-{id}");
             put_id_field(&mut writer, datestore, &date, id);
             put_id_field(&mut writer, valuestore, &value, id);
             put_sample(&mut writer, samplestore, id, &value);
@@ -60,26 +60,26 @@ fn read_many() {
 
         // now we read in the same transaction
         for id in 0..30_u64 {
-            let value = format!("value{}", id);
-            let date = format!("2019-06-{}", id);
+            let value = format!("value{id}");
+            let date = format!("2019-06-{id}");
             let ids = get_ids_by_field(&writer, datestore, &date);
             let ids2 = get_ids_by_field(&writer, valuestore, &value);
             let samples = get_samples(&writer, samplestore, &ids);
             let samples2 = get_samples(&writer, samplestore, &ids2);
-            println!("{:?}, {:?}", samples, samples2);
+            println!("{samples:?}, {samples2:?}");
         }
     }
 
     {
         let reader = k.read().expect("env read lock");
         for id in 0..30_u64 {
-            let value = format!("value{}", id);
-            let date = format!("2019-06-{}", id);
+            let value = format!("value{id}");
+            let date = format!("2019-06-{id}");
             let ids = get_ids_by_field(&reader, datestore, &date);
             let ids2 = get_ids_by_field(&reader, valuestore, &value);
             let samples = get_samples(&reader, samplestore, &ids);
             let samples2 = get_samples(&reader, samplestore, &ids2);
-            println!("{:?}, {:?}", samples, samples2);
+            println!("{samples:?}, {samples2:?}");
         }
     }
 }
