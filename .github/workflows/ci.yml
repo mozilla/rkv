@@ -1,9 +1,13 @@
 name: CI Build Status
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches: main
 
 env:
   RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
 
 defaults:
   run:
