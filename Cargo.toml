@@ -17,7 +17,7 @@ name = "rkv"
 readme = "README.md"
 repository = "https://github.com/mozilla/rkv"
 version = "0.18.4"
-rust-version = "1.58"
+rust-version = "1.66"
 
 [[bin]]
 name = "rand"
@@ -59,7 +59,7 @@ byteorder = "1"
 id-arena = "2.2"
 lazy_static = "1.1"
 lmdb-rkv = { version = "0.14", optional = true }
-log = "0.4.4"
+log = "0.4.20"
 ordered-float = "3.0.0"
 paste = "1.0.6"
 serde = {version = "1.0.144", features = ["derive", "rc"]}
