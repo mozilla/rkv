@@ -18,7 +18,7 @@ use uuid::{Bytes, Uuid};
 use crate::error::DataError;
 
 /// We define a set of types, associated with simple integers, to annotate values stored
-/// in LMDB. This is to avoid an accidental 'cast' from a value of one type to another.
+/// in the database. This is to avoid an accidental 'cast' from a value of one type to another.
 /// For this reason we don't simply use `deserialize` from the `bincode` crate.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq)]

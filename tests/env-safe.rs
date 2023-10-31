@@ -795,7 +795,7 @@ fn test_isolation_safe() {
     writer.commit().expect("committed");
     assert_eq!(s.get(&reader, "foo").expect("read"), Some(Value::I64(1234)));
 
-    // A new reader sees the committed value. Note that LMDB doesn't allow two
+    // A new reader sees the committed value. Note that Rkv doesn't allow two
     // read transactions to exist in the same thread, so we abort the previous one.
     reader.abort();
     let reader = k.read().expect("reader");
