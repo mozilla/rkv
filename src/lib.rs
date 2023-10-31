@@ -209,8 +209,6 @@ mod manager;
 mod readwrite;
 
 pub mod backend;
-#[cfg(feature = "lmdb")]
-pub mod migrator;
 pub mod store;
 pub mod value;
 
@@ -218,8 +216,6 @@ pub use backend::{DatabaseFlags, EnvironmentFlags, WriteFlags};
 pub use env::Rkv;
 pub use error::{DataError, MigrateError, StoreError};
 pub use manager::Manager;
-#[cfg(feature = "lmdb")]
-pub use migrator::Migrator;
 pub use readwrite::{Readable, Reader, Writer};
 pub use store::{keys::EncodableKey, single::SingleStore, CloseOptions, Options as StoreOptions};
 pub use value::{OwnedValue, Value};
