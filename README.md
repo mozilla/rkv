@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/rkv/badge.svg)](https://docs.rs/rkv/)
 [![Crate](https://img.shields.io/crates/v/rkv.svg)](https://crates.io/crates/rkv)
 
-The [rkv Rust crate](https://crates.io/crates/rkv) is a simple, humane, typed key-value storage solution. It supports multiple backend engines with varying guarantees, such as [LMDB](http://www.lmdb.tech/doc/) for performance, or "SafeMode" for reliability.
+The [rkv Rust crate](https://crates.io/crates/rkv) is a simple, humane, typed key-value storage solution.
 
 ## ⚠️ Warning ⚠️
 
@@ -21,8 +21,6 @@ let shared_rkv = manager.get_or_create(path, Rkv::new::<SafeMode>).unwrap();
 ```
 
 The "SafeMode" backend performs well, with two caveats: the entire database is stored in memory, and write transactions are synchronously written to disk (only on commit).
-
-In the future, it will be advisable to switch to a different backend with better performance guarantees. We're working on either fixing some LMDB crashes, or offering more choices of backend engines (e.g. SQLite).
 
 ## Use
 
@@ -45,8 +43,6 @@ cargo build
 There are several features that you can opt-in and out of when using rkv:
 
 By default, `db-dup-sort` and `db-int-key` features offer high level database APIs which allow multiple values per key, and optimizations around integer-based keys respectively. Opt out of these default features when specifying the rkv dependency in your Cargo.toml file to disable them; doing so avoids a certain amount of overhead required to support them.
-
-To aid fuzzing efforts, `with-asan`, `with-fuzzer`, and `with-fuzzer-no-link` configure the build scripts responsible with compiling the underlying backing engines (e.g. LMDB) to build with these LLMV features enabled. Please refer to the official LLVM/Clang documentation on them for more informatiuon. These features are also disabled by default.
 
 ## Test
 

@@ -39,7 +39,7 @@ use crate::store::integermulti::MultiIntegerStore;
 
 pub static DEFAULT_MAX_DBS: c_uint = 5;
 
-/// Wrapper around an `Environment` (e.g. such as an `LMDB` or `SafeMode` environment).
+/// Wrapper around an `Environment` (e.g. a `SafeMode` environment).
 #[derive(Debug)]
 pub struct Rkv<E> {
     _path: PathBuf,
@@ -174,10 +174,6 @@ where
             self.env
                 .create_db(name.into(), opts.flags)
                 .map_err(|e| match e.into() {
-                    #[cfg(feature = "lmdb")]
-                    StoreError::LmdbError(lmdb::Error::BadRslot) => {
-                        StoreError::open_during_transaction()
-                    }
                     StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => {
                         StoreError::open_during_transaction()
                     }
@@ -185,10 +181,6 @@ where
                 })
         } else {
             self.env.open_db(name.into()).map_err(|e| match e.into() {
-                #[cfg(feature = "lmdb")]
-                StoreError::LmdbError(lmdb::Error::BadRslot) => {
-                    StoreError::open_during_transaction()
-                }
                 StoreError::SafeModeError(SafeModeError::DbsIllegalOpen) => {
                     StoreError::open_during_transaction()
                 }
@@ -204,7 +196,7 @@ where
     E: BackendEnvironment<'e>,
 {
     /// Create a read transaction.  There can be multiple concurrent readers for an
-    /// environment, up to the maximum specified by LMDB (default 126), and you can open
+    /// environment, and you can open
     /// readers while a write transaction is active.
     pub fn read<T>(&'e self) -> Result<Reader<T>, StoreError>
     where
@@ -236,9 +228,7 @@ where
     /// not valid if the environment was opened with `READ_ONLY`.
     ///
     /// Data is always written to disk when `transaction.commit()` is called, but the
-    /// operating system may keep it buffered. LMDB always flushes the OS buffers upon
-    /// commit as well, unless the environment was opened with `NO_SYNC` or in part
-    /// `NO_META_SYNC`.
+    /// operating system may keep it buffered.
     ///
     /// `force`: if true, force a synchronous flush. Otherwise if the environment has the
     /// `NO_SYNC` flag set the flushes will be omitted, and with `MAP_ASYNC` they will
@@ -297,8 +287,7 @@ where
     ///
     /// * In the multi-process case, once a process resizes the map, other processes need
     ///   to either re-open the environment, or call set_map_size with size 0 to update
-    ///   the environment. Otherwise, new transaction creation will fail with
-    ///   `LmdbError::MapResized`.
+    ///   the environment.
     pub fn set_map_size(&self, size: usize) -> Result<(), StoreError> {
         self.env.set_map_size(size).map_err(Into::into)
     }

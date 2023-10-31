@@ -54,7 +54,7 @@ fn main() {
     fs::create_dir_all(root.path()).unwrap();
     let p = root.path();
 
-    // The manager enforces that each process opens the same lmdb environment at most once
+    // The manager enforces that each process opens the same environment at most once
     let mut manager = Manager::<SafeModeEnvironment>::singleton().write().unwrap();
     let created_arc = manager.get_or_create(p, Rkv::new::<SafeMode>).unwrap();
     let k = created_arc.read().unwrap();
