@@ -57,9 +57,6 @@ jobs:
       - name: Test with db-int-key
         run: cargo test --lib --no-default-features --features "db-int-key" --verbose
 
-      - name: Test with LMDB enabled
-        run: cargo test --all --features "lmdb" --verbose
-
       - name: Test in release mode
         run: cargo test --release --all --verbose
 

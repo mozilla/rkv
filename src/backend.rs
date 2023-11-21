@@ -9,26 +9,11 @@
 // specific language governing permissions and limitations under the License.
 
 mod common;
-#[cfg(feature = "lmdb")]
-mod impl_lmdb;
 mod impl_safe;
 mod traits;
 
 pub use common::*;
 pub use traits::*;
-
-#[cfg(feature = "lmdb")]
-pub use impl_lmdb::{
-    ArchMigrateError as LmdbArchMigrateError, ArchMigrateResult as LmdbArchMigrateResult,
-    ArchMigrator as LmdbArchMigrator, DatabaseFlagsImpl as LmdbDatabaseFlags,
-    DatabaseImpl as LmdbDatabase, EnvironmentBuilderImpl as Lmdb,
-    EnvironmentFlagsImpl as LmdbEnvironmentFlags, EnvironmentImpl as LmdbEnvironment,
-    ErrorImpl as LmdbError, InfoImpl as LmdbInfo, IterImpl as LmdbIter,
-    RoCursorImpl as LmdbRoCursor, RoTransactionImpl as LmdbRoTransaction,
-    RwCursorImpl as LmdbRwCursor, RwTransactionImpl as LmdbRwTransaction, StatImpl as LmdbStat,
-    WriteFlagsImpl as LmdbWriteFlags,
-};
-
 pub use impl_safe::{
     DatabaseFlagsImpl as SafeModeDatabaseFlags, DatabaseImpl as SafeModeDatabase,
     EnvironmentBuilderImpl as SafeMode, EnvironmentFlagsImpl as SafeModeEnvironmentFlags,

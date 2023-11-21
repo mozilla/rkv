@@ -18,8 +18,6 @@ use std::{
 
 use lazy_static::lazy_static;
 
-#[cfg(feature = "lmdb")]
-use crate::backend::LmdbEnvironment;
 use crate::{
     backend::{BackendEnvironment, BackendEnvironmentBuilder, SafeModeEnvironment},
     error::{CloseError, StoreError},
@@ -31,11 +29,6 @@ use crate::{
 type Result<T> = result::Result<T, StoreError>;
 type CloseResult<T> = result::Result<T, CloseError>;
 type SharedRkv<E> = Arc<RwLock<Rkv<E>>>;
-
-#[cfg(feature = "lmdb")]
-lazy_static! {
-    static ref MANAGER_LMDB: RwLock<Manager<LmdbEnvironment>> = RwLock::new(Manager::new());
-}
 
 lazy_static! {
     static ref MANAGER_SAFE_MODE: RwLock<Manager<SafeModeEnvironment>> =
@@ -177,13 +170,6 @@ where
     }
 }
 
-#[cfg(feature = "lmdb")]
-impl Manager<LmdbEnvironment> {
-    pub fn singleton() -> &'static RwLock<Manager<LmdbEnvironment>> {
-        &MANAGER_LMDB
-    }
-}
-
 impl Manager<SafeModeEnvironment> {
     pub fn singleton() -> &'static RwLock<Manager<SafeModeEnvironment>> {
         &MANAGER_SAFE_MODE
@@ -199,14 +185,12 @@ mod tests {
 
     use tempfile::Builder;
 
-    #[cfg(feature = "lmdb")]
-    use backend::Lmdb;
+    use backend::SafeMode;
 
     /// Test that one can mutate managed Rkv instances in surprising ways.
-    #[cfg(feature = "lmdb")]
     #[test]
-    fn test_mutate_managed_rkv() {
-        let mut manager = Manager::<LmdbEnvironment>::new();
+    fn test_mutate_managed_rkv_safemode() {
+        let mut manager = Manager::<SafeModeEnvironment>::new();
 
         let root1 = Builder::new()
             .prefix("test_mutate_managed_rkv_1")
@@ -215,7 +199,7 @@ mod tests {
         fs::create_dir_all(root1.path()).expect("dir created");
         let path1 = root1.path();
         let arc = manager
-            .get_or_create(path1, Rkv::new::<Lmdb>)
+            .get_or_create(path1, Rkv::new::<SafeMode>)
             .expect("created");
 
         // Arc<RwLock<>> has interior mutability, so we can replace arc's Rkv instance with a new
@@ -228,7 +212,7 @@ mod tests {
         let path2 = root2.path();
         {
             let mut rkv = arc.write().expect("guard");
-            let rkv2 = Rkv::new::<Lmdb>(path2).expect("Rkv");
+            let rkv2 = Rkv::new::<SafeMode>(path2).expect("Rkv");
             *rkv = rkv2;
         }
 
@@ -240,7 +224,7 @@ mod tests {
         // Meanwhile, a new Arc for path2 has a different pointer, even though its Rkv's path is
         // the same as arc's current path.
         let path2_arc = manager
-            .get_or_create(path2, Rkv::new::<Lmdb>)
+            .get_or_create(path2, Rkv::new::<SafeMode>)
             .expect("success");
         assert!(!Arc::ptr_eq(&path2_arc, &arc));
     }
