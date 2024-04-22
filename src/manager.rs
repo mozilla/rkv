@@ -21,7 +21,7 @@ use lazy_static::lazy_static;
 #[cfg(feature = "lmdb")]
 use crate::backend::LmdbEnvironment;
 use crate::{
-    backend::{BackendEnvironment, BackendEnvironmentBuilder, SafeModeEnvironment},
+    backend::{BackendEnvironment, BackendEnvironmentBuilder, SafeModeEnvironment, SqliteEnvironment},
     error::{CloseError, StoreError},
     helpers::canonicalize_path,
     store::CloseOptions,
@@ -39,6 +39,11 @@ lazy_static! {
 
 lazy_static! {
     static ref MANAGER_SAFE_MODE: RwLock<Manager<SafeModeEnvironment>> =
+        RwLock::new(Manager::new());
+}
+
+lazy_static! {
+    static ref MANAGER_SQLITE: RwLock<Manager<SqliteEnvironment>> =
         RwLock::new(Manager::new());
 }
 
@@ -187,6 +192,12 @@ impl Manager<LmdbEnvironment> {
 impl Manager<SafeModeEnvironment> {
     pub fn singleton() -> &'static RwLock<Manager<SafeModeEnvironment>> {
         &MANAGER_SAFE_MODE
+    }
+}
+
+impl Manager<SqliteEnvironment> {
+    pub fn singleton() -> &'static RwLock<Manager<SqliteEnvironment>> {
+        &MANAGER_SQLITE
     }
 }
 

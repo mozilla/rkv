@@ -13,6 +13,8 @@ use std::{io, path::PathBuf, sync, thread, thread::ThreadId};
 use thiserror::Error;
 
 pub use crate::backend::SafeModeError;
+pub use crate::backend::SqliteError;
+
 use crate::value::Type;
 
 #[derive(Debug, Error)]
@@ -80,6 +82,9 @@ pub enum StoreError {
 
     #[error("safe mode backend error: {0}")]
     SafeModeError(SafeModeError),
+
+    #[error("sqlite backend error: {0}")]
+    SqliteError(rusqlite::Error),
 
     #[error("read transaction already exists in thread {0:?}")]
     ReadTransactionAlreadyExists(ThreadId),

@@ -20,7 +20,7 @@ use crate::{
 
 pub trait BackendError: Debug + Display + Into<StoreError> {}
 
-pub trait BackendDatabase: Debug + Eq + PartialEq + Copy + Clone {}
+pub trait BackendDatabase: Debug + Eq + PartialEq + Clone {}
 
 pub trait BackendFlags: Debug + Eq + PartialEq + Copy + Clone + Default {
     fn empty() -> Self;

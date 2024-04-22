@@ -12,6 +12,7 @@ mod common;
 #[cfg(feature = "lmdb")]
 mod impl_lmdb;
 mod impl_safe;
+mod impl_sqlite;
 mod traits;
 
 pub use common::*;
@@ -38,3 +39,14 @@ pub use impl_safe::{
     RwTransactionImpl as SafeModeRwTransaction, StatImpl as SafeModeStat,
     WriteFlagsImpl as SafeModeWriteFlags,
 };
+
+pub use impl_sqlite::{
+    DatabaseFlagsImpl as SqliteDatabaseFlags, DatabaseImpl as SqliteDatabase,
+    EnvironmentBuilderImpl as Sqlite, EnvironmentFlagsImpl as SqliteEnvironmentFlags,
+    EnvironmentImpl as SqliteEnvironment, ErrorImpl as SqliteError, InfoImpl as SqliteInfo,
+    IterImpl as SqliteIter, RoCursorImpl as SqliteRoCursor,
+    RoTransactionImpl as SqliteRoTransaction, RwCursorImpl as SqliteRwCursor,
+    RwTransactionImpl as SqliteRwTransaction, StatImpl as SqliteStat,
+    WriteFlagsImpl as SqliteWriteFlags,
+};
+
