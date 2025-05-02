@@ -24,6 +24,7 @@ db-dup-sort = []
 db-int-key = []
 default = ["db-dup-sort", "db-int-key"]
 no-canonicalize-path = []
+malloc-size-of = ["dep:malloc_size_of", "dep:malloc_size_of_derive"]
 
 [dependencies]
 arrayref = "0.3"
@@ -38,6 +39,8 @@ serde_derive = "1.0"
 thiserror = "2.0"
 url = "2.0"
 uuid = "1.0"
+malloc_size_of_derive = { version = "0.1.3", optional = true }
+malloc_size_of = { version = "0.2.2", package = "wr_malloc_size_of", default-features = false, optional = true }
 
 [dev-dependencies]
 byteorder = "1"
