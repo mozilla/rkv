@@ -17,9 +17,18 @@ use crate::backend::traits::BackendDatabase;
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Hash)]
 pub struct DatabaseImpl(pub(crate) Id<Database>);
 
+#[cfg(feature = "malloc-size-of")]
+impl malloc_size_of::MallocSizeOf for DatabaseImpl {
+    fn size_of(&self, _ops: &mut malloc_size_of::MallocSizeOfOps) -> usize {
+        // Id<T> does not allocate
+        0
+    }
+}
+
 impl BackendDatabase for DatabaseImpl {}
 
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "malloc-size-of", derive(malloc_size_of_derive::MallocSizeOf))]
 pub struct Database {
     snapshot: Snapshot,
 }

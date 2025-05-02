@@ -29,6 +29,21 @@ pub struct Snapshot {
     map: Arc<BTreeMap<Key, BTreeSet<Value>>>,
 }
 
+#[cfg(feature = "malloc-size-of")]
+impl malloc_size_of::MallocSizeOf for Snapshot {
+    fn size_of(&self, ops: &mut malloc_size_of::MallocSizeOfOps) -> usize {
+        let mut n = 0;
+        n += self.flags.size_of(ops);
+
+        // All other clones of the `Snapshot` map are transient in a transaction
+        // and thus not reachable from the `Database` object,
+        // so we're safe counting them here.
+        n += (*self.map).size_of(ops);
+
+        n
+    }
+}
+
 impl Snapshot {
     pub(crate) fn new(flags: Option<DatabaseFlagsImpl>) -> Snapshot {
         Snapshot {

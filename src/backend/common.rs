@@ -45,6 +45,7 @@ pub enum WriteFlags {
 
 /// Strategy to use when corrupted data is detected while opening a database.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "malloc-size-of", derive(malloc_size_of_derive::MallocSizeOf))]
 pub enum RecoveryStrategy {
     /// Bubble up the error on detecting a corrupted data file. The default.
     Error,

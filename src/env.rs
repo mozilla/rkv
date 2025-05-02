@@ -41,6 +41,7 @@ pub static DEFAULT_MAX_DBS: c_uint = 5;
 
 /// Wrapper around an `Environment` (e.g. a `SafeMode` environment).
 #[derive(Debug)]
+#[cfg_attr(feature = "malloc-size-of", derive(malloc_size_of_derive::MallocSizeOf))]
 pub struct Rkv<E> {
     _path: PathBuf,
     env: E,
