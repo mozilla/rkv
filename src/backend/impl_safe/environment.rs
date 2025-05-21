@@ -207,7 +207,7 @@ impl EnvironmentImpl {
 
         Ok(EnvironmentImpl {
             path: path.to_path_buf(),
-            max_dbs: max_dbs.unwrap_or(std::usize::MAX),
+            max_dbs: max_dbs.unwrap_or(usize::MAX),
             dbs: RwLock::new(EnvironmentDbs {
                 arena: DatabaseArena::new(),
                 name_map: HashMap::new(),
