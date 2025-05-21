@@ -8,6 +8,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 #![allow(clippy::from_over_into)] // TODO: `Into` implementations in [safe/lmdb]/flags.rs
+#![allow(clippy::uninlined_format_args)] // This is old code, we won't convert it
+#![allow(clippy::from_over_into)]
 
 //! A simple, humane, typed key-value storage solution. It supports multiple backend
 //! engines with varying guarantees, such as [LMDB](http://www.lmdb.tech/doc/) for
