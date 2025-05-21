@@ -33,7 +33,7 @@ where
     let canonical = path.into().canonicalize()?;
 
     Ok(if cfg!(target_os = "windows") {
-        let map_err = |_| io::Error::new(io::ErrorKind::Other, "path canonicalization error");
+        let map_err = |_| io::Error::other("path canonicalization error");
         Url::from_file_path(&canonical)
             .and_then(|url| url.to_file_path())
             .map_err(map_err)?
