@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install Rust toolchain ${{ matrix.toolchain }}${{ matrix.target.host }} on ${{ matrix.target.os }}
         run: |
-          rustup toolchain install ${{ matrix.toolchain }}${{ matrix.target.host }} --profile minimal --component rustfmt clippy
+          rustup toolchain install ${{ matrix.toolchain }}${{ matrix.target.host }} --profile minimal --component "rustfmt,clippy"
           rustup default ${{ matrix.toolchain }}${{ matrix.target.host }}
 
       - if: ${{ matrix.toolchain == 'nightly' }}
