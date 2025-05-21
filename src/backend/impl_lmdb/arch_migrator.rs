@@ -27,15 +27,15 @@
 //! The tool currently has these limitations:
 //!
 //! 1. It doesn't support migration from environments created with
-//!     `EnvironmentFlags::NO_SUB_DIR`.  To migrate such an environment, create a
-//!     temporary directory, copy the environment's data file to a file called data.mdb in
-//!     the temporary directory, then migrate the temporary directory as the source
-//!     environment.
+//!    `EnvironmentFlags::NO_SUB_DIR`.  To migrate such an environment, create a
+//!    temporary directory, copy the environment's data file to a file called data.mdb in
+//!    the temporary directory, then migrate the temporary directory as the source
+//!    environment.
 //! 2. It doesn't support migration from databases created with DatabaseFlags::DUP_SORT`
-//!     (with or without `DatabaseFlags::DUP_FIXED`).
+//!    (with or without `DatabaseFlags::DUP_FIXED`).
 //! 3. It doesn't account for existing data in the destination environment, which means
-//!     that it can overwrite data (causing data loss) or fail to migrate data if the
-//!     destination environment contains existing data.
+//!    that it can overwrite data (causing data loss) or fail to migrate data if the
+//!    destination environment contains existing data.
 //!
 //! ## Basic Usage
 //!

@@ -123,6 +123,7 @@ macro_rules! fn_migrator {
         /// migration and doesn't delete any files if the following conditions apply:
         /// - Source environment is invalid/corrupted, unavailable, or empty.
         /// - Destination environment is not empty.
+        ///
         /// Use this instead of the other migration methods if:
         /// - You're not concerned by throwing away old data and starting fresh with a new store.
         /// - You'll never want to overwrite data in the new store from the old store.
