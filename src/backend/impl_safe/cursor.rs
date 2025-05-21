@@ -73,6 +73,7 @@ impl<'c> BackendRoCursor<'c> for RoCursorImpl<'c> {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)] // `&mut Snapshot` is unused, as `BackendRoCursor` is unimplemented
 pub struct RwCursorImpl<'c>(&'c mut Snapshot);
 
 impl<'c> BackendRoCursor<'c> for RwCursorImpl<'c> {
