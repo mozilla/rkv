@@ -46,7 +46,7 @@ jobs:
       - run: cargo build --verbose
 
       - name: Test with all features
-        run: cargo test --all --verbose
+        run: cargo test --all --all-features --verbose
 
       - name: Test with no default features
         run: cargo test --lib --no-default-features --verbose
