@@ -38,6 +38,12 @@ serde_derive = "1.0"
 thiserror = "2.0"
 url = "2.0"
 uuid = "1.0"
+elsa = "1.10.0"
+crossbeam-channel = "0.5.12"
+
+[dependencies.rusqlite]
+version = "0.26.1"
+features = ["bundled"]
 
 [dev-dependencies]
 byteorder = "1"
