@@ -9,6 +9,8 @@
 // specific language governing permissions and limitations under the License.
 #![allow(clippy::uninlined_format_args)] // This is old code, we won't convert it
 #![allow(clippy::from_over_into)]
+#![allow(unknown_lints)] // allow the `mismatched_lifetime_syntaxes` (nightly only right now)
+#![allow(mismatched_lifetime_syntaxes)]
 
 //! A simple, humane, typed key-value storage solution.
 //! It only has a single backend engine: "SafeMode".
