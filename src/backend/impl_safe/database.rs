@@ -28,7 +28,10 @@ impl malloc_size_of::MallocSizeOf for DatabaseImpl {
 impl BackendDatabase for DatabaseImpl {}
 
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "malloc-size-of", derive(malloc_size_of_derive::MallocSizeOf))]
+#[cfg_attr(
+    feature = "malloc-size-of",
+    derive(malloc_size_of_derive::MallocSizeOf)
+)]
 pub struct Database {
     snapshot: Snapshot,
 }

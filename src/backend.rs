@@ -13,7 +13,6 @@ mod impl_safe;
 mod traits;
 
 pub use common::*;
-pub use traits::*;
 pub use impl_safe::{
     DatabaseFlagsImpl as SafeModeDatabaseFlags, DatabaseImpl as SafeModeDatabase,
     EnvironmentBuilderImpl as SafeMode, EnvironmentFlagsImpl as SafeModeEnvironmentFlags,
@@ -23,3 +22,4 @@ pub use impl_safe::{
     RwTransactionImpl as SafeModeRwTransaction, StatImpl as SafeModeStat,
     WriteFlagsImpl as SafeModeWriteFlags,
 };
+pub use traits::*;
