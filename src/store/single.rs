@@ -21,7 +21,10 @@ use crate::{
 type EmptyResult = Result<(), StoreError>;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-#[cfg_attr(feature = "malloc-size-of", derive(malloc_size_of_derive::MallocSizeOf))]
+#[cfg_attr(
+    feature = "malloc-size-of",
+    derive(malloc_size_of_derive::MallocSizeOf)
+)]
 pub struct SingleStore<D> {
     db: D,
 }

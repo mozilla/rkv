@@ -8,6 +8,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+#[cfg(feature = "malloc-size-of")]
+use std::mem;
 use std::{
     borrow::Cow,
     collections::HashMap,
@@ -16,8 +18,6 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
-#[cfg(feature = "malloc-size-of")]
-use std::mem;
 
 use id_arena::Arena;
 use log::warn;
@@ -36,7 +36,10 @@ type DatabaseArena = Arena<Database>;
 type DatabaseNameMap = HashMap<Option<String>, DatabaseImpl>;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-#[cfg_attr(feature = "malloc-size-of", derive(malloc_size_of_derive::MallocSizeOf))]
+#[cfg_attr(
+    feature = "malloc-size-of",
+    derive(malloc_size_of_derive::MallocSizeOf)
+)]
 pub struct EnvironmentBuilderImpl {
     flags: EnvironmentFlagsImpl,
     max_readers: Option<usize>,
@@ -132,7 +135,7 @@ impl malloc_size_of::MallocSizeOf for EnvironmentDbs {
         n += len * mem::size_of::<Database>();
 
         for (_id, s) in self.arena.iter() {
-             n += s.size_of(ops)
+            n += s.size_of(ops)
         }
         n + self.name_map.size_of(ops)
     }
@@ -169,7 +172,7 @@ impl malloc_size_of::MallocSizeOf for EnvironmentImpl {
         n += self.path.size_of(ops);
         n += self.max_dbs.size_of(ops);
         if let Ok(dbs) = self.dbs.read() {
-            n +=  (*dbs).size_of(ops);
+            n += (*dbs).size_of(ops);
         }
 
         n

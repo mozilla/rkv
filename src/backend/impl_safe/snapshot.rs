@@ -115,7 +115,7 @@ impl Snapshot {
             Some(values) => {
                 let was_empty = values.is_empty();
                 values.clear();
-                Some(()).filter(|_| !was_empty)
+                (!was_empty).then_some(())
             }
         }
     }
@@ -149,7 +149,7 @@ impl Snapshot {
             None => None,
             Some(values) => {
                 let was_removed = values.remove(value);
-                Some(()).filter(|_| was_removed)
+                was_removed.then_some(())
             }
         }
     }

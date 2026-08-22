@@ -76,7 +76,6 @@ fn test_same_safe() {
     assert!(Arc::ptr_eq(&created_arc, &fetched_arc));
 }
 
-
 /// Test that the manager will return the same Rkv instance each time for each path.
 #[test]
 fn test_same_with_capacity_safe() {
@@ -345,7 +344,11 @@ fn test_safe_mode_corrupt_while_open_3() {
         .expect("opened");
 
     let reader = env.read().expect("reader");
-    assert_eq!(store.get(&reader, "foo").expect("read"), None, "Nothing to be read");
+    assert_eq!(
+        store.get(&reader, "foo").expect("read"),
+        None,
+        "Nothing to be read"
+    );
 
     // We can write.
     let mut writer = env.write().expect("writer");
