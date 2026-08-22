@@ -6,9 +6,7 @@
 
 The [rkv Rust crate](https://crates.io/crates/rkv) is a simple, humane, typed key-value storage solution.
 
-## ⚠️ Warning ⚠️
-
-To use rkv in production/release environments at Mozilla, you may do so with the "SafeMode" backend, for example:
+To use rkv, you can start with:
 
 ```rust
 use rkv::{Manager, Rkv};
@@ -20,7 +18,7 @@ let shared_rkv = manager.get_or_create(path, Rkv::new::<SafeMode>).unwrap();
 ...
 ```
 
-The "SafeMode" backend performs well, with two caveats: the entire database is stored in memory, and write transactions are synchronously written to disk (only on commit).
+The rkv crate has two caveats: the entire database is stored in memory, and write transactions are synchronously written to disk (only on commit).
 
 ## Use
 
