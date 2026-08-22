@@ -27,7 +27,6 @@ no-canonicalize-path = []
 malloc-size-of = ["dep:malloc_size_of", "dep:malloc_size_of_derive"]
 
 [dependencies]
-arrayref = "0.3"
 bincode = "1.0"
 bitflags = {version = "2.4.1", features = ["serde"]}
 id-arena = "2.2"

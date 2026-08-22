@@ -10,7 +10,6 @@
 
 use std::fmt;
 
-use arrayref::array_ref;
 use bincode::{deserialize, serialize, serialized_size};
 use ordered_float::OrderedFloat;
 use uuid::{Bytes, Uuid};
@@ -106,7 +105,7 @@ pub enum OwnedValue {
 
 fn uuid(bytes: &[u8]) -> Result<Value, DataError> {
     if bytes.len() == 16 {
-        Ok(Value::Uuid(array_ref![bytes, 0, 16]))
+        Ok(Value::Uuid(bytes.first_chunk().unwrap()))
     } else {
         Err(DataError::InvalidUuid)
     }
